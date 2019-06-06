@@ -1,11 +1,18 @@
 CMake build scripts for cross compiling PCL and its dependencies for Android and iOS.
 
 Windows
-[![Build status](https://ci.appveyor.com/api/projects/status/u8l4ixwdpysbx45h/branch/master?svg=true)](https://ci.appveyor.com/project/Sirokujira/pcl-superbuild/branch/master)
+[![Build status](https://ci.appveyor.com/api/projects/status/u8l4ixwdpysbx45h/branch/master?svg=true)](https://ci.appveyor.com/project/Sirokujira/pcl_mobile_framework/branch/master)
 
-Ubuntu/MacOSX
-[![Build Status](https://travis-ci.org/Sirokujira/pcl-superbuild.svg?branch=master)](https://travis-ci.org/Sirokujira/pcl-superbuild)
+Ubuntu/MacOSX(Travis)
+[![Build Status](https://travis-ci.org/Sirokujira/pcl_mobile_framework.svg?branch=master)](https://travis-ci.org/Sirokujira/pcl_mobile_framework)
 
+Ubuntu(CircleCI)
+[![Build Status](https://travis-ci.org/Sirokujira/template.svg?branch=master)](https://travis-ci.org/Sirokujira/template)
+
+Azure
+[![Build status](https://ci.appveyor.com/api/projects/status/u8l4ixwdpysbx45h/branch/master?svg=true)](https://ci.appveyor.com/project/Sirokujira/template/branch/master)
+
+Gitlab
 pcl use libraries
 
 [boost 1.60.0](http://www.boost.org/), [custom boost patches](https://svn.boost.org/trac10/ticket/13230), [custom source code](https://github.com/sirokujira/boost-build/)
@@ -22,13 +29,13 @@ Requirements
 ============
 
     Android
-    * Windows/Linux(Test Windows 7?, Ubuntu 14.04/16.04?)
+    * Windows/Linux(Test Windows 7/8/8.1/10?, Ubuntu 14.04/16.04?)
     * Android NDK, Revision 15c/16b(Test 16b)
     * CMake >=3.6.x(Test 3.9.2/3.10.1)
 
     iOS
-    * MacOSX ??.?(Test 10.x)
-    * Xcode 8.3, 9.0(?)(Test 9.0)
+    * MacOSX 10.9/10.10/..(Test 10.13)
+    * Xcode 8.3, 9.0(?), 9.3(Test 9.3), ..
     * CMake >=3.7.x(Test 3.9.4)
 
 
@@ -95,6 +102,7 @@ Reference modules
 * Android
 
     https://github.com/taka-no-me/android-cmake
+    * current using android-ndk cmake file.
 
 * iOS
 

@@ -1,5 +1,6 @@
 # Standard settings
 set (CMAKE_SYSTEM_NAME Darwin)
+# set (CMAKE_SYSTEM_NAME iOS)
 set (CMAKE_SYSTEM_VERSION 1)
 set (UNIX True)
 set (APPLE True)
@@ -7,7 +8,8 @@ set (IOS True)
 
 # Developper Settings
 set(IOS_PLATFORM "OS")
-set(ENABLE_BITCODE 0)
+set(ENABLE_BITCODE 1)
+set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE YES)
 
 # Required as of cmake 2.8.10
 set (CMAKE_OSX_DEPLOYMENT_TARGET "" CACHE STRING "Force unset of the deployment target for iOS" FORCE)

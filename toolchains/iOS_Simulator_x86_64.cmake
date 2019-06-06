@@ -8,6 +8,7 @@ set (IOS True)
 # Simulation Settings
 set(IOS_PLATFORM "SIMULATOR64")
 set(ENABLE_BITCODE 0)
+set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE YES)
 
 # Required as of cmake 2.8.10
 set (CMAKE_OSX_DEPLOYMENT_TARGET "" CACHE STRING "Force unset of the deployment target for iOS" FORCE)

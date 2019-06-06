@@ -1,6 +1,0 @@
-MODULEMAP_FILE[sdk=iphoneos*]        = \
-    $(SRCROOT)/iphoneos.modulemap
-MODULEMAP_FILE[sdk=iphonesimulator*] = \
-    $(SRCROOT)/iphonesimulator.modulemap
-MODULEMAP_FILE[sdk=macosx*]          = \
-    $(SRCROOT)/macosx.modulemap

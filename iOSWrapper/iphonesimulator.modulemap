@@ -1,8 +1,0 @@
-module libPointCloudLibrary [system] {
-  link "pcl"
-  umbrella header "umbrella-libpcl.h"
-
-  export *
-  module * { export * }
-}
-

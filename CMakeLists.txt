@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12.4 FATAL_ERROR)
 
 # reference pcl cmakelists.txt cmake policy
 # start
@@ -17,20 +17,12 @@ if(POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW)
 endif()
 
-if(POLICY CMP0048)
-  cmake_policy(SET CMP0048 OLD) # do not use VERSION option in project() command
-endif()
-
-if(POLICY CMP0054)
-  cmake_policy(SET CMP0054 OLD) # Silent warnings about quoted variables
-endif()
-
-if(POLICY CMP0074)
-  # TODO:
-  # 1. Find*.cmake modules need to be individually verified.
-  # 2. PCLConfig.cmake needs to be changed.
-  cmake_policy(SET CMP0074 OLD)
-endif()
+# if(POLICY CMP0074)
+#   # TODO:
+#   # 1. Find*.cmake modules need to be individually verified.
+#   # 2. PCLConfig.cmake needs to be changed.
+#   cmake_policy(SET CMP0074 OLD)
+# endif()
 # end
 
 # use elseif
@@ -38,7 +30,9 @@ cmake_policy(GET CMP0054 NEW)
 
 # http://cmake.3232098.n2.nabble.com/Computation-of-CMAKE-OSX-SYSROOT-td7598354.html
 # set use xcode target version
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14")
+# set(CMAKE_OSX_DEPLOYMENT_TARGET "12.1")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "9.3")
+# x86_64  warning : -Wshorten-64-to-32
 
 project(superbuild NONE)
 
@@ -76,6 +70,9 @@ endif()
 # 
 if (BUILD_IOS_DEVICE_ARM64)
  list(APPEND tags ios-device-arm64)
+endif()
+if (BUILD_IOS_DEVICE_ARM64E)
+ list(APPEND tags ios-device-arm64e)
 endif()
 if (BUILD_IOS_DEVICE_ARMV7)
  list(APPEND tags ios-device-armv7)
