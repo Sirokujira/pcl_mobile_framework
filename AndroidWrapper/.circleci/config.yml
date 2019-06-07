@@ -1,0 +1,22 @@
+version: 2
+jobs:
+    build:
+        docker: 
+            - image: circleci/android:api-26-alpha
+        steps:
+            - checkout
+            - restore_cache:
+                key: deps-{{ checksum  "aar/build.gradle" }}
+            - run:
+                name: Download Dependencies
+                command: ./aar/gradlew androidDependencies
+            - run:
+                name: Download Dependencies
+                command: ./aar/gradlew androidDependencies
+            - save_cache:
+                paths: ~/.gradle
+                key: deps-{{ checksum  "aar/build.gradle" }}
+            - run:
+                name: Run Tests
+                command: ./aar/gradlew testDebugUnitTest
+

@@ -1,0 +1,14 @@
+framework module pcl_mobile {
+  link framework "pcl_mobile"
+
+  // umbrella "Headers"
+  // umbrella "/Users/to/pcl_mobile_framework/iOSWrapper/pcl_mobile/Sources/cpplib/include"
+  // umbrella "/Users/to/pcl_mobile_framework/iOSWrapper/pcl_mobile/Sources/cpplib/pcl"
+  // umbrella "/Users/to/pcl_mobile_framework/iOSWrapper/pcl_mobile/Sources/cpplib/eigen"
+  // umbrella "/Users/to/pcl_mobile_framework/iOSWrapper/pcl_mobile/Sources/cpplib/flann"
+  // umbrella "/Users/to/pcl_mobile_framework/iOSWrapper/pcl_mobile/Sources/cpplib/qhull"
+  // umbrella header "umbrella-libpcl.h"
+  
+  export *
+  // module * { export * }
+}
