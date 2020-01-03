@@ -1,0 +1,34 @@
+package com.sirokujira.pclmobile
+
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Before
+import org.junit.Test
+
+/**
+ * Example local unit test, which will execute on the development machine (host).
+ *
+ * @see [Testing documentation](http://d.android.com/tools/testing)
+ */
+class PCLFeatureUnitTest {
+    // @Mock
+    // Context mMockContext;
+
+    @Before
+    // @Throws(Exception::class)
+    fun setUp() {
+        // JNILib.load("aaa.pcd")
+    }
+
+    @After
+    // @Throws(Exception::class)
+    fun tearDown() {
+
+    }
+
+
+    @Test
+    fun addition_isCorrect() {
+        assertEquals(4, (2 + 2).toLong())
+    }
+}

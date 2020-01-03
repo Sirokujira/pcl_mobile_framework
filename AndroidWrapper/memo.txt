@@ -1,0 +1,89 @@
+↓見ている限りだと、Android Studio 用の Import モジュールの作成方法がありそうな気がしてくるが...
+https://qiita.com/kodai100/items/6c9e8a34d0714913c017
+
+Output:
+PointCloudLibrary-android-sdk
+
+---
+
+aar と Nativa ライブラリとの連携?
+http://www.blog.bdauria.com/?p=981
+
+https://stackoverflow.com/questions/35140809/android-aar-package-for-native-library
+
+https://slions.net/threads/integrate-a-c-library-with-your-android-build-system.45/
+
+https://techbooster.org/android/18043/
+
+Kotlin + C++ の使用
+https://proandroiddev.com/android-ndk-interaction-of-kotlin-and-c-c-5e19e35bac74
+※ JNI-Native 経由での対応で Java とおんなじ感じに使用できそう。
+
+公式
+(C++ との連携について)
+https://developer.android.com/studio/projects/add-native-code
+Android インターフェース定義言語（AIDL） 
+https://developer.android.com/guide/components/aidl?hl=ja
+
+---
+
+Android での Native Library Wrapper を作成する際の手順について
+
+0. 空の app 作成。
+   参照 : https://techbooster.org/android/18043/
+
+1. Android Sutdio のメニューから File->New->New Module を選択して ライブラリを作成する。
+   ※ Folder 構成 : (appフォルダ名)/(ライブラリ名)
+   ※ ライブラリ名に "_" は使用しない。(_1 になるためバグの温床になりやすいので)(-にする？)
+
+2. Appveyor の Artifacts から バイナリをダウンロードして ライブラリフォルダの libs フォルダに解凍する。
+   (フォルダ構成は、
+    (対象 arch)/(module名)/include
+    (対象 arch)/(module名)/lib
+
+3. ライブラリ
+
+4. CMakeLists.txt にリンクを設定。
+
+4. 必要があれば app/build.gradle に 対象 arch の Filter を追加する。
+   参照 : https://developer.android.com/studio/projects/add-native-code
+   ※ なるべくなら、5個全部用意しておく。
+
+5. メニューから build -> make 
+
+---
+
+aar 自体は zip
+external lib の取り込みについて
+zip フォルダに変化後, 各 archtecture の定義に lib フォルダの中身をコピーする?(必要あるかチェック)
+
+---
+
+aar について?
+https://techblog.yahoo.co.jp/android/sdk-dev/
+
+Android のライブラリづくりとライセンスについて 
+https://techlife.cookpad.com/entry/2015/06/15/184248
+
+https://techlife.cookpad.com/entry/2018-11-19-technical-selection-for-android-cookpad
+
+bot の導入
+https://techlife.cookpad.com/entry/2017/06/28/190000
+
+外部ライブラリ取込み
+https://stackoverflow.com/questions/22568705/android-studio-native-method-not-found-include-so-file-in-build
+https://stackoverflow.com/questions/16682847/how-to-manually-include-external-aar-package-using-new-gradle-android-build-syst
+
+    sourceSets.main {
+        jniLibs.srcDir 'src/main/libs'
+        jni.srcDirs = [] //disable automatic ndk-build call
+    }
+
+※ ダメそう
+
+fileTree(dir: 'libs', include: '**/*.aar')
+        .each { File file ->
+    dependencies.add("compile", [name: file.name.lastIndexOf('.').with { it != -1 ? file.name[0..<it] : file.name }, ext: 'aar'])
+}
+
+implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
