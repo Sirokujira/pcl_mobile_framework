@@ -1,27 +1,29 @@
-if [ -e 'build' ]; then
-    # exists build Folder
-    echo "Folder exists."
-else
-    # not exists build Folder
-    mkdir build
-fi
-
 # change current install path and set enviroment parameters.
-# export ANDROID_HOME=/opt/android-sdk-linux
-# export ANDROID_NDK=/opt/android-ndk-r16b
-# Target settings
-# export ANDROID_ABIs=arm64-v8a
-# export TOOLCHAIN_NAME=arm-linux-android-clang3.6
-# export ANDROID_ABIs=x86
-# export TOOLCHAIN_NAME=x86-linux-android-clang3.6
-# export ANDROID_ABIs=x86_64
-# export TOOLCHAIN_NAME=x86_64-linux-android-clang3.6
-# export ANDROID_TARGET_API=26
+# check Android Studio SDK Locations
+export ANDROID_HOME=~/Library/Android/sdk
+export ANDROID_NDK=~/Library/Android/sdk/ndk-bundle
+## Target settings
+# arm64
+#export ANDROID_ABIs=arm64-v8a
+#export TOOLCHAIN_NAME=aarch64-linux-android-4.9
+# arm?
+#export ANDROID_ABIs=armeabi
+export ANDROID_ABIs=armeabi-v7a
+export TOOLCHAIN_NAME=arm-linux-android-4.9
+# x86
+#export ANDROID_ABIs=x86
+#export TOOLCHAIN_NAME=x86-4.9
+# x64
+#export ANDROID_ABIs=x86_64
+#export TOOLCHAIN_NAME=x86_64-4.9
+# TARGET_API VERSION
+#export ANDROID_TARGET_API=26
 # set compiler(gcc or clang[default])
-# export TARGET_COMPILER=clang
+export TARGET_COMPILER=clang
 
-cd build
-# cmake -G"Ninja" -DCMAKE_TOOLCHAIN_FILE:FILEPATH=${ANDROID_NDK}/build/cmake/android.toolchain.cmake -DANDROID_TOOLCHAIN_NAME=${TOOLCHAIN_NAME} -DANDROID_NATIVE_API_LEVEL=${ANDROID_TARGET_API} -DANDROID_ABI=${ANDROID_ABIs} -DANDROID_TOOLCHAIN=${TARGET_COMPILER} -DBUILD_ANDROID:BOOL="ON" -DBUILD_IOS_DEVICE:BOOL="OFF" -DBUILD_IOS_SIMULATOR:BOOL="OFF" ../
-cmake -DCMAKE_TOOLCHAIN_FILE:FILEPATH=${ANDROID_NDK}/build/cmake/android.toolchain.cmake -DANDROID_TOOLCHAIN_NAME=${TOOLCHAIN_NAME} -DANDROID_NATIVE_API_LEVEL=${ANDROID_TARGET_API} -DANDROID_ABI=${ANDROID_ABIs} -DANDROID_TOOLCHAIN=${TARGET_COMPILER} -DBUILD_ANDROID:BOOL="ON" -DBUILD_IOS_DEVICE:BOOL="OFF" -DBUILD_IOS_SIMULATOR:BOOL="OFF" ../
-cmake --build . --config Release
-
+# cmake -H. -Bbuild -G"Ninja" -DCMAKE_TOOLCHAIN_FILE:FILEPATH=${ANDROID_NDK}/build/cmake/android.toolchain.cmake -DANDROID_TOOLCHAIN_NAME=${TOOLCHAIN_NAME} -DANDROID_NATIVE_API_LEVEL=${ANDROID_TARGET_API} -DANDROID_ABI=${ANDROID_ABIs} -DANDROID_TOOLCHAIN=${TARGET_COMPILER} -DBUILD_ANDROID:BOOL="ON" -DBUILD_IOS_DEVICE:BOOL="OFF" -DBUILD_IOS_SIMULATOR:BOOL="OFF"
+cmake -G"Unix Makefiles" -H. -Bbuild -DCMAKE_TOOLCHAIN_FILE:FILEPATH=${ANDROID_NDK}/build/cmake/android.toolchain.cmake -DANDROID_TOOLCHAIN_NAME=${TOOLCHAIN_NAME} -DANDROID_NATIVE_API_LEVEL=${ANDROID_TARGET_API} -DANDROID_ABI=${ANDROID_ABIs} -DANDROID_TOOLCHAIN=${TARGET_COMPILER} -DBUILD_ANDROID:BOOL="ON" -DBUILD_IOS_DEVICE:BOOL="OFF" -DBUILD_IOS_SIMULATOR:BOOL="OFF"
+-DC_COMPILER_TOOL=$ANDROID_NDK/toolchains/$TOOLCHAIN_NAME/clang
+-DCXX_COMPILER_TOOL="clang"
+#cd build
+cmake --build build --config Release
