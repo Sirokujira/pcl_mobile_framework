@@ -113,6 +113,10 @@ github_repository() {
 GITHUB_REPOSITORY_NAME="$(github_repository)"
 VERSIONED_AAR_NAME="pclmobile-${VERSION}.aar"
 VERSIONED_AAR_PATH="${DIST_DIR}/${VERSIONED_AAR_NAME}"
+GH_RELEASE_ARGS=()
+if [[ -n "${GITHUB_REPOSITORY_NAME}" ]]; then
+    GH_RELEASE_ARGS=(--repo "${GITHUB_REPOSITORY_NAME}")
+fi
 
 export ANDROID_ABIS="${ANDROID_ABIS:-arm64-v8a armeabi-v7a x86_64}"
 export ANDROID_CLEAN_AFTER_STAGE="${ANDROID_CLEAN_AFTER_STAGE:-ON}"
@@ -209,19 +213,20 @@ if ${CREATE_RELEASE} || ${UPLOAD_RELEASE}; then
 fi
 
 if ${CREATE_RELEASE}; then
-    if gh release view "${TAG}" >/dev/null 2>&1; then
+    if gh release view "${TAG}" "${GH_RELEASE_ARGS[@]}" >/dev/null 2>&1; then
         echo "==> GitHub Release ${TAG} already exists."
     else
         echo "==> Creating GitHub Release ${TAG}"
         gh release create "${TAG}" \
             --title "PCLMobile ${VERSION}" \
-            --notes "Android AAR and mobile wrapper release ${VERSION}."
+            --notes "Android AAR and mobile wrapper release ${VERSION}." \
+            "${GH_RELEASE_ARGS[@]}"
     fi
 fi
 
 if ${UPLOAD_RELEASE}; then
     echo "==> Uploading AAR to GitHub Release ${TAG}"
-    gh release upload "${TAG}" "${VERSIONED_AAR_PATH}" "${VERSIONED_AAR_PATH}.sha256" --clobber
+    gh release upload "${TAG}" "${VERSIONED_AAR_PATH}" "${VERSIONED_AAR_PATH}.sha256" --clobber "${GH_RELEASE_ARGS[@]}"
 fi
 
 echo "==> Android package complete."
