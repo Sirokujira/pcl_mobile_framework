@@ -1,5 +1,8 @@
 # pcl_mobile_framework
 
+[![Android AAR](https://github.com/Sirokujira/pcl_mobile_framework/actions/workflows/android.yml/badge.svg)](https://github.com/Sirokujira/pcl_mobile_framework/actions/workflows/android.yml)
+[![Android Package Release](https://github.com/Sirokujira/pcl_mobile_framework/actions/workflows/android-release.yml/badge.svg)](https://github.com/Sirokujira/pcl_mobile_framework/actions/workflows/android-release.yml)
+
 Cross-compile a curated subset of [PCL](https://pointclouds.org/) plus its
 dependencies (Boost, Eigen, FLANN, Qhull) into shippable mobile libraries:
 
@@ -71,6 +74,27 @@ pcl_mobile_framework/
 
 The toolchain script auto-detects Xcode/SDK paths via `xcrun`, so any modern
 Xcode install on macOS 13+ will work.
+
+## GitHub Actions
+
+Android CI is split into build verification and release publishing:
+
+- [`Android AAR`](https://github.com/Sirokujira/pcl_mobile_framework/actions/workflows/android.yml)
+  builds the Android wrapper for `arm64-v8a`, `armeabi-v7a`, and `x86_64` on
+  pushes or pull requests that touch Android, CMake, or Android package scripts.
+- [`Android Package Release`](https://github.com/Sirokujira/pcl_mobile_framework/actions/workflows/android-release.yml)
+  builds the multi-ABI release AAR, uploads release assets, and publishes
+  `io.github.sirokujira:pclmobile:<version>` to GitHub Packages when a GitHub
+  Release is published or the workflow is manually dispatched.
+
+For provider-side manual publishing, run `Android Package Release` with:
+
+```text
+version: 0.1.0
+create_release: true
+upload_release: true
+publish_github_packages: true
+```
 
 ## Building
 
@@ -314,8 +338,9 @@ dependencies {
 
 This repository is in the middle of a major modernization (see
 [MODERNIZATION_PLAN.md](./MODERNIZATION_PLAN.md)). Phases A and B from that
-plan are landed; phases C (CI on GitHub Actions, releases) and D
-(documentation polish, integration tests) are still in progress.
+plan are landed; phase C has Android GitHub Actions and package publishing
+support in place; phase D (documentation polish, integration tests) is still in
+progress.
 
 ## License
 

@@ -1,6 +1,28 @@
 # AndroidWrapper
 
+[![Android AAR](https://github.com/Sirokujira/pcl_mobile_framework/actions/workflows/android.yml/badge.svg)](https://github.com/Sirokujira/pcl_mobile_framework/actions/workflows/android.yml)
+[![Android Package Release](https://github.com/Sirokujira/pcl_mobile_framework/actions/workflows/android-release.yml/badge.svg)](https://github.com/Sirokujira/pcl_mobile_framework/actions/workflows/android-release.yml)
+
 Android AAR wrapper for `pclmobile`.
+
+## GitHub Actions
+
+Android CI uses two workflows:
+
+- [`Android AAR`](https://github.com/Sirokujira/pcl_mobile_framework/actions/workflows/android.yml)
+  verifies the Android wrapper for `arm64-v8a`, `armeabi-v7a`, and `x86_64`.
+- [`Android Package Release`](https://github.com/Sirokujira/pcl_mobile_framework/actions/workflows/android-release.yml)
+  builds the provider-side release package, uploads the GitHub Release assets,
+  and publishes `io.github.sirokujira:pclmobile:<version>` to GitHub Packages.
+
+For manual provider-side publishing, run `Android Package Release` with:
+
+```text
+version: 0.1.0
+create_release: true
+upload_release: true
+publish_github_packages: true
+```
 
 ## Local build
 
