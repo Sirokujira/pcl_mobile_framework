@@ -108,6 +108,22 @@ ANDROID_CMAKE_VERSION=3.31.6 \
 ./scripts/package_android.sh 0.1.0 --upload-release
 ```
 
+Create the GitHub Release when needed, upload a versioned AAR, and publish to
+GitHub Packages:
+
+```sh
+cd ~/Github/pcl_mobile_framework
+ANDROID_NDK_VERSION=29.0.14206865 \
+ANDROID_CMAKE_VERSION=3.31.6 \
+PCLMOBILE_GITHUB_REPOSITORY="Sirokujira/pcl_mobile_framework" \
+MAVEN_USERNAME="$GITHUB_ACTOR" \
+MAVEN_PASSWORD="$GITHUB_TOKEN" \
+./scripts/package_android.sh 0.1.0 \
+  --create-release \
+  --upload-release \
+  --publish-github-packages
+```
+
 Publish to a local Maven repository under the module build directory:
 
 ```sh
@@ -132,15 +148,84 @@ Publish to GitHub Packages:
 cd ~/Github/pcl_mobile_framework
 ANDROID_NDK_VERSION=29.0.14206865 \
 ANDROID_CMAKE_VERSION=3.31.6 \
-MAVEN_REPOSITORY_URL="https://maven.pkg.github.com/Sirokujira/pcl_mobile_framework" \
+PCLMOBILE_GITHUB_REPOSITORY="Sirokujira/pcl_mobile_framework" \
 MAVEN_USERNAME="$GITHUB_ACTOR" \
 MAVEN_PASSWORD="$GITHUB_TOKEN" \
-./scripts/package_android.sh 0.1.0 --publish-maven
+./scripts/package_android.sh 0.1.0 --publish-github-packages
+```
+
+Publish to another Maven-compatible repository:
+
+```sh
+cd ~/Github/pcl_mobile_framework
+ANDROID_NDK_VERSION=29.0.14206865 \
+ANDROID_CMAKE_VERSION=3.31.6 \
+MAVEN_USERNAME="$MAVEN_USERNAME" \
+MAVEN_PASSWORD="$MAVEN_PASSWORD" \
+./scripts/package_android.sh 0.1.0 \
+  --maven-repository-url "https://maven.example.com/releases"
 ```
 
 When a GitHub Release is published, `.github/workflows/android-release.yml`
 rebuilds the same multi-ABI AAR, uploads it to that release, and publishes the
 matching Maven package to GitHub Packages.
+
+The script also writes a versioned release asset and checksum:
+
+```text
+build/android/distributions/pclmobile-0.1.0.aar
+build/android/distributions/pclmobile-0.1.0.aar.sha256
+```
+
+## Consuming from Gradle
+
+GitHub Packages:
+
+```kotlin
+repositories {
+    google()
+    mavenCentral()
+    maven {
+        url = uri("https://maven.pkg.github.com/Sirokujira/pcl_mobile_framework")
+        credentials {
+            username = providers.gradleProperty("gpr.user")
+                .orElse(providers.environmentVariable("GITHUB_ACTOR"))
+                .get()
+            password = providers.gradleProperty("gpr.key")
+                .orElse(providers.environmentVariable("GITHUB_TOKEN"))
+                .get()
+        }
+    }
+}
+
+dependencies {
+    implementation("io.github.sirokujira:pclmobile:0.1.0")
+}
+```
+
+Local Maven repository under this repo, produced by `--local-repo`:
+
+```kotlin
+repositories {
+    google()
+    mavenCentral()
+    maven {
+        url = uri("/path/to/pcl_mobile_framework/AndroidWrapper/aar/pclmobile/build/repo")
+    }
+}
+
+dependencies {
+    implementation("io.github.sirokujira:pclmobile:0.1.0")
+}
+```
+
+Manual AAR drop-in:
+
+```kotlin
+dependencies {
+    implementation(files("libs/pclmobile-0.1.0.aar"))
+}
+```
 
 ## Environment variables
 
@@ -152,6 +237,8 @@ matching Maven package to GitHub Packages.
 - `PCLMOBILE_VERSION`: Maven version for the generated AAR.
 - `MAVEN_REPOSITORY_URL`: remote Maven repository URL, for example GitHub Packages.
 - `MAVEN_USERNAME` / `MAVEN_PASSWORD`: remote Maven credentials.
+- `PCLMOBILE_GITHUB_REPOSITORY`: `owner/repo` for GitHub Packages and Release uploads.
+- `PCLMOBILE_RELEASE_TAG`: release tag, defaulting to `v<PCLMOBILE_VERSION>`.
 
 ## Maven Central
 

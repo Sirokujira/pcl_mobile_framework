@@ -14,6 +14,11 @@ on:
         required: true
         type: boolean
         default: false
+      create_release:
+        description: "Create the matching GitHub Release when it does not exist"
+        required: true
+        type: boolean
+        default: false
       publish_github_packages:
         description: "Publish the AAR to GitHub Packages"
         required: true
@@ -94,16 +99,19 @@ jobs:
       - name: Build package
         env:
           GH_TOKEN: ${{ github.token }}
-          MAVEN_REPOSITORY_URL: https://maven.pkg.github.com/${{ github.repository }}
+          PCLMOBILE_GITHUB_REPOSITORY: ${{ github.repository }}
           MAVEN_USERNAME: ${{ github.actor }}
           MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
           FLAGS=()
+          if [[ "${{ inputs.create_release }}" == "true" ]]; then
+            FLAGS+=(--create-release)
+          fi
           if [[ "${{ github.event_name }}" == "release" || "${{ inputs.upload_release }}" == "true" ]]; then
             FLAGS+=(--upload-release)
           fi
           if [[ "${{ github.event_name }}" == "release" || "${{ inputs.publish_github_packages }}" == "true" ]]; then
-            FLAGS+=(--publish-maven)
+            FLAGS+=(--publish-github-packages)
           fi
           ./scripts/package_android.sh "$PCLMOBILE_VERSION" "${FLAGS[@]}"
 
@@ -111,5 +119,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: pclmobile-${{ env.PCLMOBILE_VERSION }}-release-aar
-          path: AndroidWrapper/aar/pclmobile/build/outputs/aar/pclmobile-release.aar
+          path: |
+            build/android/distributions/pclmobile-${{ env.PCLMOBILE_VERSION }}.aar
+            build/android/distributions/pclmobile-${{ env.PCLMOBILE_VERSION }}.aar.sha256
           if-no-files-found: error
