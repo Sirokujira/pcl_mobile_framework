@@ -21,10 +21,11 @@ std::vector<jfloat> alignToTranslatedCopyICP(float tx, float ty, float tz, int m
     pcl::transformPointCloud(*source, *target, transform);
 
     pcl::PointCloud<pcl::PointXYZ> aligned;
-    // Keep the ICP object alive for the process lifetime. On the tested Android
-    // build, destroying the registration object after JNI return trips Scudo in
-    // PCL's correspondence-estimation cleanup path.
-    static pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ>* icp =
+    // Keep each ICP object alive for the process lifetime. Reusing one ICP
+    // instance across calls corrupts the correspondence-estimation state on the
+    // tested Android build, while destroying it after JNI return trips Scudo in
+    // the same cleanup path.
+    pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ>* icp =
             new pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ>();
     icp->setInputSource(source);
     icp->setInputTarget(target);
