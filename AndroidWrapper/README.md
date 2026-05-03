@@ -177,7 +177,45 @@ build/android/distributions/pclmobile-0.1.0.aar
 build/android/distributions/pclmobile-0.1.0.aar.sha256
 ```
 
+## Provider-side publishing
+
+Use this command when this repository publishes the Android AAR to GitHub
+Release and GitHub Packages:
+
+```sh
+cd ~/Github/pcl_mobile_framework
+ANDROID_NDK_VERSION=29.0.14206865 \
+ANDROID_CMAKE_VERSION=3.31.6 \
+PCLMOBILE_GITHUB_REPOSITORY="Sirokujira/pcl_mobile_framework" \
+MAVEN_USERNAME="$GITHUB_ACTOR" \
+MAVEN_PASSWORD="$GITHUB_TOKEN" \
+./scripts/package_android.sh 0.1.0 \
+  --create-release \
+  --upload-release \
+  --publish-github-packages
+```
+
+For GitHub Actions, run the `Android Package Release` workflow with:
+
+```text
+version: 0.1.0
+create_release: true
+upload_release: true
+publish_github_packages: true
+```
+
+The provider publishes these outputs:
+
+```text
+GitHub Release asset: build/android/distributions/pclmobile-0.1.0.aar
+GitHub Release checksum: build/android/distributions/pclmobile-0.1.0.aar.sha256
+GitHub Packages coordinate: io.github.sirokujira:pclmobile:0.1.0
+```
+
 ## Consuming from Gradle
+
+The following Gradle snippets are for app projects that depend on the published
+package.
 
 GitHub Packages:
 
