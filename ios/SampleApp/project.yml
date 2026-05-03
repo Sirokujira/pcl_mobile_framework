@@ -1,0 +1,77 @@
+name: PCLMobileARSample
+options:
+  bundleIdPrefix: io.github.sirokujira
+  deploymentTarget:
+    iOS: "13.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    CLANG_CXX_LANGUAGE_STANDARD: "c++17"
+    CLANG_CXX_LIBRARY: "libc++"
+    ENABLE_BITCODE: NO
+    OTHER_LDFLAGS: "-lc++"
+
+# `xcodegen` resolves this relative to the project.yml, which lives at
+# ios/SampleApp/. The XCFramework is produced by scripts/build_ios.sh under
+# build/ios/xcframework/PCLMobile.xcframework at the repo root.
+packages: {}
+
+targets:
+
+  # ---------------------------------------------------------------------------
+  # App target
+  # ---------------------------------------------------------------------------
+  PCLMobileARSample:
+    type: application
+    platform: iOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: PCLMobileARSample
+    info:
+      path: PCLMobileARSample/Info.plist
+    dependencies:
+      - framework: ../../build/ios/xcframework/PCLMobile.xcframework
+        embed: true
+        codeSign: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.sirokujira.PCLMobileARSample
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_FILE: PCLMobileARSample/Info.plist
+        # Some XCFramework consumers need this to resolve dyld load:
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/Frameworks"
+
+  # ---------------------------------------------------------------------------
+  # Test target
+  # ---------------------------------------------------------------------------
+  PCLMobileARSampleTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: PCLMobileARSampleTests
+    dependencies:
+      - target: PCLMobileARSample
+      - framework: ../../build/ios/xcframework/PCLMobile.xcframework
+        embed: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.sirokujira.PCLMobileARSampleTests
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PCLMobileARSample.app/PCLMobileARSample"
+
+schemes:
+  PCLMobileARSample:
+    build:
+      targets:
+        PCLMobileARSample: all
+    test:
+      targets:
+        - PCLMobileARSampleTests
+    run:
+      config: Debug
+    archive:
+      config: Release

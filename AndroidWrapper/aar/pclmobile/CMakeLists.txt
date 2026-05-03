@@ -1,204 +1,171 @@
-# For more information about using CMake with Android Studio, read the
-# documentation: https://d.android.com/studio/projects/add-native-code.html
+# Native side of the :pclmobile AAR module.
+#
+# This file used to declare 14 individual add_library(lib_pclN ...) targets.
+# It is now a foreach() loop over the PCL/Boost components we depend on so
+# that adding/removing a component is a one-line change.
+#
+# See ../../../MODERNIZATION_PLAN.md for the bigger picture.
 
-# Sets the minimum version of CMake required to build the native library.
+cmake_minimum_required(VERSION 3.24)
 
-cmake_minimum_required(VERSION 3.4.1)
+project(pclmobile_jni LANGUAGES CXX)
 
-### external Native Settings ###
-# root path setting
-message(STATUS ${CMAKE_CURRENT_SOURCE_DIR})
-message(STATUS ${ANDROID_ABI})
-#set (BASE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/libs)
-set (BASE_ROOT "/Users/to/pcl_mobile_framework/AndroidWrapper/aar/pclmobile/libs")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-set (PCL_ROOT ${BASE_ROOT}/${ANDROID_ABI}/pcl-android)
-set (PCL_DIR ${BASE_ROOT}/${ANDROID_ABI}/pcl-android)
-#find_package(PCL REQUIRED)
-#message(STATUS ${PCL_FOUND})
-#message(STATUS ${PCL_LIBRARIES})
-#message(STATUS ${PCL_COMPONENTS})
-#message(STATUS ${PCL_INCLUDE_DIRS})
-#message(STATUS ${PCL_LIBRARY_DIRS})
-#message(STATUS ${PCL_DEFINITIONS})
+message(STATUS "[pclmobile] CMAKE_CURRENT_SOURCE_DIR = ${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS "[pclmobile] ANDROID_ABI               = ${ANDROID_ABI}")
 
-set (BOOST_ROOT ${BASE_ROOT}/${ANDROID_ABI}/boost-android)
-set (BOOST_INCLUDEDIR ${BOOST_ROOT}/include)
-set (FLANN_ROOT ${BASE_ROOT}/${ANDROID_ABI}/flann-android)
-set (FLANN_USE_STATIC TRUE)
-set (EIGEN_ROOT "${BASE_ROOT}/${ANDROID_ABI}/Eigen" "${BASE_ROOT}/${ANDROID_ABI}/unsupported/Eigen")
-set (Eigen_DIR "${BASE_ROOT}/${ANDROID_ABI}/eigen")
-set (Eigen3_DIR "${BASE_ROOT}/${ANDROID_ABI}/eigen")
-set (EIGEN_INCLUDE_DIR "${BASE_ROOT}/${ANDROID_ABI}/eigen")
-set (QHULL_ROOT "${BASE_ROOT}/${ANDROID_ABI}/qhull-android")
+# ---------------------------------------------------------------------------
+# Pre-built dependencies (PCL/Boost/Eigen/FLANN/Qhull) are unpacked under
+# ${CMAKE_CURRENT_SOURCE_DIR}/libs/<ANDROID_ABI>/<modulename>/{include,lib}.
+# scripts/build_android.sh produces this layout from the cross-compiled output
+# of the superbuild at the repo root.
+# ---------------------------------------------------------------------------
+set(PCL_PREBUILT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/libs/${ANDROID_ABI}")
 
-#PCLConfig.cmake
-list(APPEND CMAKE_MODULE_PATH ${PCL_ROOT}/share/pcl-1.9)
-#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PCL_ROOT}/share/pcl-1.9/Modules)
+set(PCL_ROOT   "${PCL_PREBUILT_ROOT}/pcl-android")
+set(BOOST_ROOT "${PCL_PREBUILT_ROOT}/boost-android")
+set(FLANN_ROOT "${PCL_PREBUILT_ROOT}/flann-android")
+set(QHULL_ROOT "${PCL_PREBUILT_ROOT}/qhull-android")
+set(LZ4_ROOT   "${PCL_PREBUILT_ROOT}/lz4-android")
+set(EIGEN_ROOT "${PCL_PREBUILT_ROOT}/eigen")
 
-# boost
-# find_package(boost REQUIRED)
-set (Boost_INCLUDE_DIRS ${BOOST_ROOT}/include)
-set (Boost_LIBRARIES_DIRS ${BOOST_ROOT}/lib)
+set(PCL_INCLUDE_DIRS   "${PCL_ROOT}/include")
+set(BOOST_INCLUDE_DIRS "${BOOST_ROOT}/include")
+set(FLANN_INCLUDE_DIRS "${FLANN_ROOT}/include")
+set(QHULL_INCLUDE_DIRS "${QHULL_ROOT}/include" "${QHULL_ROOT}/include/libqhull_r")
+set(LZ4_INCLUDE_DIRS   "${LZ4_ROOT}/include")
+set(EIGEN_INCLUDE_DIRS "${EIGEN_ROOT}/include/eigen3")
 
-# flann
-# priority using pkg-config?
-# find_package(FLANN REQUIRED)
-set (Flann_INCLUDE_DIRS ${FLANN_ROOT}/include)
-set (Flann_LIBRARIES_DIRS ${FLANN_ROOT}/lib)
-include_directories(${Flann_INCLUDE_DIRS})
+# ---------------------------------------------------------------------------
+# Helper: declare an IMPORTED static library that lives in the prebuilt root.
+# ---------------------------------------------------------------------------
+function(pclmobile_import_static target file)
+    if(TARGET ${target})
+        return()
+    endif()
+    if(NOT EXISTS "${file}")
+        message(FATAL_ERROR
+            "[pclmobile] Missing prebuilt library for ${ANDROID_ABI}: ${file}\n"
+            "Run scripts/build_android.sh before building the AAR.")
+    endif()
+    add_library(${target} STATIC IMPORTED)
+    set_target_properties(${target} PROPERTIES IMPORTED_LOCATION "${file}")
+endfunction()
 
-# Eigen
-# Folder : Eigen, unsupported/Eigen
-#find_package (Eigen3 3.3 REQUIRED NO_MODULE)
-#add_executable (example example.cpp)
-#target_link_libraries (example Eigen3::Eigen)
-#set (EIGEN_INCLUDE_DIRS ${EIGEN_ANRDROID_ROOT}/Eigen)
-# set (EIGEN_INCLUDE_DIRS ${EIGEN_ANRDROID_ROOT}/unsupported/Eigen)
-include_directories(${EIGEN_ANRDROID_ROOT})
-#include_directories(${EIGEN_INCLUDE_DIRS})
+function(pclmobile_require_dir label dir)
+    if(NOT IS_DIRECTORY "${dir}")
+        message(FATAL_ERROR
+            "[pclmobile] Missing ${label} for ${ANDROID_ABI}: ${dir}\n"
+            "Run scripts/build_android.sh before building the AAR.")
+    endif()
+endfunction()
 
-# QHull
-# Folder : libqhull, libqhull_r, libqhullcpp
-set (QHull_INCLUDE_DIRS ${QHull_ROOT}/libqhull ${QHull_ROOT}/libqhull)
-set (QHull_LIBRARIES_DIRS ${QHull_ROOT}/lib)
-# include_directories(${QHull_INCLUDE_DIRS})
+pclmobile_require_dir("PCL prebuilt root" "${PCL_PREBUILT_ROOT}")
+pclmobile_require_dir("PCL include directory" "${PCL_INCLUDE_DIRS}")
+pclmobile_require_dir("Boost include directory" "${BOOST_INCLUDE_DIRS}")
+pclmobile_require_dir("Eigen include directory" "${EIGEN_INCLUDE_DIRS}")
+pclmobile_require_dir("FLANN include directory" "${FLANN_INCLUDE_DIRS}")
+pclmobile_require_dir("Qhull include directory" "${QHULL_ROOT}/include")
+pclmobile_require_dir("LZ4 include directory" "${LZ4_INCLUDE_DIRS}")
 
-# pcl
-#find_package(PCL 1.9 REQUIRED)
-set (PCL_INCLUDE_DIRS ${PCL_ROOT}/include)
-set (PCL_LIBRARIES_DIRS ${PCL_ROOT}/lib)
-# include_directories(${PCL_INCLUDE_DIRS})
+# PCL components used by the JNI wrapper implementation.
+set(PCL_COMPONENTS
+    recognition tracking segmentation registration keypoints surface
+    features filters sample_consensus search kdtree octree io io_ply
+    ml common
+)
+foreach(comp IN LISTS PCL_COMPONENTS)
+    pclmobile_import_static(pcl::${comp} "${PCL_ROOT}/lib/libpcl_${comp}.a")
+endforeach()
 
+set(BOOST_COMPONENTS filesystem system thread program_options iostreams date_time regex)
+foreach(comp IN LISTS BOOST_COMPONENTS)
+    pclmobile_import_static(boost::${comp} "${BOOST_ROOT}/lib/libboost_${comp}.a")
+endforeach()
 
-# library folder path
-link_directories (${Boost_LIBRARIES_DIRS} ${Flann_LIBRARIES_DIRS} ${Qhull_LIBRARIES_DIRS} ${PCL_LIBRARIES_DIRS})
+pclmobile_import_static(flann::cpp_s "${FLANN_ROOT}/lib/libflann_cpp_s.a")
+pclmobile_import_static(lz4::lz4 "${LZ4_ROOT}/lib/liblz4.a")
+# Qhull and qhull_r are both shipped by recent PCL; link the reentrant variant.
+pclmobile_import_static(qhull::r "${QHULL_ROOT}/lib/libqhullstatic_r.a")
 
-###
+if(ANDROID)
+    if(ANDROID_ABI STREQUAL "arm64-v8a")
+        set(PCLMOBILE_OMP_ARCH "aarch64")
+    elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
+        set(PCLMOBILE_OMP_ARCH "arm")
+    elseif(ANDROID_ABI STREQUAL "x86_64")
+        set(PCLMOBILE_OMP_ARCH "x86_64")
+    endif()
 
-# Creates and names a library, sets it as either STATIC
-# or SHARED, and provides the relative paths to its source code.
-# You can define multiple libraries, and CMake builds them for you.
-# Gradle automatically packages shared libraries with your APK.
+    if(PCLMOBILE_OMP_ARCH)
+        file(GLOB PCLMOBILE_OMP_LIBS
+            "${ANDROID_NDK}/toolchains/llvm/prebuilt/*/lib/clang/*/lib/linux/${PCLMOBILE_OMP_ARCH}/libomp.a"
+        )
+        if(PCLMOBILE_OMP_LIBS)
+            list(SORT PCLMOBILE_OMP_LIBS)
+            list(LENGTH PCLMOBILE_OMP_LIBS PCLMOBILE_OMP_LIB_COUNT)
+            if(PCLMOBILE_OMP_LIB_COUNT GREATER 1)
+                message(WARNING
+                    "[pclmobile] Multiple libomp.a candidates found for ${ANDROID_ABI}; "
+                    "using the latest sorted path.")
+            endif()
+            list(GET PCLMOBILE_OMP_LIBS -1 PCLMOBILE_OMP_LIB)
+            pclmobile_import_static(openmp::omp "${PCLMOBILE_OMP_LIB}")
+        else()
+            message(FATAL_ERROR
+                "[pclmobile] Missing Android NDK OpenMP runtime libomp.a "
+                "for ${ANDROID_ABI} (${PCLMOBILE_OMP_ARCH}) under ${ANDROID_NDK}.")
+        endif()
+    else()
+        message(FATAL_ERROR "[pclmobile] Unsupported Android ABI for OpenMP: ${ANDROID_ABI}")
+    endif()
+endif()
 
-add_library( # Sets the name of the library.
-        native-lib
+# ---------------------------------------------------------------------------
+# The JNI shared object that gets packaged inside the AAR.
+# ---------------------------------------------------------------------------
+add_library(pclmobile-jni SHARED
+    src/main/cpp/native-lib.cpp
+    src/main/cpp/pcl_mobile_arrays.cpp
+    src/main/cpp/pcl_mobile_context.cpp
+    src/main/cpp/pcl_mobile_features.cpp
+    src/main/cpp/pcl_mobile_filters.cpp
+    src/main/cpp/pcl_mobile_io.cpp
+    src/main/cpp/pcl_mobile_registration.cpp
+    src/main/cpp/pcl_mobile_search.cpp
+    src/main/cpp/pcl_mobile_segmentation.cpp
+    src/main/cpp/pcl_mobile_surface.cpp
+)
 
-        # Sets the library as a shared library.
-        SHARED
-        # STATIC
+target_include_directories(pclmobile-jni PRIVATE
+    ${PCL_INCLUDE_DIRS}
+    ${BOOST_INCLUDE_DIRS}
+    ${EIGEN_INCLUDE_DIRS}
+    ${FLANN_INCLUDE_DIRS}
+    ${QHULL_INCLUDE_DIRS}
+    ${LZ4_INCLUDE_DIRS}
+)
 
-        # Provides a relative path to your source file(s).
-        src/main/cpp/native-lib.cpp)
+# Backwards-compatible alias so System.loadLibrary("native-lib") still works
+# until the JNI side is renamed in a future release.
+set_target_properties(pclmobile-jni PROPERTIES OUTPUT_NAME "native-lib")
 
-target_include_directories(native-lib PRIVATE
-              ${Boost_INCLUDE_DIRS}
-              ${FLANN_INCLUDE_DIRS}
-              ${EIGEN_INCLUDE_DIRS}
-              ${QHULL_INCLUDE_DIRS}
-              ${PCL_INCLUDE_DIRS}
-              # ${GLM_INCLUDE_DIRS}
-              )
+find_library(log-lib log)
 
-# Searches for a specified prebuilt library and stores the path as a
-# variable. Because CMake includes system libraries in the search path by
-# default, you only need to specify the name of the public NDK library
-# you want to add. CMake verifies that the library exists before
-# completing its build.
-
-find_library( # Sets the name of the path variable.
-        log-lib
-
-        # Specifies the name of the NDK library that
-        # you want CMake to locate.
-        log)
-
-# Specifies libraries CMake should link to your target library. You
-# can link multiple libraries, such as libraries you define in this
-# build script, prebuilt third-party libraries, or system libraries.
-
-add_library(lib_pcl STATIC IMPORTED)
-add_library(lib_pcl2 STATIC IMPORTED)
-add_library(lib_pcl3 STATIC IMPORTED)
-add_library(lib_pcl4 STATIC IMPORTED)
-add_library(lib_pcl5 STATIC IMPORTED)
-add_library(lib_pcl6 STATIC IMPORTED)
-add_library(lib_pcl7 STATIC IMPORTED)
-add_library(lib_pcl8 STATIC IMPORTED)
-add_library(lib_pcl9 STATIC IMPORTED)
-add_library(lib_pcl10 STATIC IMPORTED)
-add_library(lib_pcl11 STATIC IMPORTED)
-add_library(lib_pcl12 STATIC IMPORTED)
-add_library(lib_pcl13 STATIC IMPORTED)
-add_library(lib_pcl14 STATIC IMPORTED)
-set_target_properties(lib_pcl PROPERTIES IMPORTED_LOCATION ${PCL_ROOT}/lib/libpcl_common.a)
-set_target_properties(lib_pcl2 PROPERTIES IMPORTED_LOCATION ${PCL_ROOT}/lib/libpcl_keypoints.a)
-set_target_properties(lib_pcl3 PROPERTIES IMPORTED_LOCATION ${PCL_ROOT}/lib/libpcl_segmentation.a)
-set_target_properties(lib_pcl4 PROPERTIES IMPORTED_LOCATION ${PCL_ROOT}/lib/libpcl_features.a)
-set_target_properties(lib_pcl5 PROPERTIES IMPORTED_LOCATION ${PCL_ROOT}/lib/libpcl_octree.a)
-set_target_properties(lib_pcl6 PROPERTIES IMPORTED_LOCATION ${PCL_ROOT}/lib/libpcl_surface.a)
-set_target_properties(lib_pcl7 PROPERTIES IMPORTED_LOCATION ${PCL_ROOT}/lib/libpcl_filters.a)
-set_target_properties(lib_pcl8 PROPERTIES IMPORTED_LOCATION ${PCL_ROOT}/lib/libpcl_recognition.a)
-set_target_properties(lib_pcl9 PROPERTIES IMPORTED_LOCATION ${PCL_ROOT}/lib/libpcl_io.a)
-set_target_properties(lib_pcl10 PROPERTIES IMPORTED_LOCATION ${PCL_ROOT}/lib/libpcl_registration.a)
-set_target_properties(lib_pcl11 PROPERTIES IMPORTED_LOCATION ${PCL_ROOT}/lib/libpcl_io_ply.a)
-set_target_properties(lib_pcl12 PROPERTIES IMPORTED_LOCATION ${PCL_ROOT}/lib/libpcl_sample_consensus.a)
-set_target_properties(lib_pcl13 PROPERTIES IMPORTED_LOCATION ${PCL_ROOT}/lib/libpcl_kdtree.a)
-set_target_properties(lib_pcl14 PROPERTIES IMPORTED_LOCATION ${PCL_ROOT}/lib/libpcl_search.a)
-add_library(lib_boost STATIC IMPORTED)
-set_target_properties(lib_boost PROPERTIES IMPORTED_LOCATION ${BOOST_ROOT}/lib/libboost_filesystem.a)
-add_library(lib_boost2 STATIC IMPORTED)
-add_library(lib_boost3 STATIC IMPORTED)
-add_library(lib_boost4 STATIC IMPORTED)
-add_library(lib_boost5 STATIC IMPORTED)
-add_library(lib_boost6 STATIC IMPORTED)
-set_target_properties(lib_boost2 PROPERTIES IMPORTED_LOCATION ${BOOST_ROOT}/lib/libboost_system.a)
-set_target_properties(lib_boost3 PROPERTIES IMPORTED_LOCATION ${BOOST_ROOT}/lib/libboost_thread.a)
-set_target_properties(lib_boost4 PROPERTIES IMPORTED_LOCATION ${BOOST_ROOT}/lib/libboost_program_options.a)
-set_target_properties(lib_boost5 PROPERTIES IMPORTED_LOCATION ${BOOST_ROOT}/lib/libboost_iostreams.a)
-set_target_properties(lib_boost6 PROPERTIES IMPORTED_LOCATION ${BOOST_ROOT}/lib/libboost_date_time.a)
-add_library(lib_flann_s STATIC IMPORTED)
-set_target_properties(lib_flann_s PROPERTIES IMPORTED_LOCATION ${FLANN_ROOT}/lib/libflann_cpp_s.a)
-
-# add_definitions(${FLANN_DEFINITIONS} ${QHULL_DEFINITIONS})
-
-target_link_libraries( # Specifies the target library.
-        native-lib
-
-        # external libraries
-        # pcl_common pcl_keypoints pcl_segmentation pcl_features pcl_octree pcl_surface pcl_filters pcl_recognition pcl_io pcl_registration pcl_io_ply pcl_sample_consensus pcl_kdtree pcl_search
-        # boost_filesystem boost_system boost_thread boost_program_options boost_iostreams boost_date_time
-        # flann_cpp_s
-        # pcl_common.a pcl_keypoints.a pcl_segmentation.a pcl_features.a pcl_octree.a pcl_surface.a pcl_filters.a pcl_recognition.a pcl_io.a pcl_registration.a pcl_io_ply.a pcl_sample_consensus.a pcl_kdtree.a pcl_search.a
-        # boost_filesystem.a boost_system.a boost_thread.a boost_program_options.a boost_iostreams.a boost_date_time.a
-        # flann_cpp_s.a
-        lib_pcl
-        lib_pcl2
-        lib_pcl3
-        lib_pcl4
-        lib_pcl5
-        lib_pcl6
-        lib_pcl7
-        lib_pcl8
-        lib_pcl9
-        lib_pcl10
-        lib_pcl11
-        lib_pcl12
-        lib_pcl13
-        lib_pcl14
-        lib_boost
-        lib_boost2
-        lib_boost3
-        lib_boost4
-        lib_boost5
-        lib_boost6
-        lib_flann_s
-        # ${BOOST_LIBRARIES}
-        # ${FLANN_LIBRARIES}
-        # ${QHULL_LIBRARIES}
-        # ${PCL_LIBRARIES}
-        # Eigen3::Eigen
-
-        # Links the target library to the log library
-        # included in the NDK.
-        ${log-lib})
+target_link_libraries(pclmobile-jni
+    PRIVATE
+        ${log-lib}
+)
+foreach(comp IN LISTS PCL_COMPONENTS)
+    target_link_libraries(pclmobile-jni PRIVATE pcl::${comp})
+endforeach()
+foreach(comp IN LISTS BOOST_COMPONENTS)
+    target_link_libraries(pclmobile-jni PRIVATE boost::${comp})
+endforeach()
+target_link_libraries(pclmobile-jni PRIVATE flann::cpp_s lz4::lz4 qhull::r)
+if(TARGET openmp::omp)
+    target_link_libraries(pclmobile-jni PRIVATE openmp::omp)
+endif()

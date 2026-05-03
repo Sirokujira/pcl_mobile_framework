@@ -1,2 +1,7 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.sirokujira.pclmobile" />
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AGP 8 moved the package attribute to the namespace property of
+  android { } in build.gradle.kts. This manifest stays minimal: the
+  library has no application component of its own.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

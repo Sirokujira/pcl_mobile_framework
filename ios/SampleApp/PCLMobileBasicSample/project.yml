@@ -1,0 +1,71 @@
+name: PCLMobileBasicSample
+options:
+  bundleIdPrefix: io.github.sirokujira
+  deploymentTarget:
+    iOS: "13.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    CLANG_CXX_LANGUAGE_STANDARD: "c++17"
+    CLANG_CXX_LIBRARY: "libc++"
+    ENABLE_BITCODE: NO
+    OTHER_LDFLAGS: "-lc++ -weak_framework UIUtilities"
+    CLANG_MODULES_AUTOLINK: NO
+
+targets:
+
+  PCLMobileBasicSample:
+    type: application
+    platform: iOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: ../PCLMobileBasicSample
+        excludes:
+          - "Tests/**"
+          - "project.yml"
+          - "Podfile*"
+          - "README.md"
+    info:
+      path: ../PCLMobileBasicSample/Info.plist
+    dependencies:
+      - framework: ../../../build/ios/xcframework/PCLMobile.xcframework
+        embed: true
+        codeSign: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.sirokujira.PCLMobileBasicSample
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_FILE: ../PCLMobileBasicSample/Info.plist
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/Frameworks"
+
+  PCLMobileBasicSampleTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: ../PCLMobileBasicSampleTests
+    dependencies:
+      - target: PCLMobileBasicSample
+      - framework: ../../../build/ios/xcframework/PCLMobile.xcframework
+        embed: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.sirokujira.PCLMobileBasicSampleTests
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PCLMobileBasicSample.app/PCLMobileBasicSample"
+
+schemes:
+  PCLMobileBasicSample:
+    build:
+      targets:
+        PCLMobileBasicSample: all
+    test:
+      targets:
+        - PCLMobileBasicSampleTests
+    run:
+      config: Debug
+    archive:
+      config: Release

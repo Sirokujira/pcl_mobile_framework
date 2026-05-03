@@ -1,103 +1,57 @@
-cmake_minimum_required(VERSION 3.12.4 FATAL_ERROR)
+# Top-level CMakeLists.txt for the pcl_mobile_framework superbuild.
+#
+# This is a "superbuild" in the CMake sense: it doesn't build any code
+# itself, only orchestrates ExternalProject_Add of PCL and its dependencies
+# for one cross-compilation target at a time.
+#
+#   * Android slices: driven by scripts/build_android.sh
+#   * iOS slices:     driven by scripts/build_ios.sh
+#
+# See MODERNIZATION_PLAN.md for context.
 
-# reference pcl cmakelists.txt cmake policy
-# start
-if(POLICY CMP0017)
-  # Do not include files in CMAKE_MODULE_PATH from files
-  # in CMake module directory. Fix MXE build
-  cmake_policy(SET CMP0017 NEW)
+cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
+
+# CMP0135: ExternalProject URL downloads honour the file's mtime, not the
+# extraction time. Required by ExternalProject_Add caching.
+if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
 endif()
 
-if(POLICY CMP0020 AND (WIN32 AND NOT MINGW))
-  cmake_policy(SET CMP0020 NEW) # Automatically link Qt executables to qtmain target on Windows
-endif()
+project(pcl_mobile_superbuild
+    VERSION 0.1.0
+    DESCRIPTION "Cross-compile PCL and its dependencies for iOS / Android"
+    LANGUAGES NONE
+)
 
-if(POLICY CMP0042)
-  # Uses Mac OS X @rpath in the target's install name
-  cmake_policy(SET CMP0042 NEW)
-endif()
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-# if(POLICY CMP0074)
-#   # TODO:
-#   # 1. Find*.cmake modules need to be individually verified.
-#   # 2. PCLConfig.cmake needs to be changed.
-#   cmake_policy(SET CMP0074 OLD)
-# endif()
-# end
+include(SetupSuperbuild)
+include(ProjectVariables)
 
-# use elseif
-cmake_policy(GET CMP0054 NEW)
+# Each ExternalProject_Add wrapper lives in its own file so the dependency
+# tree is grep-friendly.
+include(external/eigen)
+include(external/boost)
+include(external/lz4)
+include(external/flann)
+include(external/qhull)
+include(external/pcl)
 
-# http://cmake.3232098.n2.nabble.com/Computation-of-CMAKE-OSX-SYSROOT-td7598354.html
-# set use xcode target version
-# set(CMAKE_OSX_DEPLOYMENT_TARGET "12.1")
-set(CMAKE_OSX_DEPLOYMENT_TARGET "9.3")
-# x86_64  warning : -Wshorten-64-to-32
-
-project(superbuild NONE)
-
-include(setup-superbuild.cmake)
-
-include(setup-project-variables.cmake)
-
-include(external-project-macros.cmake)
-
-
+# Eigen is header-only and shared across slices.
 install_eigen()
-# Build overTime
-# fetch_vtk()
-fetch_pcl()
-fetch_boost()
-fetch_flann()
-fetch_qhull()
 
-# Build overTime and
-# pcl-vtk not Implement ios/android vtk I/F
-# compile_vtk()
-
-set(tags)
-
-# Add
-if (BUILD_ANDROID)
- list(APPEND tags android)
-endif()
-if (BUILD_IOS_DEVICE)
- list(APPEND tags ios-device)
-endif()
-if(BUILD_IOS_SIMULATOR)
- list(APPEND tags ios-simulator)
-endif()
-# 
-if (BUILD_IOS_DEVICE_ARM64)
- list(APPEND tags ios-device-arm64)
-endif()
-if (BUILD_IOS_DEVICE_ARM64E)
- list(APPEND tags ios-device-arm64e)
-endif()
-if (BUILD_IOS_DEVICE_ARMV7)
- list(APPEND tags ios-device-armv7)
-endif()
-if (BUILD_IOS_DEVICE_ARMV7S)
- list(APPEND tags ios-device-armv7s)
-endif()
-
-if (BUILD_IOS_SIMULATOR_X86_64)
- list(APPEND tags ios-simulator-x86-64)
-endif()
-
-if (BUILD_IOS_SIMULATOR_I386)
- list(APPEND tags ios-simulator-i386)
-endif()
-
-foreach(tag ${tags})
-  # Build overTime and pcl_visualization not support android/ios IF
-  # crosscompile_vtk(${tag})
-  crosscompile_boost(${tag})
-  # crosscompile_boost_on_b2(${tag})
-  crosscompile_flann(${tag})
-  crosscompile_qhull(${tag})
-
-  # use pcl
-  crosscompile_pcl(${tag})
+# For every requested slice, build LZ4 -> Boost/FLANN/Qhull, then PCL on top.
+# (LZ4 is required by FLANN 1.9.2 -- see cmake/external/lz4.cmake.)
+foreach(tag IN LISTS PCL_MOBILE_TARGETS)
+    crosscompile_lz4(${tag})
+    crosscompile_boost(${tag})
+    crosscompile_flann(${tag})
+    crosscompile_qhull(${tag})
+    crosscompile_pcl(${tag})
 endforeach()
 
+message(STATUS "")
+message(STATUS "pcl_mobile_framework superbuild configured.")
+message(STATUS "  PCL_MOBILE_TARGETS = ${PCL_MOBILE_TARGETS}")
+message(STATUS "  install_prefix     = ${install_prefix}")
+message(STATUS "  Run: cmake --build <build dir> --parallel")

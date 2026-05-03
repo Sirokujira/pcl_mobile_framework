@@ -19,3 +19,10 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep all native methods on the JNI bridge class. Without this rule R8
+# may rename or remove pclmobileJNILib's native declarations and the
+# UnsatisfiedLinkError surfaces only at runtime.
+-keepclasseswithmembers class com.sirokujira.pclmobile.** {
+    native <methods>;
+}

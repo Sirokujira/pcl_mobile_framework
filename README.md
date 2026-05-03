@@ -1,110 +1,243 @@
-CMake build scripts for cross compiling PCL and its dependencies for Android and iOS.
+# pcl_mobile_framework
 
-Windows
-[![Build status](https://ci.appveyor.com/api/projects/status/u8l4ixwdpysbx45h/branch/master?svg=true)](https://ci.appveyor.com/project/Sirokujira/pcl_mobile_framework/branch/master)
+Cross-compile a curated subset of [PCL](https://pointclouds.org/) plus its
+dependencies (Boost, Eigen, FLANN, Qhull) into shippable mobile libraries:
 
-Ubuntu/MacOSX(Travis)
-[![Build Status](https://travis-ci.org/Sirokujira/pcl_mobile_framework.svg?branch=master)](https://travis-ci.org/Sirokujira/pcl_mobile_framework)
+* **iOS** — `PCLMobile.xcframework` (consumable via Swift Package Manager,
+  CocoaPods or Carthage).
+* **Android** — `pclmobile` AAR (consumable via Gradle / Maven).
 
-Ubuntu(CircleCI)
-[![Build Status](https://travis-ci.org/Sirokujira/template.svg?branch=master)](https://travis-ci.org/Sirokujira/template)
+## Repository layout
 
-Azure
-[![Build status](https://ci.appveyor.com/api/projects/status/u8l4ixwdpysbx45h/branch/master?svg=true)](https://ci.appveyor.com/project/Sirokujira/template/branch/master)
-
-Gitlab
-pcl use libraries
-
-[boost 1.60.0](http://www.boost.org/), [custom boost patches](https://svn.boost.org/trac10/ticket/13230), [custom source code](https://github.com/sirokujira/boost-build/)
-
-[eigen 3.3.4](http://eigen.tuxfamily.org/)
-
-[flann 1.9.1](https://www.cs.ubc.ca/research/flann/)
-
-[qhull(2015.2)](http://www.qhull.org/)
-
-[PCL API/ABI Tracker](https://abi-laboratory.pro/tracker/timeline/pcl/)
-
-Requirements
-============
-
-    Android
-    * Windows/Linux(Test Windows 7/8/8.1/10?, Ubuntu 14.04/16.04?)
-    * Android NDK, Revision 15c/16b(Test 16b)
-    * CMake >=3.6.x(Test 3.9.2/3.10.1)
-
-    iOS
-    * MacOSX 10.9/10.10/..(Test 10.13)
-    * Xcode 8.3, 9.0(?), 9.3(Test 9.3), ..
-    * CMake >=3.7.x(Test 3.9.4)
-
-
-To Build 
-========
-
-Building for Android(Ubuntu 14.04/16.04)
-========================================
-
-```Sample:Bash
-$ wget -qO- https://dl.google.com/android/repository/android-ndk-r16b-linux-x86_64.zip -O /tmp/android-ndk-r16b-linux-x86_64.zip
-$ unzip -q /tmp/android-ndk-r16b-linux-x86_64.zip
-
-$ cd android-ndk-r16b
-$ export ANDROID_NDK=$PWD
-
-$ export ANDROID_TARGET_API="23"
-$ export ANDROID_ABIs="armeabi-v7a"
-$ export TOOLCHAIN_NAME="arm-linux-android-clang3.6"
-$ export TARGET_COMPILER="clang"
-
-$ mkdir build && cd build
-$ cmake -DBUILD_ANDROID:BOOL="ON" -DBUILD_IOS_DEVICE:BOOL="OFF" -DBUILD_IOS_SIMULATOR:BOOL="OFF" -DCMAKE_TOOLCHAIN_FILE:FILEPATH=${ANDROID_NDK}/build/cmake/android.toolchain.cmake -DCMAKE_MAKE_PROGRAM=${ANDROID_NDK}/prebuilt/linux-x86_64/bin/make -DANDROID_TOOLCHAIN_NAME=${TOOLCHAIN_NAME} -DANDROID_NATIVE_API_LEVEL=${ANDROID_TARGET_API} -DANDROID_ABI=${ANDROID_ABIs} -DANDROID_TOOLCHAIN=${TARGET_COMPILER} ..
-$ cmake --build .
+```
+pcl_mobile_framework/
+├── CMakeLists.txt                 # Top-level CMake superbuild
+├── Package.swift                  # Swift Package Manager manifest (iOS)
+├── LICENSE
+├── README.md                      # ← you are here
+├── MODERNIZATION_PLAN.md          # Where this repo is heading
+│
+├── cmake/
+│   ├── SetupSuperbuild.cmake      # Per-tree paths
+│   ├── ProjectVariables.cmake     # Options & ccache wiring
+│   ├── external/                  # ExternalProject_Add per dependency
+│   │   ├── eigen.cmake
+│   │   ├── boost.cmake
+│   │   ├── flann.cmake
+│   │   ├── qhull.cmake
+│   │   └── pcl.cmake
+│   └── toolchains/
+│       ├── ios.toolchain.cmake    # The single iOS toolchain
+│       └── pcl-try-run-results.cmake
+│
+├── scripts/
+│   ├── build_android.sh           # All ABIs in one go
+│   ├── build_ios.sh               # All slices + XCFramework in one go
+│   └── make_xcframework.sh        # Standalone XCFramework merger
+│
+├── iOSWrapper/                    # PCLMobile.framework sources
+│   ├── CMakeLists.txt             #   Builds the framework via Xcode
+│   ├── module.modulemap
+│   ├── PCLMobile.podspec
+│   └── Sources/
+│       ├── Info.plist
+│       ├── PCLMobile.mm
+│       ├── PCLMPointCloud.mm
+│       └── include/PCLMobile/{PCLMobile.h,PCLMPointCloud.h}
+│
+├── AndroidWrapper/aar/            # pclmobile AAR + sample app
+│   ├── settings.gradle.kts
+│   ├── build.gradle.kts
+│   ├── pclmobile/                 # The AAR module
+│   │   ├── build.gradle.kts
+│   │   ├── CMakeLists.txt
+│   │   └── src/main/{java,cpp,res,AndroidManifest.xml}
+│   └── app/                       # Sample / smoke-test app
+│
+├── strip-frameworks.sh            # App-Store hook (Realm, Apache-2.0)
+└── .deprecated/                   # Pre-modernization files (history only)
 ```
 
-other target
+## Requirements
 
-```arm64-v8a:Bash
-$ export ANDROID_ABIs="arm64-v8a"
-$ export TOOLCHAIN_NAME="aarch64-linux-android-clang3.6"
-$ export TARGET_COMPILER="clang"
+| | Recommended | Minimum |
+|---|---|---|
+| CMake          | 3.31+ | 3.24 |
+| Android Studio | Hedgehog (2023.1.1) or newer | Iguana w/ AGP 8.5 |
+| Android NDK    | r29 | r26 |
+| Android SDK    | API 34 | API 24 (`minSdk`) |
+| Xcode          | 15.x  | 15.0 |
+| iOS deployment | 13.0+ | 13.0 |
+
+The toolchain script auto-detects Xcode/SDK paths via `xcrun`, so any modern
+Xcode install on macOS 13+ will work.
+
+## Building
+
+### Android (AAR)
+
+```bash
+export ANDROID_NDK_HOME=$HOME/Library/Android/sdk/ndk/29.0.14206865
+
+# 1. Cross-compile PCL/Boost/FLANN/Qhull/Eigen for every required ABI.
+#    Output is staged under AndroidWrapper/aar/pclmobile/libs/<ABI>/.
+./scripts/build_android.sh
+
+# 2. Build the AAR.
+cd AndroidWrapper/aar
+sh ./gradlew :pclmobile:assembleRelease
+
+# 3. (optional) Publish to a Maven repository.
+sh ./gradlew :pclmobile:publishReleasePublicationToMavenLocal
 ```
 
-```armeabi-v7a_gcc:Bash
-$ export ANDROID_ABIs="armeabi-v7a"
-$ export TOOLCHAIN_NAME="arm-linux-androideabi-4.9"
-$ export TARGET_COMPILER="gcc"
+Or open `AndroidWrapper/aar/` in Android Studio (Hedgehog or later) and run
+the `:pclmobile:assembleRelease` task from the Gradle pane.
+
+### iOS (XCFramework)
+
+```bash
+# 1. Cross-compile every slice (device arm64, simulator arm64, simulator x86_64).
+#    Slices to build can be limited via IOS_SLICES="OS64 SIMULATORARM64".
+./scripts/build_ios.sh
+
+# 2. The XCFramework (and a zipped + checksummed copy) ends up at
+#    build/ios/xcframework/PCLMobile.xcframework{,.zip}
 ```
 
-```arm64-v8a_gcc:Bash
-$ export ANDROID_ABIs="arm64-v8a"
-$ export TOOLCHAIN_NAME="aarch64-linux-android-4.9"
-$ export TARGET_COMPILER="gcc"
+If you only need to play with the Objective-C++ wrapper (without the
+underlying PCL build), open `iOSWrapper/CMakeLists.txt` directly in Xcode by
+running `cmake -S iOSWrapper -B iOSWrapper/build.ios -G Xcode -DPLATFORM=OS64
+-DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/ios.toolchain.cmake` and opening the
+generated `PCLMobile.xcodeproj`.
+
+## Consuming the iOS XCFramework
+
+### Swift Package Manager
+
+```swift
+.package(url: "https://github.com/Sirokujira/pcl_mobile_framework.git", from: "0.1.0"),
 ```
 
-Building for iOS(Mac OSX 10.x)
-==============================
+```swift
+import PCLMobile
 
-```Sample:Bash
-$ mkdir build && cd build
-$ cmake -DBUILD_ANDROID:BOOL="OFF" -DBUILD_IOS_DEVICE:BOOL="OFF" -DBUILD_IOS_SIMULATOR:BOOL="OFF" ../
-$ cmake --build .
+let cloud   = try PointCloud.load(pcdAt: path)
+let smaller = try cloud.voxelGridDownsampled(leaf: 0.01)
+let cropped = try smaller.passThroughFiltered(axis: "z", min: 0.0, max: 1.5)
+print(cropped.pointCount)
 ```
 
-Reference modules
-=================
+### CocoaPods
 
-* Base module
+```ruby
+pod 'PCLMobile', '~> 0.1'
+```
 
-    https://github.com/patmarion/pcl-superbuild
-    https://github.com/hirotakaster/pcl-superbuild
+### Carthage
 
-* Android
+Add a single line to your `Cartfile`:
 
-    https://github.com/taka-no-me/android-cmake
-    * current using android-ndk cmake file.
+```
+binary "https://raw.githubusercontent.com/Sirokujira/pcl_mobile_framework/main/iOSWrapper/PCLMobile.json"
+```
 
-* iOS
+then run `carthage update --use-xcframeworks --platform iOS`. Drag the
+resolved `Carthage/Build/PCLMobile.xcframework` into your Xcode target.
 
-    https://github.com/sheldonth/ios-cmake
+### Manual XCFramework drop-in
 
+If you'd rather not adopt a package manager: grab
+`PCLMobile.xcframework.zip` from the
+[Releases page](https://github.com/Sirokujira/pcl_mobile_framework/releases),
+unzip, drag the `.xcframework` into Xcode, set Embed mode to
+**Embed & Sign**, and add `-lc++` to *Other Linker Flags*. See
+[iOSWrapper/README.md](./iOSWrapper/README.md) for full instructions.
+
+### Maintainer release workflow
+
+`scripts/release.sh <version> [--publish]` rebuilds the XCFramework,
+patches every manifest (`Package.swift`, `PCLMobile.podspec`,
+`PCLMobile.json`) with the new version + checksum, and (optionally) tags
+the repo and uploads the zip via `gh release create`. See
+[iOSWrapper/README.md](./iOSWrapper/README.md) for details.
+
+Manual iOS release:
+
+```sh
+cd ~/Github/pcl_mobile_framework
+./scripts/build_ios.sh
+./scripts/lint_podspec.sh
+git tag v0.1.0
+git push origin v0.1.0
+gh release create v0.1.0 \
+  build/ios/xcframework/PCLMobile.xcframework.zip \
+  --title "PCLMobile 0.1.0" --notes "Initial release"
+pod trunk push iOSWrapper/PCLMobile.podspec --allow-warnings
+```
+
+Android package release for the same tag:
+
+```sh
+cd ~/Github/pcl_mobile_framework
+ANDROID_NDK_VERSION=29.0.14206865 \
+ANDROID_CMAKE_VERSION=3.31.6 \
+./scripts/package_android.sh 0.1.0 --upload-release --publish-maven
+```
+
+The Android release workflow also runs automatically when a GitHub Release is
+published. It rebuilds the multi-ABI AAR, uploads it to the same release, and
+publishes `io.github.sirokujira:pclmobile:<version>` to GitHub Packages.
+
+Android Maven publish options:
+
+```sh
+cd ~/Github/pcl_mobile_framework
+
+# Local Maven cache: ~/.m2/repository/io/github/sirokujira/pclmobile/
+ANDROID_CMAKE_VERSION=3.31.6 \
+./scripts/package_android.sh 0.1.0 --maven-local
+
+# Local repository under AndroidWrapper/aar/pclmobile/build/repo/
+ANDROID_CMAKE_VERSION=3.31.6 \
+./scripts/package_android.sh 0.1.0 --local-repo
+
+# GitHub Packages
+ANDROID_CMAKE_VERSION=3.31.6 \
+MAVEN_REPOSITORY_URL="https://maven.pkg.github.com/Sirokujira/pcl_mobile_framework" \
+MAVEN_USERNAME="$GITHUB_ACTOR" \
+MAVEN_PASSWORD="$GITHUB_TOKEN" \
+./scripts/package_android.sh 0.1.0 --publish-maven
+```
+
+## Consuming the Android AAR
+
+`build.gradle.kts`:
+
+```kotlin
+dependencies {
+    implementation("io.github.sirokujira:pclmobile:0.1.0")
+}
+```
+
+Or, locally:
+
+```kotlin
+dependencies {
+    implementation(files("libs/pclmobile-release.aar"))
+}
+```
+
+## Status
+
+This repository is in the middle of a major modernization (see
+[MODERNIZATION_PLAN.md](./MODERNIZATION_PLAN.md)). Phases A and B from that
+plan are landed; phases C (CI on GitHub Actions, releases) and D
+(documentation polish, integration tests) are still in progress.
+
+## License
+
+Apache License 2.0. See [`LICENSE`](./LICENSE).
+
+`strip-frameworks.sh` is from Realm Inc. and retains its original Apache-2.0
+license header.

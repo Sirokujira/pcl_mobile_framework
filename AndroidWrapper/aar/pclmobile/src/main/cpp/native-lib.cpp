@@ -1,284 +1,324 @@
-// common headers
 #include <jni.h>
-#include <android/log.h>
-#include <string>
 
-// include pcl headers
-#include <pcl/point_types.h>
-#include <pcl/point_cloud.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/kdtree/kdtree.h>
-#include <pcl/kdtree/kdtree_flann.h>
-#include <pcl/filters/passthrough.h>
-#include <pcl/filters/radius_outlier_removal.h>
-#include <pcl/filters/conditional_removal.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/filters/statistical_outlier_removal.h>
+#include "pcl_mobile_arrays.h"
+#include "pcl_mobile_context.h"
+#include "pcl_mobile_features.h"
+#include "pcl_mobile_filters.h"
+#include "pcl_mobile_io.h"
+#include "pcl_mobile_log.h"
+#include "pcl_mobile_registration.h"
+#include "pcl_mobile_search.h"
+#include "pcl_mobile_segmentation.h"
+#include "pcl_mobile_surface.h"
 
-#define  LOG_TAG    "libpclmobile"
-#define  LOGI(...)  __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__)
-#define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR,LOG_TAG,__VA_ARGS__)
+namespace {
 
-/////
-static pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-static pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
-
-void callFilterAxis(std::string axis, double min, double max);
-void callFilterVoxelGrid(double x, double y, double z);
-
-//
-// https://stackoverflow.com/questions/41820039/jstringjni-to-stdstringc-with-utf8-characters
-// 
-std::string jstring2string(JNIEnv *env, jstring jStr) {
-    if (!jStr)
-        return "";
-
-    const jclass stringClass = env->GetObjectClass(jStr);
-    const jmethodID getBytes = env->GetMethodID(stringClass, "getBytes", "(Ljava/lang/String;)[B");
-    const jbyteArray stringJbytes = (jbyteArray) env->CallObjectMethod(jStr, getBytes, env->NewStringUTF("UTF-8"));
-
-    size_t length = (size_t) env->GetArrayLength(stringJbytes);
-    jbyte* pBytes = env->GetByteArrayElements(stringJbytes, NULL);
-
-    std::string ret = std::string((char *)pBytes, length);
-    env->ReleaseByteArrayElements(stringJbytes, pBytes, JNI_ABORT);
-
-    env->DeleteLocalRef(stringJbytes);
-    env->DeleteLocalRef(stringClass);
-    return ret;
-}
-
-void loadPCDFile(std::string filename)
+void loadIfProvided(JNIEnv* env, jstring filename)
 {
-    // Fill in the cloud data
-#if 0
-    cloud->width = 1000;
-    cloud->height = 1;
-    cloud->points.resize(cloud->width * cloud->height);
-
-    for (size_t i = 0; i < cloud->points.size(); ++i) {
-        cloud->points[i].x = 1024 * rand() / (RAND_MAX + 1.0f);
-        cloud->points[i].y = 1024 * rand() / (RAND_MAX + 1.0f);
-        cloud->points[i].z = 1024 * rand() / (RAND_MAX + 1.0f);
+    std::string path = pclmobile::jstringToString(env, filename);
+    if (!path.empty()) {
+        pclmobile::loadPCDFile(path);
     }
-#else
-    // ?t?@?C????????o??
-    // ????????AADM ????t?@?C????]??????????B
-    // 6.0 ????Apermission ??m?F???s??????
-    // ??????OK :
-    // Emulator mode
-    // std::string pcl_file = "storage/emulated/0/lamppost.pcd";
-    // std::string pcl_file = "storage/emulated/0/" + filename;
-    std::string pcl_file = filename;
-    // NG(?f?[?^?T?C?Y???????H)
-    // std::string pcl_file = "storage/emulated/0/bun0.pcd";
-    // std::string pcl_file = "storage/emulated/0/CSite1_orig-utm.pcd";
-
-    // /data/data/(package) folder ??t?@?C??????
-    // std::string pcl_file = "lamppost.pcd";
-    // ng : boost library?
-    // ?????T?C?Y??ng : ?_?Q????? ??? 20k?? ???
-    if (pcl::io::loadPCDFile<pcl::PointXYZ> (pcl_file, *cloud) == -1) //* load the file
-    {
-        // PCL_ERROR ("Couldn't read file test_pcd.pcd.\n");
-        return;
-    }
-#endif
-    // callFilterAxis("y", 0.0, 0.01);
 }
 
-void callFilterAxis(std::string axis, double min, double max) {
-    // Create the filtering object
-    pcl::PassThrough<pcl::PointXYZ> pass;
-    pass.setInputCloud (cloud);
-    // pass.setFilterFieldName ("z");
-    pass.setFilterFieldName (axis);
-    pass.setFilterLimits (min, max);
-    pass.setFilterLimitsNegative (true);
-    pass.filter (*cloud_filtered);
-}
-
-void callFilterVoxelGrid(double x, double y, double z)
+void logPointCount(const char* name, const char* operation, std::size_t float_count)
 {
-    // Create the filtering object
-    pcl::VoxelGrid<pcl::PointXYZ> voxelGrid;
-    voxelGrid.setInputCloud (cloud);
-    voxelGrid.setLeafSize(x, y, z);
-    voxelGrid.filter (*cloud_filtered);
+    LOGI("%s compatibility sample: %s points=%zu", name, operation, float_count / 3);
 }
 
-/////
+void logTupleCount(const char* name, const char* operation, std::size_t float_count, std::size_t tuple_size)
+{
+    LOGI("%s compatibility sample: %s tuples=%zu", name, operation,
+         tuple_size == 0 ? 0 : float_count / tuple_size);
+}
+
+} // namespace
+
 extern "C" {
-	JNIEXPORT jstring JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_stringFromJNI(JNIEnv *env, jobject /* this */);
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_init(JNIEnv * env, jobject obj,  jint width, jint height);
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_step(JNIEnv * env, jobject obj);
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_load(JNIEnv * env, jobject obj, jstring filename);
-    // Feature
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(JNIEnv *env, jobject /* this */);
-    // Filter
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterAxis(JNIEnv * env, jobject obj, jstring axis, jdouble minValue, jdouble maxValue);
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterVoxelGrid(JNIEnv * env, jobject obj, jdouble x, jdouble y, jdouble z);
-    // Geometry
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_geometry1(JNIEnv * env, jobject obj, jstring filename);
-    // KdTree
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_kdtree1(JNIEnv * env, jobject obj, jstring filename);
-    // KeyPoint
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_keypoint1(JNIEnv * env, jobject obj, jstring filename);
 
-    // Octree
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_octree1(JNIEnv * env, jobject obj, jstring filename);
-    // People
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_people1(JNIEnv * env, jobject obj, jstring filename);
-    // RangeImages
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_rangeImages1(JNIEnv * env, jobject obj, jstring filename);
-    // Recognition
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_recognition1(JNIEnv * env, jobject obj, jstring filename);
-    // Registration
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_registration1(JNIEnv * env, jobject obj, jstring filename);
-    // SampleConsensus
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_sampleconsensus1(JNIEnv * env, jobject obj, jstring filename);
-    // Segmentation
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_segmentation1(JNIEnv * env, jobject obj, jstring filename);
-    // Stereo
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_stereo1(JNIEnv * env, jobject obj, jstring filename);
-    // Surface
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_surface1(JNIEnv * env, jobject obj, jstring filename);
-    // Tracking
-    JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_track1(JNIEnv * env, jobject obj, jstring filename);
-};
-
-
-JNIEXPORT jstring JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_stringFromJNI(
-        JNIEnv *env,
-        jobject /* this */) {
-    std::string hello = "Hello from C++";
-    return env->NewStringUTF(hello.c_str());
-}
-
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_init(JNIEnv * env, jobject obj,  jint width, jint height)
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_init(
+        JNIEnv* env, jobject obj, jint width, jint height)
 {
-    // setupGraphics(width, height);
+    (void) env;
+    (void) obj;
+    (void) width;
+    (void) height;
 }
 
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_step(JNIEnv * env, jobject obj)
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_step(JNIEnv* env, jobject obj)
 {
-    // renderFrame();
+    (void) env;
+    (void) obj;
 }
 
-// io
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_load(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_load(
+        JNIEnv* env, jobject obj, jstring filename)
 {
-	std::string c_filename = jstring2string(env, filename);
-    loadPCDFile(c_filename);
+    (void) obj;
+    pclmobile::loadPCDFile(pclmobile::jstringToString(env, filename));
 }
 
-//region Feature
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_getCloudPoints(
+        JNIEnv* env, jclass clazz)
 {
+    (void) clazz;
+    return pclmobile::makePointArray(env, pclmobile::cloud());
 }
-//endregion
 
-//region Filter
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterAxis(JNIEnv * env, jobject obj, jstring axis, jdouble minValue, jdouble maxValue)
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_getFilteredPoints(
+        JNIEnv* env, jclass clazz)
 {
-    std::string c_axis = jstring2string(env, axis);
-    callFilterAxis(c_axis, minValue, maxValue);
+    (void) clazz;
+    return pclmobile::makePointArray(env, pclmobile::filteredCloud());
 }
 
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterVoxelGrid(JNIEnv * env, jobject obj, jdouble x, jdouble y, jdouble z)
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeCentroidAndBounds(
+        JNIEnv* env, jclass clazz)
 {
-    callFilterVoxelGrid(x, y, z);
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::computeCentroidAndBounds());
 }
 
-//endregion
-
-//region Geometry
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_geometry1(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_estimateNormals(
+        JNIEnv* env, jclass clazz, jint kSearch)
 {
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::estimateNormals(kSearch));
 }
 
-//endregion
-
-//region KdTree
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_kdtree1(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_segmentPlane(
+        JNIEnv* env, jclass clazz, jdouble distanceThreshold, jint maxIterations)
 {
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::segmentPlaneModel(distanceThreshold, maxIterations));
 }
-//endregion
 
-//region KeyPoint
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_keypoint1(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_segmentSphere(
+        JNIEnv* env, jclass clazz, jdouble distanceThreshold, jint maxIterations)
 {
-
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::segmentSphereModel(distanceThreshold, maxIterations));
 }
-//endregion
 
-//region Octree
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_octree1(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_nearestKSearch(
+        JNIEnv* env, jclass clazz, jfloat x, jfloat y, jfloat z, jint k)
 {
-
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::nearestKSearch(x, y, z, k));
 }
-//endregion
 
-//region People
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_people1(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_octreeRadiusSearch(
+        JNIEnv* env, jclass clazz, jfloat x, jfloat y, jfloat z, jdouble resolution, jdouble radius)
 {
-
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::octreeRadiusSearch(x, y, z, resolution, radius));
 }
-//endregion
 
-//region RangeImages
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_rangeimages1(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractEuclideanClusters(
+        JNIEnv* env, jclass clazz, jdouble tolerance, jint minClusterSize, jint maxClusterSize)
 {
-
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env, pclmobile::extractEuclideanClusters(tolerance, minClusterSize, maxClusterSize));
 }
-//endregion
 
-//region Recognition
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_recognition1(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeConvexHull(
+        JNIEnv* env, jclass clazz)
 {
-
+    (void) clazz;
+    return pclmobile::makePointArray(env, pclmobile::computeConvexHull());
 }
-//endregion
 
-//region Registration
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_registration1(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_projectInliersToPlane(
+        JNIEnv* env, jclass clazz, jdouble distanceThreshold, jint maxIterations)
 {
-
+    (void) clazz;
+    return pclmobile::makePointArray(env, pclmobile::projectInliersToPlane(distanceThreshold, maxIterations));
 }
-//endregion
 
-//region SampleConsensus
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_sampleconsensus1(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_alignToTranslatedCopyICP(
+        JNIEnv* env, jclass clazz, jfloat tx, jfloat ty, jfloat tz, jint maxIterations)
 {
-
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::alignToTranslatedCopyICP(tx, ty, tz, maxIterations));
 }
-//endregion
 
-//region Segmentation
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_segmentation1(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(
+        JNIEnv* env, jobject obj, jstring filename)
 {
-
+    (void) obj;
+    loadIfProvided(env, filename);
+    logTupleCount("feature1", "NormalEstimation", pclmobile::estimateNormals(16).size(), 4);
 }
-//endregion
 
-//region Stereo
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_stereo1(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterAxis(
+        JNIEnv* env, jobject obj, jstring axis, jdouble minValue, jdouble maxValue)
 {
-
+    (void) obj;
+    pclmobile::filterAxis(pclmobile::jstringToString(env, axis), minValue, maxValue);
 }
-//endregion
 
-//region Surface
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_surface1(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterVoxelGrid(
+        JNIEnv* env, jobject obj, jdouble x, jdouble y, jdouble z)
 {
-
+    (void) env;
+    (void) obj;
+    pclmobile::filterVoxelGrid(x, y, z);
 }
-//endregion
 
-//region Tracking
-JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_tracking1(JNIEnv * env, jobject obj, jstring filename)
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterStatisticalOutlierRemoval(
+        JNIEnv* env, jclass clazz, jint meanK, jdouble stddevMulThresh)
 {
-
+    (void) env;
+    (void) clazz;
+    pclmobile::filterStatisticalOutlierRemoval(meanK, stddevMulThresh);
 }
-//endregion
 
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterRadiusOutlierRemoval(
+        JNIEnv* env, jclass clazz, jdouble radius, jint minNeighbors)
+{
+    (void) env;
+    (void) clazz;
+    pclmobile::filterRadiusOutlierRemoval(radius, minNeighbors);
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterCropBox(
+        JNIEnv* env,
+        jclass clazz,
+        jdouble minX,
+        jdouble minY,
+        jdouble minZ,
+        jdouble maxX,
+        jdouble maxY,
+        jdouble maxZ)
+{
+    (void) env;
+    (void) clazz;
+    pclmobile::filterCropBox(minX, minY, minZ, maxX, maxY, maxZ);
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractPlaneInliers(
+        JNIEnv* env, jclass clazz, jdouble distanceThreshold, jint maxIterations)
+{
+    (void) env;
+    (void) clazz;
+    pclmobile::extractPlaneInliers(distanceThreshold, maxIterations);
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_geometry1(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    loadIfProvided(env, filename);
+    LOGI("geometry1 compatibility sample: computeCentroidAndBounds values=%zu",
+         pclmobile::computeCentroidAndBounds().size());
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_kdtree1(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    loadIfProvided(env, filename);
+    logTupleCount("kdtree1", "KdTreeFLANN nearestKSearch",
+                  pclmobile::nearestKSearch(0.0f, 0.0f, 0.0f, 8).size(), 4);
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_keypoint1(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    loadIfProvided(env, filename);
+    logTupleCount("keypoint1", "KdTree probe", pclmobile::nearestKSearch(0.0f, 0.0f, 0.0f, 8).size(), 4);
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_octree1(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    loadIfProvided(env, filename);
+    logTupleCount("octree1", "OctreePointCloudSearch radiusSearch",
+                  pclmobile::octreeRadiusSearch(0.0f, 0.0f, 0.0f, 0.10, 0.28).size(), 4);
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_people1(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    loadIfProvided(env, filename);
+    LOGI("people1 compatibility sample: EuclideanClusterExtraction clusters=%zu",
+         pclmobile::extractEuclideanClusters(0.18, 20, 5000).size());
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_rangeimages1(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    loadIfProvided(env, filename);
+    LOGI("rangeimages1 compatibility sample: computeCentroidAndBounds values=%zu",
+         pclmobile::computeCentroidAndBounds().size());
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_recognition1(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    loadIfProvided(env, filename);
+    LOGI("recognition1 compatibility sample: EuclideanClusterExtraction clusters=%zu",
+         pclmobile::extractEuclideanClusters(0.18, 20, 5000).size());
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_registration1(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    loadIfProvided(env, filename);
+    LOGI("registration1 compatibility sample: ICP values=%zu",
+         pclmobile::alignToTranslatedCopyICP(0.05f, -0.03f, 0.02f, 35).size());
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_sampleconsensus1(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    loadIfProvided(env, filename);
+    LOGI("sampleconsensus1 compatibility sample: segmentPlane values=%zu",
+         pclmobile::segmentPlaneModel(0.03, 100).size());
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_segmentation1(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    loadIfProvided(env, filename);
+    LOGI("segmentation1 compatibility sample: segmentPlane values=%zu clusters=%zu",
+         pclmobile::segmentPlaneModel(0.03, 100).size(),
+         pclmobile::extractEuclideanClusters(0.18, 20, 5000).size());
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_stereo1(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    loadIfProvided(env, filename);
+    pclmobile::filterRadiusOutlierRemoval(0.18, 3);
+    logPointCount("stereo1", "RadiusOutlierRemoval", pclmobile::filteredCloud()->points.size() * 3);
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_surface1(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    loadIfProvided(env, filename);
+    logPointCount("surface1", "ConvexHull", pclmobile::computeConvexHull()->points.size() * 3);
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_tracking1(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    loadIfProvided(env, filename);
+    LOGI("tracking1 compatibility sample: ICP values=%zu",
+         pclmobile::alignToTranslatedCopyICP(0.05f, -0.03f, 0.02f, 35).size());
+}
+
+} // extern "C"

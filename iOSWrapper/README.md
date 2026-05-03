@@ -1,147 +1,125 @@
-# pcl_mobile_framework
+# PCLMobile (iOS framework wrapper)
 
-[![Swift 4.2](https://img.shields.io/badge/Swift-4.2-orange.svg?style=flat)](https://swift.org/)
-[![Version](https://img.shields.io/cocoapods/v/pcl_mobile_framework.svg?style=flat)](http://cocoapods.org/pods/pcl_mobile_framework)
-[![License](https://img.shields.io/cocoapods/l/pcl_mobile_framework.svg?style=flat)](http://cocoapods.org/pods/pcl_mobile_framework)
-[![Platform](https://img.shields.io/cocoapods/p/pcl_mobile_framework.svg?style=flat)](http://cocoapods.org/pods/pcl_mobile_framework)
-[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
-[![CI Status](http://img.shields.io/travis/Sirokujira/pcl_mobile_framework.svg?style=flat)](https://travis-ci.org/Sirokujira/pcl_mobile_framework)
-[![Azure CI Status](http://img.shields.io/travis/Sirokujira/pcl_mobile_framework.svg?style=flat)](https://microsoft.com/Sirokujira/pcl_mobile_framework)
+This directory contains the iOS-side wrapper that turns the cross-compiled
+PCL/Boost/Eigen/FLANN/Qhull static libraries into a single
+`PCLMobile.xcframework` consumers can drop into their app.
 
-Swift implementation of a k-dimensional binary space partitioning tree.
+## Contents
 
-## Usage
-
-Import the package in your *.swift file:
-```swift
-import pcl
+```
+iOSWrapper/
+├── CMakeLists.txt              # Generates PCLMobile.framework via Xcode
+├── module.modulemap            # Clang module definition (umbrella header)
+├── PCLMobile.podspec           # CocoaPods spec (-> XCFramework)
+└── Sources/
+    ├── Info.plist              # Framework Info.plist (template)
+    ├── include/PCLMobile/
+    │   ├── PCLMobile.h         # Umbrella header (Objective-C)
+    │   └── PCLMPointCloud.h    # Public API
+    ├── PCLMobile.mm            # Version constants + error domain
+    └── PCLMPointCloud.mm       # Objective-C++ implementation
 ```
 
-Make sure your data values conforom to 
-```swift
-public protocol pcl_mobile_frameworkPoint: Equatable {
-  static var dimensions: Int { get }
-  func kdDimension(dimension: Int) -> Double
-  func squaredDistance(otherPoint: Self) -> Double
-}
-```
-(CGPoint conforms to pcl_mobile_frameworkPoint as part of the package)
+`Sources/include/PCLMobile/` is the only header set exposed to consumers.
+The PCL/Boost/Eigen/FLANN/Qhull C++ headers stay strictly inside the .mm
+files, so apps can keep their files as plain Objective-C or Swift without
+flipping to Objective-C++.
 
-Then you can grow your own Tree:
-```swift
-extension CustomDataPoint: pcl_mobile_frameworkPoint { ... }
+## Build
 
-let dataValues: [CustomDataPoint] = ...
+The wrapper is meant to be driven by `scripts/build_ios.sh` at the repo
+root, which runs the cross-compile of PCL/Boost/etc. for every required
+slice (device arm64 + simulator arm64 + simulator x86_64) and then asks
+CMake to build this framework against each slice.
 
-var tree: pcl_mobile_framework<CGPoint> = pcl_mobile_framework(values: dataValues)
-```
+`scripts/make_xcframework.sh` packages those per-slice frameworks into a
+single `build/PCLMobile.xcframework`.
 
-Then you can `insert()`, `remove()`, `map()`, `filter()`, `reduce()` and `forEach()` on this tree with the expected results, as pcl_mobile_framework conforms to Sequence.
-
-## Applications
-
-### Feature:
-
-Given a pcl_mobile_framework:
-
-we can retrieve the nearest Neighbour to a test point like so
-```swift
-let nearest: CGPoint? = tree.nearest(to: point)
-```
-
-or the get the 10 nearest neighbours
+## Public API (Swift)
 
 ```swift
-let nearestPoints: [CGPoint] = tree.nearestK(10, to: point)
+import PCLMobile
+
+let cloud = try PointCloud.load(pcdAt: "/var/mobile/lamppost.pcd")
+let smaller = try cloud.voxelGridDownsampled(leaf: 0.01)
+let cropped = try smaller.passThroughFiltered(axis: "z", min: 0.0, max: 1.5)
+print("\(cropped.pointCount) points")
 ```
 
-Complexity is O(log N), while brute-force searching through an Array is of cource O(N).
+## Public API (Objective-C)
 
-Preliminary performance results can be gained by running the unit tests, the load example has 10.000 random points in [-1,1]x[-1,1] and find the nearest points for 500 test points:
+```objc
+@import PCLMobile;
 
-![Performance Results](/Screenshots/performance.png?raw=true)
+NSError *error;
+PCLMPointCloud *cloud = [PCLMPointCloud cloudFromPCDFile:path error:&error];
+PCLMPointCloud *smaller = [cloud voxelGridDownsampleWithLeaf:0.01 error:&error];
+NSLog(@"%lu points", (unsigned long)smaller.pointCount);
+```
 
+## Distribution
 
-### Filter:
-![Filter Example](/Screenshots/tesselations.png?raw=true)
+`PCLMobile.xcframework.zip` is attached to every GitHub Release; pick the
+package manager you prefer.
 
-### Geometry:
-![Geometry Example](/Screenshots/tesselations.png?raw=true)
+### Swift Package Manager (recommended)
 
-### KdTree:
-![KdTree Example](/Screenshots/tesselations.png?raw=true)
+`Package.swift` lives at the repo root and declares a `binaryTarget`
+pointing at the released zip. Consumers add:
 
-### Keypoints:
-![Keypoints Example](/Screenshots/tesselations.png?raw=true)
+```swift
+.package(url: "https://github.com/Sirokujira/pcl_mobile_framework.git",
+         from: "0.1.0"),
+```
 
-### Octree:
-![Octree Example](/Screenshots/tesselations.png?raw=true)
+then list `"PCLMobile"` in their target's `dependencies`.
 
-### People:
-![People Example](/Screenshots/tesselations.png?raw=true)
-
-### RangeImages:
-![RangeImages Example](/Screenshots/tesselations.png?raw=true)
-
-### Recognition:
-![Recognition Example](/Screenshots/tesselations.png?raw=true)
-
-### Registration:
-![Registration Example](/Screenshots/tesselations.png?raw=true)
-
-### SampleConsensus:
-![SampleConsensus Example](/Screenshots/tesselations.png?raw=true)
-
-### Search:
-![Search Example](/Screenshots/tesselations.png?raw=true)
-
-### Segmentation:
-![Segmentation Example](/Screenshots/tesselations.png?raw=true)
-
-### Stereo:
-![Stereo Example](/Screenshots/tesselations.png?raw=true)
-
-### Surface:
-![Surface Example](/Screenshots/tesselations.png?raw=true)
-
-### Tracking:
-![Tracking Example](/Screenshots/tesselations.png?raw=true)
-
-
-## Installation
-
-#### Cocoapods
-
-pcl_mobile_framework is available through [CocoaPods](http://cocoapods.org). To install
-it, simply add the following line to your Podfile:
+### CocoaPods
 
 ```ruby
-pod "pcl_mobile_framework"
+pod 'PCLMobile', '~> 0.1'
 ```
 
+`PCLMobile.podspec` references the same release zip. Run
+`scripts/lint_podspec.sh` before publishing to Trunk; see top-level
+`MODERNIZATION_PLAN.md` for the full publish workflow.
 
-To run the example project, clone the repo, and run `pod install` from the Example directory first.
+### Carthage
 
---- 
-
-#### Swift package manager
-
-Add the following to your `Package.swift` dependencies
-
-```
-.Package(url: "https://github.com/Sirokujira/pcl_mobile_framework", majorVersion: 0, minor: 0),
-```
-
----
-
-#### Carthage
-
-To add `pcl_mobile_framework` using Carthage add the following to your Cartfile:
+`PCLMobile.json` next to this README is a Carthage *binary project
+specification*. Add a single line to your `Cartfile`:
 
 ```
-github "Sirokujira/pcl_mobile_framework"
+binary "https://raw.githubusercontent.com/Sirokujira/pcl_mobile_framework/main/iOSWrapper/PCLMobile.json"
 ```
 
-## License
+then `carthage update --use-xcframeworks --platform iOS`. Carthage drops
+the resolved `PCLMobile.xcframework` into `Carthage/Build/`; drag it into
+your Xcode target's "Frameworks, Libraries, and Embedded Content" with
+**Embed & Sign**.
 
-pcl_mobile_framework is available under the MIT license. See the LICENSE file for more info.
+### Manual XCFramework drop-in (zero-tooling fallback)
+
+If you'd rather not adopt any package manager:
+
+1. Download `PCLMobile.xcframework.zip` from the repo's
+   [Releases](https://github.com/Sirokujira/pcl_mobile_framework/releases) page.
+2. Unzip and drag `PCLMobile.xcframework` into your Xcode project.
+3. In **Target → General → Frameworks, Libraries, and Embedded Content**,
+   set the embed mode to **Embed & Sign**.
+4. **Build Settings → Other Linker Flags** add `-lc++`.
+5. **Build Settings → Build Library for Distribution → No** (Apps).
+
+Done. You can now `import PCLMobile` from Swift or `@import PCLMobile;`
+from Objective-C.
+
+### Cutting a new release
+
+Maintainers run a single script that builds the XCFramework, recomputes
+checksums, patches `Package.swift` / `PCLMobile.podspec` /
+`PCLMobile.json`, then optionally tags and publishes the GitHub Release:
+
+```bash
+./scripts/release.sh 0.2.0           # patch manifests only
+./scripts/release.sh 0.2.0 --publish # also tag + gh release create
+```
