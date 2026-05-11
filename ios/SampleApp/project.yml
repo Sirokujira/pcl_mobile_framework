@@ -2,7 +2,7 @@ name: PCLMobileARSample
 options:
   bundleIdPrefix: io.github.sirokujira
   deploymentTarget:
-    iOS: "13.0"
+    iOS: "17.0"
   developmentLanguage: en
   createIntermediateGroups: true
 
@@ -12,7 +12,8 @@ settings:
     CLANG_CXX_LANGUAGE_STANDARD: "c++17"
     CLANG_CXX_LIBRARY: "libc++"
     ENABLE_BITCODE: NO
-    OTHER_LDFLAGS: "-lc++"
+    OTHER_LDFLAGS: "-lc++ -ObjC"
+    CLANG_MODULES_AUTOLINK: NO
 
 # `xcodegen` resolves this relative to the project.yml, which lives at
 # ios/SampleApp/. The XCFramework is produced by scripts/build_ios.sh under
@@ -27,11 +28,28 @@ targets:
   PCLMobileARSample:
     type: application
     platform: iOS
-    deploymentTarget: "13.0"
+    deploymentTarget: "17.0"
     sources:
       - path: PCLMobileARSample
     info:
       path: PCLMobileARSample/Info.plist
+      properties:
+        NSCameraUsageDescription: "ARKit uses the camera to track the environment and collect feature points for PCL processing."
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        UIRequiredDeviceCapabilities:
+          - arm64
+          - arkit
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
     dependencies:
       - framework: ../../build/ios/xcframework/PCLMobile.xcframework
         embed: true
@@ -50,7 +68,7 @@ targets:
   PCLMobileARSampleTests:
     type: bundle.unit-test
     platform: iOS
-    deploymentTarget: "13.0"
+    deploymentTarget: "17.0"
     sources:
       - path: PCLMobileARSampleTests
     dependencies:

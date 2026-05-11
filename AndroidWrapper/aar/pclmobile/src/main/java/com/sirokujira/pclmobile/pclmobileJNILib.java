@@ -29,14 +29,36 @@ package com.sirokujira.pclmobile;
  * <ul>
  *     <li>Point clouds: {@code x, y, z, x, y, z, ...}</li>
  *     <li>Normals: {@code normal_x, normal_y, normal_z, curvature, ...}</li>
+ *     <li>FPFH descriptors: 33-bin histogram per input point</li>
+ *     <li>Principal curvatures: {@code principal_curvature_x/y/z, pc1, pc2, ...}</li>
  *     <li>Plane model: {@code a, b, c, d, inlier_count, input_count}</li>
  *     <li>Sphere model: {@code center_x, center_y, center_z, radius, inlier_count, input_count}</li>
- *     <li>Nearest/radius search: {@code x, y, z, squared_distance, ...}</li>
+ *     <li>Nearest/radius/voxel search: {@code x, y, z, squared_distance, ...}</li>
+ *     <li>Hull and smoothed clouds: {@code x, y, z, x, y, z, ...}</li>
  *     <li>Centroid/bounds: {@code centroid_xyz, min_xyz, max_xyz, point_count}</li>
  *     <li>ICP: {@code has_converged, fitness_score, row-major 4x4 matrix}</li>
  * </ul>
  */
 public final class pclmobileJNILib {
+    public static final int SACMODEL_PLANE = 0;
+    public static final int SACMODEL_LINE = 1;
+    public static final int SACMODEL_CIRCLE2D = 2;
+    public static final int SACMODEL_CIRCLE3D = 3;
+    public static final int SACMODEL_SPHERE = 4;
+    public static final int SACMODEL_CYLINDER = 5;
+    public static final int SACMODEL_CONE = 6;
+    public static final int SACMODEL_TORUS = 7;
+    public static final int SACMODEL_PARALLEL_LINE = 8;
+    public static final int SACMODEL_PERPENDICULAR_PLANE = 9;
+    public static final int SACMODEL_PARALLEL_LINES = 10;
+    public static final int SACMODEL_NORMAL_PLANE = 11;
+    public static final int SACMODEL_NORMAL_SPHERE = 12;
+    public static final int SACMODEL_REGISTRATION = 13;
+    public static final int SACMODEL_REGISTRATION_2D = 14;
+    public static final int SACMODEL_PARALLEL_PLANE = 15;
+    public static final int SACMODEL_NORMAL_PARALLEL_PLANE = 16;
+    public static final int SACMODEL_STICK = 17;
+    public static final int SACMODEL_ELLIPSE3D = 18;
 
     static {
         System.loadLibrary("native-lib");
@@ -66,6 +88,18 @@ public final class pclmobileJNILib {
     public static native void load(String filename);
 
     /**
+     * Loads a PLY file into the native source cloud and clears the filtered cloud.
+     */
+    public static native void loadPLY(String filename);
+
+    /**
+     * Replaces the native source cloud from packed {@code x, y, z} triples.
+     *
+     * <p>Trailing values are ignored when {@code packedXYZ.length} is not divisible by 3.</p>
+     */
+    public static native void setCloudPoints(float[] packedXYZ);
+
+    /**
      * Returns the loaded source cloud packed as {@code x, y, z} triples.
      */
     public static native float[] getCloudPoints();
@@ -74,6 +108,56 @@ public final class pclmobileJNILib {
      * Returns the most recent filtered cloud packed as {@code x, y, z} triples.
      */
     public static native float[] getFilteredPoints();
+
+    /**
+     * Returns the active cloud point count.
+     */
+    public static native int getPointCount();
+
+    /**
+     * Returns the active cloud width.
+     */
+    public static native int getWidth();
+
+    /**
+     * Returns the active cloud height.
+     */
+    public static native int getHeight();
+
+    /**
+     * Returns {@code point_count, width, height} for the active cloud.
+     */
+    public static native int[] getCloudShape();
+
+    /**
+     * Returns {@code point_count, width, height} for the source cloud.
+     */
+    public static native int[] getSourceCloudShape();
+
+    /**
+     * Returns {@code point_count, width, height} for the filtered cloud.
+     */
+    public static native int[] getFilteredCloudShape();
+
+    /**
+     * Writes the active cloud to an ASCII PCD file.
+     */
+    public static native boolean writeActivePCDFile(String filename);
+
+    /**
+     * Writes the source cloud to an ASCII PCD file.
+     */
+    public static native boolean writeSourcePCDFile(String filename);
+
+    /**
+     * Writes the filtered cloud to an ASCII PCD file.
+     */
+    public static native boolean writeFilteredPCDFile(String filename);
+
+    /**
+     * Writes the active cloud to an ASCII PLY file.
+     */
+    public static native boolean writeActivePLYFile(String filename);
 
     /**
      * Computes centroid, min bounds, max bounds, and point count for the active cloud.
@@ -89,6 +173,31 @@ public final class pclmobileJNILib {
      * @return {@code normal_x, normal_y, normal_z, curvature} tuples
      */
     public static native float[] estimateNormals(int kSearch);
+
+    /**
+     * Estimates normals for the active cloud using all neighbors within {@code radiusSearch}.
+     *
+     * @return {@code normal_x, normal_y, normal_z, curvature} tuples
+     */
+    public static native float[] estimateNormalsRadius(double radiusSearch);
+
+    /**
+     * Computes Fast Point Feature Histograms for the active cloud.
+     *
+     * @param normalKSearch nearest neighbors used to estimate normals before descriptor computation
+     * @param featureRadius radius used for each FPFH descriptor neighborhood
+     * @return 33 histogram values per descriptor
+     */
+    public static native float[] computeFPFHFeatures(int normalKSearch, double featureRadius);
+
+    /**
+     * Computes principal curvatures for the active cloud.
+     *
+     * @param normalKSearch nearest neighbors used to estimate normals before curvature computation
+     * @param curvatureKSearch nearest neighbors used for principal curvature estimation
+     * @return {@code principal_curvature_x, principal_curvature_y, principal_curvature_z, pc1, pc2} tuples
+     */
+    public static native float[] computePrincipalCurvatures(int normalKSearch, int curvatureKSearch);
 
     /**
      * Fits a plane model to the active cloud using RANSAC sample consensus.
@@ -109,11 +218,35 @@ public final class pclmobileJNILib {
     public static native float[] segmentSphere(double distanceThreshold, int maxIterations);
 
     /**
+     * Fits a PCL SAC model to the active cloud using RANSAC sample consensus.
+     *
+     * <p>{@code modelType} uses the {@code SACMODEL_*} constants exposed by this class.</p>
+     *
+     * @return model coefficients followed by {@code inlier_count, input_count}, or an empty array
+     */
+    public static native float[] segmentSACModel(int modelType, double distanceThreshold, int maxIterations);
+
+    /**
      * Runs nearest-neighbor search against the active cloud.
      *
      * @return {@code x, y, z, squared_distance} tuples for found neighbors
      */
     public static native float[] nearestKSearch(float x, float y, float z, int k);
+
+    /**
+     * Runs KdTree radius search against the active cloud.
+     *
+     * @return {@code x, y, z, squared_distance} tuples for found neighbors
+     */
+    public static native float[] radiusSearch(float x, float y, float z, double radius);
+
+    /**
+     * Runs octree nearest-neighbor search against the active cloud.
+     *
+     * @param resolution octree voxel resolution
+     * @return {@code x, y, z, squared_distance} tuples for found neighbors
+     */
+    public static native float[] octreeNearestKSearch(float x, float y, float z, double resolution, int k);
 
     /**
      * Runs octree radius search against the active cloud.
@@ -123,6 +256,14 @@ public final class pclmobileJNILib {
      * @return {@code x, y, z, squared_distance} tuples for found neighbors
      */
     public static native float[] octreeRadiusSearch(float x, float y, float z, double resolution, double radius);
+
+    /**
+     * Returns active-cloud points that share the query point's octree voxel.
+     *
+     * @param resolution octree voxel resolution
+     * @return {@code x, y, z, squared_distance_from_query} tuples for found points
+     */
+    public static native float[] octreeVoxelSearch(float x, float y, float z, double resolution);
 
     /**
      * Extracts Euclidean clusters from the active cloud.
@@ -139,11 +280,27 @@ public final class pclmobileJNILib {
     public static native float[] computeConvexHull();
 
     /**
+     * Reconstructs a concave hull from the active cloud.
+     *
+     * @param alpha alpha shape value used by PCL ConcaveHull
+     * @return hull points packed as {@code x, y, z} triples
+     */
+    public static native float[] computeConcaveHull(double alpha);
+
+    /**
      * Projects plane inliers from the active cloud onto the fitted plane.
      *
      * @return projected points packed as {@code x, y, z} triples
      */
     public static native float[] projectInliersToPlane(double distanceThreshold, int maxIterations);
+
+    /**
+     * Smooths the active cloud with Moving Least Squares.
+     *
+     * @param searchRadius neighborhood radius used for local surface fitting
+     * @return smoothed points packed as {@code x, y, z} triples
+     */
+    public static native float[] smoothMovingLeastSquares(double searchRadius);
 
     /**
      * Aligns the active cloud to a translated copy with ICP.
@@ -169,6 +326,14 @@ public final class pclmobileJNILib {
     public static native void filterAxis(String filename, double min, double max);
 
     /**
+     * Applies PassThrough and returns the filtered points.
+     */
+    public static float[] passThroughFiltered(String axis, double min, double max) {
+        filterAxis(axis, min, max);
+        return getFilteredPoints();
+    }
+
+    /**
      * Downsamples the source cloud with a VoxelGrid filter.
      *
      * @param x leaf size for x
@@ -178,14 +343,97 @@ public final class pclmobileJNILib {
     public static native void filterVoxelGrid(double x, double y, double z);
 
     /**
+     * Downsamples the source cloud with equal VoxelGrid leaf sizes.
+     */
+    public static void filterVoxelGrid(double leafSize) {
+        filterVoxelGrid(leafSize, leafSize, leafSize);
+    }
+
+    /**
+     * Applies VoxelGrid and returns the filtered points.
+     */
+    public static float[] voxelGridDownsample(double leafSize) {
+        filterVoxelGrid(leafSize);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Downsamples the source cloud with an ApproximateVoxelGrid filter.
+     */
+    public static native void filterApproximateVoxelGrid(double x, double y, double z);
+
+    /**
+     * Applies ApproximateVoxelGrid and returns the filtered points.
+     */
+    public static float[] approximateVoxelGridDownsample(double x, double y, double z) {
+        filterApproximateVoxelGrid(x, y, z);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Downsamples the source cloud with UniformSampling.
+     */
+    public static native void filterUniformSampling(double radius);
+
+    /**
+     * Applies UniformSampling and returns the filtered points.
+     */
+    public static float[] uniformSample(double radius) {
+        filterUniformSampling(radius);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Randomly samples up to {@code sample} source-cloud points with a deterministic seed.
+     */
+    public static native void filterRandomSample(int sample, int seed);
+
+    /**
+     * Applies RandomSample and returns the filtered points.
+     */
+    public static float[] randomSample(int sample, int seed) {
+        filterRandomSample(sample, seed);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Samples up to {@code sample} source-cloud points with FarthestPointSampling.
+     */
+    public static native void filterFarthestPointSampling(int sample, int seed);
+
+    /**
+     * Applies FarthestPointSampling and returns the filtered points.
+     */
+    public static float[] farthestPointSample(int sample, int seed) {
+        filterFarthestPointSampling(sample, seed);
+        return getFilteredPoints();
+    }
+
+    /**
      * Removes statistical outliers from the source cloud.
      */
     public static native void filterStatisticalOutlierRemoval(int meanK, double stddevMulThresh);
 
     /**
+     * Removes statistical outliers and returns the filtered points.
+     */
+    public static float[] statisticalOutlierRemoval(int meanK, double stddevMulThresh) {
+        filterStatisticalOutlierRemoval(meanK, stddevMulThresh);
+        return getFilteredPoints();
+    }
+
+    /**
      * Removes points that do not have enough neighbors inside {@code radius}.
      */
     public static native void filterRadiusOutlierRemoval(double radius, int minNeighbors);
+
+    /**
+     * Removes radius outliers and returns the filtered points.
+     */
+    public static float[] radiusOutlierRemoval(double radius, int minNeighbors) {
+        filterRadiusOutlierRemoval(radius, minNeighbors);
+        return getFilteredPoints();
+    }
 
     /**
      * Keeps source-cloud points inside an axis-aligned 3D box.
@@ -195,9 +443,40 @@ public final class pclmobileJNILib {
             double maxX, double maxY, double maxZ);
 
     /**
+     * Applies CropBox and returns the filtered points.
+     */
+    public static float[] cropBox(
+            double minX, double minY, double minZ,
+            double maxX, double maxY, double maxZ) {
+        filterCropBox(minX, minY, minZ, maxX, maxY, maxZ);
+        return getFilteredPoints();
+    }
+
+    /**
      * Extracts fitted plane inliers into the filtered cloud.
      */
     public static native void extractPlaneInliers(double distanceThreshold, int maxIterations);
+
+    /**
+     * Extracts fitted plane inliers and returns the filtered points.
+     */
+    public static float[] extractPlaneInlierPoints(double distanceThreshold, int maxIterations) {
+        extractPlaneInliers(distanceThreshold, maxIterations);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Extracts fitted SAC model inliers into the filtered cloud.
+     */
+    public static native void extractModelInliers(int modelType, double distanceThreshold, int maxIterations);
+
+    /**
+     * Extracts fitted SAC model inliers and returns the filtered points.
+     */
+    public static float[] extractModelInlierPoints(int modelType, double distanceThreshold, int maxIterations) {
+        extractModelInliers(modelType, distanceThreshold, maxIterations);
+        return getFilteredPoints();
+    }
 
     /**
      * Compatibility geometry sample. Loads {@code filename} when supplied and computes centroid/bounds.

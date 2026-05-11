@@ -1,0 +1,50 @@
+name: ARFaceSample
+options:
+  bundleIdPrefix: io.github.sirokujira
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    ENABLE_BITCODE: NO
+targets:
+  ARFaceSample:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ARFaceSample
+    info:
+      path: ARFaceSample/Info.plist
+      properties:
+        NSCameraUsageDescription: "ARKit requires the camera."
+        UIRequiredDeviceCapabilities:
+          - arm64
+          - arkit
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.sirokujira.ARFaceSample
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_FILE: ARFaceSample/Info.plist
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/Frameworks"
+schemes:
+  ARFaceSample:
+    build:
+      targets:
+        ARFaceSample: all
+    run:
+      config: Debug
+    archive:
+      config: Release

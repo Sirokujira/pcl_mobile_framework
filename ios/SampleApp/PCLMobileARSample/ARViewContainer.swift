@@ -1,38 +1,25 @@
 // ARViewContainer.swift
 //
-// SwiftUI wrapper around an ARKit ARSCNView. The ARSession's delegate is the
-// ARPointCloudCoordinator instance owned by ContentView, which captures
-// rawFeaturePoints and feeds them to PCLMobile.
+// UIViewControllerRepresentable wrapping ARViewController.
+//
+// Using UIViewControllerRepresentable (rather than UIViewRepresentable)
+// lets ARViewController manage viewWillAppear / viewWillDisappear lifecycle
+// hooks so the ARSession is paused and resumed automatically.
 
-import ARKit
 import SwiftUI
 
-struct ARViewContainer: UIViewRepresentable {
-    let coordinator: ARPointCloudCoordinator
+struct ARViewContainer: UIViewControllerRepresentable {
 
-    func makeUIView(context: Context) -> ARSCNView {
-        let view = ARSCNView(frame: .zero)
-        view.session.delegate = coordinator
-        view.automaticallyUpdatesLighting = true
-        view.debugOptions = [.showFeaturePoints]
+    @ObservedObject var coordinator: ARPointCloudCoordinator
 
-        let configuration = ARWorldTrackingConfiguration()
-        configuration.planeDetection = [.horizontal, .vertical]
-        if ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh) {
-            // LiDAR devices give us much denser data via mesh anchors.
-            configuration.sceneReconstruction = .mesh
-        }
-        view.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
-
-        coordinator.attach(session: view.session)
-        return view
+    func makeUIViewController(context: Context) -> ARViewController {
+        let vc        = ARViewController()
+        vc.coordinator = coordinator
+        coordinator.viewController = vc
+        return vc
     }
 
-    func updateUIView(_ uiView: ARSCNView, context: Context) {
-        // Nothing to refresh — coordinator owns the state.
-    }
-
-    static func dismantleUIView(_ uiView: ARSCNView, coordinator: ARPointCloudCoordinator) {
-        uiView.session.pause()
+    func updateUIViewController(_ vc: ARViewController, context: Context) {
+        // All state changes go through coordinator — no imperative updates needed.
     }
 }

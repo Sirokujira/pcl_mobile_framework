@@ -66,8 +66,14 @@ public class PclMobileDeviceSampleTest {
         float[] convexHullPoints = pclmobileJNILib.computeConvexHull();
         assertPointTriples("convex hull", convexHullPoints);
 
+        float[] concaveHullPoints = pclmobileJNILib.computeConcaveHull(0.18);
+        assertPointTriples("concave hull", concaveHullPoints);
+
         float[] projectedPlanePoints = pclmobileJNILib.projectInliersToPlane(0.03, 100);
         assertPointTriples("projected plane", projectedPlanePoints);
+
+        float[] mlsPoints = pclmobileJNILib.smoothMovingLeastSquares(0.12);
+        assertPointTriples("moving least squares", mlsPoints);
 
         float[] icpResult = pclmobileJNILib.alignToTranslatedCopyICP(0.05f, -0.03f, 0.02f, 35);
         assertTrue("ICP result should contain convergence, fitness, and a 4x4 matrix",
@@ -109,7 +115,9 @@ public class PclMobileDeviceSampleTest {
                 + " octree=" + (octreeNeighbors.length / 4)
                 + " clusters=" + clusterSizes.length
                 + " hull=" + (convexHullPoints.length / 3)
+                + " concaveHull=" + (concaveHullPoints.length / 3)
                 + " projectedPlane=" + (projectedPlanePoints.length / 3)
+                + " mls=" + (mlsPoints.length / 3)
                 + " sor=" + (statisticalInliers.length / 3)
                 + " radius=" + (radiusInliers.length / 3)
                 + " cropBox=" + (cropBoxPoints.length / 3)

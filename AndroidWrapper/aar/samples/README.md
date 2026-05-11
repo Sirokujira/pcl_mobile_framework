@@ -59,6 +59,10 @@ The Java and Kotlin samples cover these PCL-backed calls:
   `pcl::EuclideanClusterExtraction`.
 - `computeConvexHull(...)`: surface/geometry reconstruction, backed by
   `pcl::ConvexHull`.
+- `computeConcaveHull(...)`: alpha-shape hull reconstruction, backed by
+  `pcl::ConcaveHull`.
+- `smoothMovingLeastSquares(...)`: point-cloud smoothing, backed by
+  `pcl::MovingLeastSquares`.
 - `alignToTranslatedCopyICP(...)`: registration, backed by
   `pcl::IterativeClosestPoint`.
 
@@ -83,8 +87,8 @@ sh ./gradlew --no-daemon :app:connectedDebugAndroidTest
 
 Success means the test passes and logcat contains `PclMobileDeviceSampleTest:
 device sample passed`, with non-zero counts for the generated PCD, VoxelGrid
-result, normals, model segmentation, search, hull, projection, filter, and ICP
-calls.
+result, normals, model segmentation, search, hull, smoothing, projection,
+filter, and ICP calls.
 
 ## Notes
 

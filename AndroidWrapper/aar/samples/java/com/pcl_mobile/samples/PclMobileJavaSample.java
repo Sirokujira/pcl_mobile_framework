@@ -36,7 +36,9 @@ public final class PclMobileJavaSample {
         float[] octreeNeighbors = pclmobileJNILib.octreeRadiusSearch(0.0f, 0.0f, 0.0f, 0.10, 0.28);
         float[] clusterSizes = pclmobileJNILib.extractEuclideanClusters(0.18, 20, 5000);
         float[] convexHullPoints = pclmobileJNILib.computeConvexHull();
+        float[] concaveHullPoints = pclmobileJNILib.computeConcaveHull(0.18);
         float[] projectedPlanePoints = pclmobileJNILib.projectInliersToPlane(0.03, 100);
+        float[] mlsPoints = pclmobileJNILib.smoothMovingLeastSquares(0.12);
         float[] icpResult = pclmobileJNILib.alignToTranslatedCopyICP(0.05f, -0.03f, 0.02f, 35);
 
         pclmobileJNILib.load(pcdFile.getAbsolutePath());
@@ -74,7 +76,9 @@ public final class PclMobileJavaSample {
                 octreeNeighbors,
                 clusterSizes,
                 convexHullPoints,
+                concaveHullPoints,
                 projectedPlanePoints,
+                mlsPoints,
                 icpResult,
                 statisticalInliers,
                 radiusInliers,
@@ -143,7 +147,9 @@ public final class PclMobileJavaSample {
         public final float[] octreeNeighbors;
         public final float[] clusterSizes;
         public final float[] convexHullPoints;
+        public final float[] concaveHullPoints;
         public final float[] projectedPlanePoints;
+        public final float[] mlsPoints;
         public final float[] icpResult;
         public final float[] statisticalInliers;
         public final float[] radiusInliers;
@@ -156,7 +162,9 @@ public final class PclMobileJavaSample {
         public final int octreeNeighborCount;
         public final int clusterCount;
         public final int convexHullPointCount;
+        public final int concaveHullPointCount;
         public final int projectedPlanePointCount;
+        public final int mlsPointCount;
         public final int statisticalInlierCount;
         public final int radiusInlierCount;
         public final int cropBoxPointCount;
@@ -176,7 +184,9 @@ public final class PclMobileJavaSample {
                 float[] octreeNeighbors,
                 float[] clusterSizes,
                 float[] convexHullPoints,
+                float[] concaveHullPoints,
                 float[] projectedPlanePoints,
+                float[] mlsPoints,
                 float[] icpResult,
                 float[] statisticalInliers,
                 float[] radiusInliers,
@@ -193,7 +203,9 @@ public final class PclMobileJavaSample {
             this.octreeNeighbors = octreeNeighbors;
             this.clusterSizes = clusterSizes;
             this.convexHullPoints = convexHullPoints;
+            this.concaveHullPoints = concaveHullPoints;
             this.projectedPlanePoints = projectedPlanePoints;
+            this.mlsPoints = mlsPoints;
             this.icpResult = icpResult;
             this.statisticalInliers = statisticalInliers;
             this.radiusInliers = radiusInliers;
@@ -206,7 +218,9 @@ public final class PclMobileJavaSample {
             this.octreeNeighborCount = octreeNeighbors.length / 4;
             this.clusterCount = clusterSizes.length;
             this.convexHullPointCount = convexHullPoints.length / 3;
+            this.concaveHullPointCount = concaveHullPoints.length / 3;
             this.projectedPlanePointCount = projectedPlanePoints.length / 3;
+            this.mlsPointCount = mlsPoints.length / 3;
             this.statisticalInlierCount = statisticalInliers.length / 3;
             this.radiusInlierCount = radiusInliers.length / 3;
             this.cropBoxPointCount = cropBoxPoints.length / 3;

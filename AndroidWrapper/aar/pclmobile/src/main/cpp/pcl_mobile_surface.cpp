@@ -4,7 +4,10 @@
 #include <pcl/common/common.h>
 #include <pcl/filters/project_inliers.h>
 #include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/search/kdtree.h>
+#include <pcl/surface/concave_hull.h>
 #include <pcl/surface/convex_hull.h>
+#include <pcl/surface/mls.h>
 
 #include "pcl_mobile_arrays.h"
 #include "pcl_mobile_context.h"
@@ -55,6 +58,23 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr computeConvexHull()
     return hull;
 }
 
+pcl::PointCloud<pcl::PointXYZ>::Ptr computeConcaveHull(double alpha)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr hull(new pcl::PointCloud<pcl::PointXYZ>);
+    if (input->empty() || alpha <= 0.0) {
+        return hull;
+    }
+
+    pcl::ConcaveHull<pcl::PointXYZ> concave_hull;
+    concave_hull.setInputCloud(input);
+    concave_hull.setAlpha(alpha);
+    concave_hull.reconstruct(*hull);
+    LOGI("ConcaveHull reconstructed points: input=%zu hull=%zu alpha=%.3f dimension=%d",
+         input->points.size(), hull->points.size(), alpha, concave_hull.getDimension());
+    return hull;
+}
+
 pcl::PointCloud<pcl::PointXYZ>::Ptr projectInliersToPlane(double distance_threshold, int max_iterations)
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
@@ -73,6 +93,25 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr projectInliersToPlane(double distance_thresh
     projection.filter(*projected);
     LOGI("ProjectInliers plane: input=%zu projected=%zu", input->points.size(), projected->points.size());
     return projected;
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr smoothMovingLeastSquares(double search_radius)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr smoothed(new pcl::PointCloud<pcl::PointXYZ>);
+    if (input->empty() || search_radius <= 0.0) {
+        return smoothed;
+    }
+
+    pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointXYZ> mls;
+    mls.setInputCloud(input);
+    mls.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    mls.setSearchRadius(search_radius);
+    mls.process(*smoothed);
+    LOGI("MovingLeastSquares smoothed points: input=%zu output=%zu radius=%.3f",
+         input->points.size(), smoothed->points.size(), search_radius);
+    return smoothed;
 }
 
 } // namespace pclmobile

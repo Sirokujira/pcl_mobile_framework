@@ -1,0 +1,50 @@
+name: ARRealityKitSample
+options:
+  bundleIdPrefix: io.github.sirokujira
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    ENABLE_BITCODE: NO
+targets:
+  ARRealityKitSample:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ARRealityKitSample
+    info:
+      path: ARRealityKitSample/Info.plist
+      properties:
+        NSCameraUsageDescription: "ARKit requires the camera."
+        UIRequiredDeviceCapabilities:
+          - arm64
+          - arkit
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.sirokujira.ARRealityKitSample
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_FILE: ARRealityKitSample/Info.plist
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/Frameworks"
+schemes:
+  ARRealityKitSample:
+    build:
+      targets:
+        ARRealityKitSample: all
+    run:
+      config: Debug
+    archive:
+      config: Release

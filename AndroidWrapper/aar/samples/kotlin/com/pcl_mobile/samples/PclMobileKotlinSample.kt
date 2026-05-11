@@ -33,7 +33,9 @@ object PclMobileKotlinSample {
         val octreeNeighbors = pclmobileJNILib.octreeRadiusSearch(0.0f, 0.0f, 0.0f, 0.10, 0.28)
         val clusterSizes = pclmobileJNILib.extractEuclideanClusters(0.18, 20, 5_000)
         val convexHullPoints = pclmobileJNILib.computeConvexHull()
+        val concaveHullPoints = pclmobileJNILib.computeConcaveHull(0.18)
         val projectedPlanePoints = pclmobileJNILib.projectInliersToPlane(0.03, 100)
+        val mlsPoints = pclmobileJNILib.smoothMovingLeastSquares(0.12)
         val icpResult = pclmobileJNILib.alignToTranslatedCopyICP(0.05f, -0.03f, 0.02f, 35)
 
         pclmobileJNILib.load(pcdFile.absolutePath)
@@ -67,7 +69,9 @@ object PclMobileKotlinSample {
             octreeNeighbors = octreeNeighbors,
             clusterSizes = clusterSizes,
             convexHullPoints = convexHullPoints,
+            concaveHullPoints = concaveHullPoints,
             projectedPlanePoints = projectedPlanePoints,
+            mlsPoints = mlsPoints,
             icpResult = icpResult,
             statisticalInliers = statisticalInliers,
             radiusInliers = radiusInliers,
@@ -137,7 +141,9 @@ object PclMobileKotlinSample {
         val octreeNeighbors: FloatArray,
         val clusterSizes: FloatArray,
         val convexHullPoints: FloatArray,
+        val concaveHullPoints: FloatArray,
         val projectedPlanePoints: FloatArray,
+        val mlsPoints: FloatArray,
         val icpResult: FloatArray,
         val statisticalInliers: FloatArray,
         val radiusInliers: FloatArray,
@@ -151,7 +157,9 @@ object PclMobileKotlinSample {
         val octreeNeighborCount: Int = octreeNeighbors.size / 4
         val clusterCount: Int = clusterSizes.size
         val convexHullPointCount: Int = convexHullPoints.size / 3
+        val concaveHullPointCount: Int = concaveHullPoints.size / 3
         val projectedPlanePointCount: Int = projectedPlanePoints.size / 3
+        val mlsPointCount: Int = mlsPoints.size / 3
         val statisticalInlierCount: Int = statisticalInliers.size / 3
         val radiusInlierCount: Int = radiusInliers.size / 3
         val cropBoxPointCount: Int = cropBoxPoints.size / 3

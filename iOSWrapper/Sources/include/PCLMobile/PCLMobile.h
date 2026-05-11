@@ -14,4 +14,8 @@ FOUNDATION_EXPORT double PCLMobileVersionNumber;
 //! Project version string for PCLMobile.
 FOUNDATION_EXPORT const unsigned char PCLMobileVersionString[];
 
+#import <PCLMobile/PCLMGeometry.h>
+#import <PCLMobile/PCLMSegmentation.h>
+#import <PCLMobile/PCLMRegistration.h>
+#import <PCLMobile/PCLMSurface.h>
 #import <PCLMobile/PCLMPointCloud.h>

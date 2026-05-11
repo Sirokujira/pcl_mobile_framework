@@ -21,6 +21,7 @@ bool segmentModel(int model_type,
                   pcl::PointIndices::Ptr inliers);
 std::vector<jfloat> segmentPlaneModel(double distance_threshold, int max_iterations);
 std::vector<jfloat> segmentSphereModel(double distance_threshold, int max_iterations);
+std::vector<jfloat> segmentSACModel(int model_type, double distance_threshold, int max_iterations);
 std::vector<jfloat> extractEuclideanClusters(double tolerance, int min_cluster_size, int max_cluster_size);
 
 } // namespace pclmobile

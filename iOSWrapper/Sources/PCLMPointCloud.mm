@@ -4,31 +4,16 @@
 // .mm extension is what lets us mix the C++ PCL types with Objective-C; the
 // public header (PCLMPointCloud.h) hides them.
 
-#import <PCLMobile/PCLMPointCloud.h>
+#import "PCLMPointCloud_Internal.h"
 
 #import <cmath>
 #import <cstdint>
 #import <memory>
 #import <string>
 
-#import <pcl/point_types.h>
-#import <pcl/point_cloud.h>
 #import <pcl/io/pcd_io.h>
 #import <pcl/filters/passthrough.h>
 #import <pcl/filters/voxel_grid.h>
-
-namespace {
-
-NSError *MakeError(PCLMobileErrorCode code, NSString *description) {
-    return [NSError errorWithDomain:PCLMobileErrorDomain
-                               code:code
-                           userInfo:@{ NSLocalizedDescriptionKey: description }];
-}
-
-using CloudT    = pcl::PointCloud<pcl::PointXYZ>;
-using CloudPtr  = CloudT::Ptr;
-
-}  // namespace
 
 @interface PCLMPointCloud () {
     CloudPtr _cloud;
@@ -52,6 +37,8 @@ using CloudPtr  = CloudT::Ptr;
     return [self initWithCloud:CloudPtr(new CloudT)];
 }
 
+- (CloudPtr)cloud { return _cloud; }
+
 #pragma mark - Public properties
 
 - (NSUInteger)pointCount {
@@ -66,14 +53,14 @@ using CloudPtr  = CloudT::Ptr;
 + (nullable instancetype)cloudFromPCDFile:(NSString *)path
                                     error:(NSError * _Nullable * _Nullable)error {
     if (path.length == 0) {
-        if (error) *error = MakeError(PCLMobileErrorCodeInvalidArgument,
+        if (error) *error = PCLMobileMakeError(PCLMobileErrorCodeInvalidArgument,
                                        @"path must not be empty");
         return nil;
     }
 
     NSFileManager *fm = NSFileManager.defaultManager;
     if (![fm fileExistsAtPath:path]) {
-        if (error) *error = MakeError(PCLMobileErrorCodeFileNotFound,
+        if (error) *error = PCLMobileMakeError(PCLMobileErrorCodeFileNotFound,
                                        [NSString stringWithFormat:@"PCD file not found: %@", path]);
         return nil;
     }
@@ -81,7 +68,7 @@ using CloudPtr  = CloudT::Ptr;
     CloudPtr cloud(new CloudT);
     const std::string utf8Path(path.UTF8String ?: "");
     if (pcl::io::loadPCDFile<pcl::PointXYZ>(utf8Path, *cloud) == -1) {
-        if (error) *error = MakeError(PCLMobileErrorCodeInvalidPCDFormat,
+        if (error) *error = PCLMobileMakeError(PCLMobileErrorCodeInvalidPCDFormat,
                                        [NSString stringWithFormat:@"failed to parse PCD: %@", path]);
         return nil;
     }
@@ -92,7 +79,7 @@ using CloudPtr  = CloudT::Ptr;
                                        count:(NSUInteger)count
                                        error:(NSError * _Nullable * _Nullable)error {
     if (packedXYZ == nullptr && count > 0) {
-        if (error) *error = MakeError(PCLMobileErrorCodeInvalidArgument,
+        if (error) *error = PCLMobileMakeError(PCLMobileErrorCodeInvalidArgument,
                                        @"packedXYZ must not be NULL when count > 0");
         return nil;
     }
@@ -123,7 +110,7 @@ using CloudPtr  = CloudT::Ptr;
                     actualCount:(NSUInteger * _Nullable)outCount
                           error:(NSError * _Nullable * _Nullable)error {
     if (buffer == nullptr && capacity > 0) {
-        if (error) *error = MakeError(PCLMobileErrorCodeInvalidArgument,
+        if (error) *error = PCLMobileMakeError(PCLMobileErrorCodeInvalidArgument,
                                        @"buffer must not be NULL");
         return NO;
     }
@@ -143,12 +130,12 @@ using CloudPtr  = CloudT::Ptr;
 - (BOOL)writePCDFileAtPath:(NSString *)path
                      error:(NSError * _Nullable * _Nullable)error {
     if (path.length == 0) {
-        if (error) *error = MakeError(PCLMobileErrorCodeInvalidArgument,
+        if (error) *error = PCLMobileMakeError(PCLMobileErrorCodeInvalidArgument,
                                        @"path must not be empty");
         return NO;
     }
     if (!_cloud) {
-        if (error) *error = MakeError(PCLMobileErrorCodeInternal,
+        if (error) *error = PCLMobileMakeError(PCLMobileErrorCodeInternal,
                                        @"underlying cloud is null");
         return NO;
     }
@@ -158,7 +145,7 @@ using CloudPtr  = CloudT::Ptr;
     // savePCDFileBinary if file size becomes a concern.
     const int rc = pcl::io::savePCDFileASCII<pcl::PointXYZ>(utf8Path, *_cloud);
     if (rc != 0) {
-        if (error) *error = MakeError(PCLMobileErrorCodeInternal,
+        if (error) *error = PCLMobileMakeError(PCLMobileErrorCodeInternal,
                                        [NSString stringWithFormat:
                                         @"savePCDFileASCII failed (rc=%d) for %@",
                                         rc, path]);
@@ -170,7 +157,7 @@ using CloudPtr  = CloudT::Ptr;
 - (nullable PCLMPointCloud *)voxelGridDownsampleWithLeaf:(double)leafSize
                                                    error:(NSError * _Nullable * _Nullable)error {
     if (leafSize <= 0.0) {
-        if (error) *error = MakeError(PCLMobileErrorCodeInvalidArgument,
+        if (error) *error = PCLMobileMakeError(PCLMobileErrorCodeInvalidArgument,
                                        @"leafSize must be positive");
         return nil;
     }
@@ -190,12 +177,12 @@ using CloudPtr  = CloudT::Ptr;
                                               maxValue:(double)maxValue
                                                  error:(NSError * _Nullable * _Nullable)error {
     if (axis.length == 0) {
-        if (error) *error = MakeError(PCLMobileErrorCodeInvalidArgument,
+        if (error) *error = PCLMobileMakeError(PCLMobileErrorCodeInvalidArgument,
                                        @"axis must be 'x', 'y' or 'z'");
         return nil;
     }
     if (minValue >= maxValue) {
-        if (error) *error = MakeError(PCLMobileErrorCodeInvalidArgument,
+        if (error) *error = PCLMobileMakeError(PCLMobileErrorCodeInvalidArgument,
                                        @"minValue must be < maxValue");
         return nil;
     }

@@ -67,11 +67,22 @@ set(EIGEN_DIR          "${PCL_INSTALL_PREFIX}/eigen")
 set(PCLMOBILE_PUBLIC_HEADERS
     Sources/include/PCLMobile/PCLMobile.h
     Sources/include/PCLMobile/PCLMPointCloud.h
+    Sources/include/PCLMobile/PCLMGeometry.h
+    Sources/include/PCLMobile/PCLMSegmentation.h
+    Sources/include/PCLMobile/PCLMRegistration.h
+    Sources/include/PCLMobile/PCLMSurface.h
 )
 
 set(PCLMOBILE_SOURCES
     Sources/PCLMobile.mm
     Sources/PCLMPointCloud.mm
+    Sources/PCLMFilters.mm
+    Sources/PCLMFeatures.mm
+    Sources/PCLMGeometry.mm
+    Sources/PCLMSearch.mm
+    Sources/PCLMSegmentation.mm
+    Sources/PCLMSurface.mm
+    Sources/PCLMRegistration.mm
 )
 
 add_library(PCLMobile STATIC

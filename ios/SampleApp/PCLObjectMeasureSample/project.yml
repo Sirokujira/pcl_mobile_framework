@@ -1,0 +1,60 @@
+name: PCLObjectMeasureSample
+options:
+  bundleIdPrefix: io.github.sirokujira
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    CLANG_CXX_LANGUAGE_STANDARD: "c++17"
+    CLANG_CXX_LIBRARY: "libc++"
+    ENABLE_BITCODE: NO
+    OTHER_LDFLAGS: "-lc++ -ObjC"
+    CLANG_MODULES_AUTOLINK: NO
+    MTL_ENABLE_DEBUG_INFO: INCLUDE_SOURCE
+targets:
+  PCLObjectMeasureSample:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: PCLObjectMeasureSample
+    info:
+      path: PCLObjectMeasureSample/Info.plist
+      properties:
+        NSCameraUsageDescription: "ARKit requires the camera for LiDAR object measurement."
+        UIRequiredDeviceCapabilities:
+          - arm64
+          - arkit
+          - iphone-lidar
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+    dependencies:
+      - framework: ../../../build/ios/xcframework/PCLMobile.xcframework
+        embed: true
+        codeSign: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.sirokujira.PCLObjectMeasureSample
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_FILE: PCLObjectMeasureSample/Info.plist
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/Frameworks"
+schemes:
+  PCLObjectMeasureSample:
+    build:
+      targets:
+        PCLObjectMeasureSample: all
+    run:
+      config: Debug
+    archive:
+      config: Release

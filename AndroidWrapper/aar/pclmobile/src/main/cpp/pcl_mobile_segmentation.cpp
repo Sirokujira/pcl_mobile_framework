@@ -80,6 +80,25 @@ std::vector<jfloat> segmentSphereModel(double distance_threshold, int max_iterat
     return values;
 }
 
+std::vector<jfloat> segmentSACModel(int model_type, double distance_threshold, int max_iterations)
+{
+    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+    if (!segmentModel(model_type, distance_threshold, max_iterations, coefficients, inliers)) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    std::vector<jfloat> values;
+    values.reserve(coefficients->values.size() + 2);
+    for (float coefficient : coefficients->values) {
+        values.push_back(coefficient);
+    }
+    values.push_back(static_cast<jfloat>(inliers->indices.size()));
+    values.push_back(static_cast<jfloat>(input->points.size()));
+    return values;
+}
+
 std::vector<jfloat> extractEuclideanClusters(double tolerance, int min_cluster_size, int max_cluster_size)
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();

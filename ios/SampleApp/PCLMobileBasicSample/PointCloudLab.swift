@@ -4,7 +4,7 @@
 // iOS Simulator with no camera / sensor dependency. Keeps every public
 // PCLMobile API on display:
 //
-//   * `PCLMPointCloud.make(packedXYZ:count:)`     -- build from a buffer
+//   * `PointCloud.make(packedXYZ:count:)`     -- build from a buffer
 //   * `voxelGridDownsampled(leaf:)`               -- decimate
 //   * `passThroughFiltered(axis:min:max:)`        -- crop
 //   * `write(pcdAt:)` + `load(pcdAt:)`            -- file round-trip
@@ -45,7 +45,7 @@ final class PointCloudLab: ObservableObject {
 
             // 2. Hand off to PCLMobile.
             let cloud = try raw.withUnsafeBufferPointer { buf in
-                try PCLMPointCloud.make(packedXYZ: buf.baseAddress!,
+                try PointCloud.make(packedXYZ: buf.baseAddress!,
                                         count: UInt(sourceCount))
             }
 
@@ -66,7 +66,7 @@ final class PointCloudLab: ObservableObject {
             try filtered.write(pcdAt: url.path)
             saveURL = url
 
-            let reloaded = try PCLMPointCloud.load(pcdAt: url.path)
+            let reloaded = try PointCloud.load(pcdAt: url.path)
             roundTripCount = Int(reloaded.pointCount)
         } catch {
             lastError = error.localizedDescription
