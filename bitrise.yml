@@ -1,0 +1,289 @@
+---
+format_version: '13'
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+
+# ---------------------------------------------------------------------------
+# project_type
+#   `other` because the repo contains both iOS (Xcode) and Android (Gradle)
+#   sub-projects under non-standard paths.
+# ---------------------------------------------------------------------------
+project_type: other
+
+app:
+  envs:
+    # ---- shared paths -----------------------------------------------------
+    - REPO_ROOT: $BITRISE_SOURCE_DIR
+    - BUILD_DIR: $BITRISE_SOURCE_DIR/build
+
+    # ---- iOS --------------------------------------------------------------
+    # XCFramework output produced by scripts/build_ios.sh.
+    - XCFRAMEWORK_PATH: $BITRISE_SOURCE_DIR/build/ios/xcframework/PCLMobile.xcframework
+    # Sample app shipped to TestFlight. Override per-workflow if needed.
+    - IOS_APP_DIR: $BITRISE_SOURCE_DIR/ios/SampleApp
+    - IOS_SCHEME: PCLMobileARSample
+    - IOS_PROJECT_PATH: $BITRISE_SOURCE_DIR/ios/SampleApp/PCLMobileARSample.xcodeproj
+    - IOS_DEPLOYMENT_TARGET: '17.0'
+    # Restrict slices to device + arm64 sim to keep CI minutes bounded.
+    # Override with SIMULATORARM64 SIMULATOR64 OS64 if you need x86_64 sims.
+    - IOS_SLICES: OS64 SIMULATORARM64
+
+    # ---- Android ----------------------------------------------------------
+    - ANDROID_PROJECT_DIR: $BITRISE_SOURCE_DIR/AndroidWrapper/aar
+    - ANDROID_APP_MODULE: app
+    - ANDROID_ABIS: arm64-v8a
+    - ANDROID_PLATFORM: android-24
+    - ANDROID_NDK_VERSION: '29.0.14206865'
+
+trigger_map:
+  # Push to master → run the cross-platform build, no deploy.
+  - push_branch: master
+    workflow: ci
+  # Tags vX.Y.Z → full release: build + deploy iOS + deploy Android.
+  - tag: 'v*.*.*'
+    workflow: release
+  # PRs → cross-platform build only.
+  - pull_request_source_branch: '*'
+    workflow: ci
+
+workflows:
+
+  # =======================================================================
+  # ci — sanity build for both platforms on every push/PR (no deploy).
+  # =======================================================================
+  ci:
+    description: Build iOS XCFramework + sample app and Android AAR + sample APK.
+    before_run:
+      - _setup
+    after_run:
+      - _ios_build
+      - _android_build
+
+  # =======================================================================
+  # release — build everything and deploy:
+  #   iOS  → TestFlight (App Store Connect API)
+  #   Android → DeployGate (curl upload)
+  # =======================================================================
+  release:
+    description: Build + deploy iOS to TestFlight and Android to DeployGate.
+    before_run:
+      - _setup
+    after_run:
+      - _ios_build
+      - _ios_deploy_testflight
+      - _android_build
+      - _android_deploy_deploygate
+
+  # =======================================================================
+  # ios_only / android_only — single-platform manual triggers.
+  # =======================================================================
+  ios_only:
+    before_run:
+      - _setup
+    after_run:
+      - _ios_build
+      - _ios_deploy_testflight
+
+  android_only:
+    before_run:
+      - _setup
+    after_run:
+      - _android_build
+      - _android_deploy_deploygate
+
+  # =======================================================================
+  # _setup — clone, restore cache, install host tools.
+  # =======================================================================
+  _setup:
+    steps:
+      - activate-ssh-key@4: {}
+      - git-clone@8: {}
+      - restore-cache@3:
+          inputs:
+            - key: |
+                pclmobile-build-{{ os }}-{{ arch }}-{{ checksum "CMakeLists.txt" }}-{{ checksum "scripts/build_ios.sh" }}-{{ checksum "scripts/build_android.sh" }}
+            - paths: |
+                build/ios
+                build/android
+                AndroidWrapper/aar/pclmobile/libs
+      - script@1:
+          title: Install xcodegen + cmake + ninja
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euo pipefail
+                if [[ "$(uname -s)" == "Darwin" ]]; then
+                    brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+                    brew list cmake     >/dev/null 2>&1 || brew install cmake
+                    brew list ninja     >/dev/null 2>&1 || brew install ninja
+                else
+                    sudo apt-get update
+                    sudo apt-get install -y cmake ninja-build
+                fi
+                cmake --version
+                ninja --version
+
+  # =======================================================================
+  # _ios_build — superbuild + XCFramework + xcodegen + xcode-archive.
+  # =======================================================================
+  _ios_build:
+    steps:
+      - script@1:
+          title: Build PCLMobile.xcframework
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euo pipefail
+                if [[ ! -d "$XCFRAMEWORK_PATH" ]]; then
+                    IOS_SLICES="$IOS_SLICES" \
+                    DEPLOYMENT_TARGET="$IOS_DEPLOYMENT_TARGET" \
+                    bash scripts/build_ios.sh
+                else
+                    echo "XCFramework already cached at $XCFRAMEWORK_PATH — skipping."
+                fi
+
+      - script@1:
+          title: xcodegen iOS sample projects
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euo pipefail
+                xcodegen generate --spec "$IOS_APP_DIR/project.yml" --project "$IOS_APP_DIR"
+
+      - certificate-and-profile-installer@1: {}
+
+      - xcode-archive@5:
+          inputs:
+            - project_path: $IOS_PROJECT_PATH
+            - scheme: $IOS_SCHEME
+            - distribution_method: app-store
+            - configuration: Release
+            - automatic_code_signing: api-key
+
+  # =======================================================================
+  # _ios_deploy_testflight — upload .ipa to TestFlight via App Store Connect API.
+  # Requires the following secrets in Bitrise → Code Signing & Files:
+  #   - APP_STORE_CONNECT_API_KEY (.p8)
+  #   - APP_STORE_CONNECT_API_KEY_ID
+  #   - APP_STORE_CONNECT_API_KEY_ISSUER_ID
+  # =======================================================================
+  _ios_deploy_testflight:
+    steps:
+      - deploy-to-itunesconnect-application-loader@1:
+          inputs:
+            - app_password: ''
+            - api_key_path: $BITRISE_APP_STORE_CONNECT_API_KEY_URL
+            - api_key_id: $APP_STORE_CONNECT_API_KEY_ID
+            - api_issuer: $APP_STORE_CONNECT_API_KEY_ISSUER_ID
+
+      - deploy-to-bitrise-io@2:
+          inputs:
+            - deploy_path: $BITRISE_IPA_PATH
+
+  # =======================================================================
+  # _android_build — native libs + AAR + sample app APK.
+  # =======================================================================
+  _android_build:
+    steps:
+      - install-missing-android-tools@3:
+          inputs:
+            - gradlew_path: $ANDROID_PROJECT_DIR/gradlew
+            - ndk_version: $ANDROID_NDK_VERSION
+
+      - script@1:
+          title: Build PCL native libs for Android
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euo pipefail
+                STAGED="$ANDROID_PROJECT_DIR/pclmobile/libs/${ANDROID_ABIS%% *}"
+                if [[ ! -d "$STAGED" ]]; then
+                    ANDROID_ABIS="$ANDROID_ABIS" \
+                    ANDROID_PLATFORM="$ANDROID_PLATFORM" \
+                    ANDROID_NDK_VERSION="$ANDROID_NDK_VERSION" \
+                    ANDROID_CLEAN_AFTER_STAGE=ON \
+                    bash scripts/build_android.sh
+                else
+                    echo "Android native libs already cached at $STAGED — skipping."
+                fi
+
+      - android-build@1:
+          inputs:
+            - project_location: $ANDROID_PROJECT_DIR
+            - module: $ANDROID_APP_MODULE
+            - variant: release
+            - build_type: apk
+
+      - sign-apk@1:
+          run_if: '{{enveq "BITRISEIO_ANDROID_KEYSTORE_URL" ""}}'
+          # If no keystore is uploaded, this step is skipped and the unsigned
+          # APK at $BITRISE_APK_PATH is still emitted. Replace `run_if` with
+          # `true` once you upload a keystore in Code Signing & Files.
+
+  # =======================================================================
+  # _android_deploy_deploygate — upload signed APK to DeployGate via REST API.
+  # Requires the following secrets in Bitrise → Secrets:
+  #   - DEPLOYGATE_API_TOKEN
+  #   - DEPLOYGATE_USER  (your DeployGate username or organisation)
+  # Optional:
+  #   - DEPLOYGATE_DISTRIBUTION_KEY   (named distribution page hash)
+  #   - DEPLOYGATE_RELEASE_NOTE
+  # =======================================================================
+  _android_deploy_deploygate:
+    steps:
+      - script@1:
+          title: Upload APK to DeployGate
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euo pipefail
+
+                if [[ -z "${DEPLOYGATE_API_TOKEN:-}" || -z "${DEPLOYGATE_USER:-}" ]]; then
+                    echo "ERROR: DEPLOYGATE_API_TOKEN and DEPLOYGATE_USER must be set." >&2
+                    exit 1
+                fi
+
+                APK="${BITRISE_SIGNED_APK_PATH:-${BITRISE_APK_PATH:-}}"
+                if [[ -z "$APK" || ! -f "$APK" ]]; then
+                    echo "ERROR: APK not found at \$BITRISE_SIGNED_APK_PATH or \$BITRISE_APK_PATH." >&2
+                    exit 1
+                fi
+
+                MESSAGE="${DEPLOYGATE_RELEASE_NOTE:-Build ${BITRISE_BUILD_NUMBER} from ${BITRISE_GIT_BRANCH:-${BITRISE_GIT_TAG}}}"
+
+                CURL_ARGS=(
+                    -sSfL
+                    -H "Authorization: token ${DEPLOYGATE_API_TOKEN}"
+                    -F "file=@${APK}"
+                    -F "message=${MESSAGE}"
+                )
+                if [[ -n "${DEPLOYGATE_DISTRIBUTION_KEY:-}" ]]; then
+                    CURL_ARGS+=(-F "distribution_key=${DEPLOYGATE_DISTRIBUTION_KEY}")
+                fi
+
+                curl "${CURL_ARGS[@]}" \
+                    "https://deploygate.com/api/users/${DEPLOYGATE_USER}/apps" \
+                    | tee deploygate-response.json
+
+      - deploy-to-bitrise-io@2:
+          inputs:
+            - deploy_path: $BITRISE_APK_PATH
+
+  # =======================================================================
+  # _post_cache — save build outputs after a successful build.
+  # Wire up by adding `after_run: [_post_cache]` to ci/release if desired.
+  # =======================================================================
+  _post_cache:
+    steps:
+      - save-cache@3:
+          inputs:
+            - key: |
+                pclmobile-build-{{ os }}-{{ arch }}-{{ checksum "CMakeLists.txt" }}-{{ checksum "scripts/build_ios.sh" }}-{{ checksum "scripts/build_android.sh" }}
+            - paths: |
+                build/ios
+                build/android
+                AndroidWrapper/aar/pclmobile/libs
+
+meta:
+  bitrise.io:
+    stack: osx-xcode-15.4.x
+    machine_type_id: g2-m1.8core
