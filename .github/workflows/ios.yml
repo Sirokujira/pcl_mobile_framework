@@ -1,0 +1,113 @@
+name: iOS XCFramework
+
+on:
+  push:
+    paths:
+      - ".github/workflows/ios.yml"
+      - "iOSWrapper/**"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "scripts/build_ios.sh"
+      - "scripts/make_xcframework.sh"
+  pull_request:
+    paths:
+      - ".github/workflows/ios.yml"
+      - "iOSWrapper/**"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "scripts/build_ios.sh"
+      - "scripts/make_xcframework.sh"
+  workflow_dispatch:
+
+concurrency:
+  group: ios-xcframework-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IOS_DEPLOYMENT_TARGET: "17.0"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Build PCLMobile.framework for each slice in parallel. The matrix runs
+  # build_ios.sh with IOS_SLICES restricted to one slice per job, so the
+  # superbuild + wrapper framework + (single-slice) xcframework are all
+  # produced inside one runner — we keep only the per-slice .framework as
+  # an artifact for the merge job below.
+  # ---------------------------------------------------------------------------
+  slice:
+    name: Build slice (${{ matrix.slice }})
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - slice: OS64
+            tag: ios-arm64
+            cfg_dir: Release-iphoneos
+          - slice: SIMULATORARM64
+            tag: iossim-arm64
+            cfg_dir: Release-iphonesimulator
+    env:
+      IOS_SLICES: ${{ matrix.slice }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: Install build tools
+        run: |
+          brew install cmake ninja
+          cmake --version
+          ninja --version
+          xcodebuild -version
+
+      - name: Build PCLMobile.framework (${{ matrix.slice }})
+        run: ./scripts/build_ios.sh
+
+      - name: Upload framework slice
+        uses: actions/upload-artifact@v7
+        with:
+          name: pclmobile-framework-${{ matrix.slice }}
+          path: build/ios/${{ matrix.tag }}/wrapper/${{ matrix.cfg_dir }}/PCLMobile.framework
+          if-no-files-found: error
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Merge per-slice frameworks into one XCFramework via make_xcframework.sh.
+  # ---------------------------------------------------------------------------
+  xcframework:
+    name: Merge into XCFramework
+    needs: slice
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download OS64 framework
+        uses: actions/download-artifact@v6
+        with:
+          name: pclmobile-framework-OS64
+          path: build/ios/ios-arm64/wrapper/Release-iphoneos/PCLMobile.framework
+
+      - name: Download SIMULATORARM64 framework
+        uses: actions/download-artifact@v6
+        with:
+          name: pclmobile-framework-SIMULATORARM64
+          path: build/ios/iossim-arm64/wrapper/Release-iphonesimulator/PCLMobile.framework
+
+      - name: Create XCFramework
+        run: ./scripts/make_xcframework.sh OS64 SIMULATORARM64
+
+      - name: Upload XCFramework
+        uses: actions/upload-artifact@v7
+        with:
+          name: pclmobile-xcframework
+          path: |
+            build/ios/xcframework/PCLMobile.xcframework
+            build/ios/xcframework/PCLMobile.xcframework.zip
+          if-no-files-found: error
+          retention-days: 30
