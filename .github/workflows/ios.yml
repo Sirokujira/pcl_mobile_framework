@@ -49,6 +49,12 @@ jobs:
             cfg_dir: Release-iphonesimulator
     env:
       IOS_SLICES: ${{ matrix.slice }}
+      # build_ios.sh calls make_xcframework.sh at the end with a single slice,
+      # whose zip lands around 29 MB — below the default 30 MB threshold that
+      # was calibrated for the full multi-slice archive. Disable the check at
+      # the slice stage; the xcframework job below re-applies it on the merged
+      # multi-slice archive.
+      XCFRAMEWORK_MIN_MB: "1"
 
     steps:
       - name: Checkout
