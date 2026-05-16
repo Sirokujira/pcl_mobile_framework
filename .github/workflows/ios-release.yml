@@ -1,0 +1,157 @@
+name: iOS Package Release
+
+# Trigger flow:
+#   1. Locally run `scripts/release.sh <version>` to patch Package.swift,
+#      PCLMobile.podspec and PCLMobile.json with the new SHA256/URL.
+#   2. Commit the patched manifests and push.
+#   3. Push the matching tag (`v<version>`) — this workflow takes over and:
+#        - rebuilds the 3-slice PCLMobile.xcframework on a clean macOS runner
+#        - creates/updates the GitHub Release for the tag
+#        - uploads PCLMobile.xcframework.zip as a release asset
+#        - (optionally) pushes the podspec to CocoaPods Trunk
+#
+# Manual re-runs and CocoaPods-only republish are available via the
+# workflow_dispatch trigger.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without the leading v (tag must already exist)"
+        required: true
+        default: "0.1.0"
+      publish_cocoapods:
+        description: "Also push to CocoaPods Trunk (needs COCOAPODS_TRUNK_TOKEN secret)"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios-package-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IOS_DEPLOYMENT_TARGET: "17.0"
+  IOS_SLICES: "OS64 SIMULATORARM64 SIMULATOR64"
+
+jobs:
+  package:
+    name: Build and publish iOS XCFramework
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout (tag commit)
+        uses: actions/checkout@v6
+
+      - name: Resolve release version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            TAG="${{ github.ref_name }}"
+            VERSION="${TAG#v}"
+          else
+            VERSION="${{ inputs.version }}"
+            VERSION="${VERSION#v}"
+            TAG="v${VERSION}"
+          fi
+          if [[ ! "${VERSION}" =~ ^[0-9]+[.][0-9]+[.][0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release version: ${VERSION}" >&2
+            exit 64
+          fi
+          echo "PCLMOBILE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "PCLMOBILE_RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: Install build tools
+        run: |
+          brew install cmake ninja
+          cmake --version
+          ninja --version
+          xcodebuild -version
+
+      - name: Build PCLMobile.xcframework (3 slices)
+        run: ./scripts/build_ios.sh
+
+      - name: Compute checksums
+        run: |
+          ZIP=build/ios/xcframework/PCLMobile.xcframework.zip
+          if [[ ! -f "$ZIP" ]]; then
+            echo "ERROR: $ZIP not produced by build_ios.sh" >&2
+            exit 1
+          fi
+          SHA256=$(shasum -a 256 "$ZIP" | awk '{print $1}')
+          ZIP_BYTES=$(stat -f '%z' "$ZIP")
+          ZIP_MB=$(( ZIP_BYTES / 1024 / 1024 ))
+          echo "Built XCFramework zip: ${ZIP_MB} MB, SHA256=${SHA256}"
+          echo "PCLMOBILE_XCFW_SHA256=${SHA256}" >> "$GITHUB_ENV"
+          echo "PCLMOBILE_XCFW_MB=${ZIP_MB}" >> "$GITHUB_ENV"
+
+      - name: Sanity-check checksum against Package.swift
+        run: |
+          MANIFEST_SHA=$(grep -E 'let xcframeworkChecksum' Package.swift | sed -E 's/.*"([^"]+)".*/\1/')
+          if [[ -z "$MANIFEST_SHA" || "$MANIFEST_SHA" == "REPLACE_WITH_SHA256_FROM_make_xcframework.sh" ]]; then
+            echo "::warning::Package.swift checksum placeholder is unset; SPM consumers will fail to verify."
+          elif [[ "$MANIFEST_SHA" != "$PCLMOBILE_XCFW_SHA256" ]]; then
+            echo "::error::Package.swift checksum (${MANIFEST_SHA}) does not match the built zip (${PCLMOBILE_XCFW_SHA256})."
+            echo "Run scripts/release.sh ${PCLMOBILE_VERSION} locally, commit the patched manifests, retag and re-push."
+            exit 1
+          else
+            echo "Package.swift checksum matches built XCFramework."
+          fi
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES_FILE="$(mktemp)"
+          cat > "$NOTES_FILE" <<EOF
+          PCLMobile ${PCLMOBILE_VERSION}
+
+          Built on macos-15 / Xcode 16 / iOS deployment target ${IOS_DEPLOYMENT_TARGET}.
+
+          XCFramework slices: ${IOS_SLICES}
+          XCFramework zip:    ${PCLMOBILE_XCFW_MB} MB
+          SHA256:             \`${PCLMOBILE_XCFW_SHA256}\`
+
+          Distribution channels:
+          - Swift Package Manager → \`Package.swift\` (binary target)
+          - CocoaPods             → \`PCLMobile.podspec\`
+          - Carthage              → \`PCLMobile.json\`
+          EOF
+
+          if ! gh release view "$PCLMOBILE_RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$PCLMOBILE_RELEASE_TAG" \
+              --title "PCLMobile $PCLMOBILE_VERSION" \
+              --notes-file "$NOTES_FILE"
+          fi
+          gh release upload "$PCLMOBILE_RELEASE_TAG" \
+            build/ios/xcframework/PCLMobile.xcframework.zip \
+            --clobber
+
+      - name: Publish to CocoaPods Trunk (optional)
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_cocoapods == true
+        env:
+          COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
+        run: |
+          if [[ -z "${COCOAPODS_TRUNK_TOKEN:-}" ]]; then
+            echo "::warning::COCOAPODS_TRUNK_TOKEN secret not set; skipping pod trunk push."
+            exit 0
+          fi
+          pod trunk push iOSWrapper/PCLMobile.podspec --allow-warnings
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: pclmobile-${{ env.PCLMOBILE_VERSION }}-xcframework
+          path: |
+            build/ios/xcframework/PCLMobile.xcframework
+            build/ios/xcframework/PCLMobile.xcframework.zip
+          if-no-files-found: error
+          retention-days: 90
