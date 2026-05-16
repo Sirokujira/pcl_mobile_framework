@@ -6,6 +6,8 @@
 #include <vector>
 
 #include <pcl/ModelCoefficients.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 #include <pcl/PointIndices.h>
 
 namespace pclmobile {
@@ -23,6 +25,15 @@ std::vector<jfloat> segmentPlaneModel(double distance_threshold, int max_iterati
 std::vector<jfloat> segmentSphereModel(double distance_threshold, int max_iterations);
 std::vector<jfloat> segmentSACModel(int model_type, double distance_threshold, int max_iterations);
 std::vector<jfloat> extractEuclideanClusters(double tolerance, int min_cluster_size, int max_cluster_size);
+std::vector<jfloat> extractRegionGrowingClusters(int normal_k_search,
+                                                 int number_of_neighbours,
+                                                 int min_cluster_size,
+                                                 int max_cluster_size,
+                                                 double smoothness_threshold_degrees,
+                                                 double curvature_threshold);
+pcl::PointCloud<pcl::PointXYZ>::Ptr segmentDifferencesAgainstTarget(
+        const std::vector<jfloat>& packed_target_xyz,
+        double distance_threshold);
 
 } // namespace pclmobile
 

@@ -134,6 +134,8 @@ add_library(pclmobile-jni SHARED
     src/main/cpp/pcl_mobile_features.cpp
     src/main/cpp/pcl_mobile_filters.cpp
     src/main/cpp/pcl_mobile_io.cpp
+    src/main/cpp/pcl_mobile_keypoints.cpp
+    src/main/cpp/pcl_mobile_range_image.cpp
     src/main/cpp/pcl_mobile_registration.cpp
     src/main/cpp/pcl_mobile_search.cpp
     src/main/cpp/pcl_mobile_segmentation.cpp

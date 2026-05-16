@@ -1,17 +1,193 @@
 #include "pcl_mobile_registration.h"
 
 #include <pcl/common/transforms.h>
+#include <pcl/registration/gicp.h>
 #include <pcl/registration/icp.h>
+#include <pcl/registration/transformation_estimation_svd.h>
 
 #include "pcl_mobile_context.h"
 #include "pcl_mobile_log.h"
 
 namespace pclmobile {
 
+namespace {
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFromPackedXYZ(const std::vector<jfloat>& packed_xyz)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr result(new pcl::PointCloud<pcl::PointXYZ>);
+    result->points.reserve(packed_xyz.size() / 3);
+    for (std::size_t i = 0; i + 2 < packed_xyz.size(); i += 3) {
+        result->points.emplace_back(packed_xyz[i], packed_xyz[i + 1], packed_xyz[i + 2]);
+    }
+    result->width = static_cast<std::uint32_t>(result->points.size());
+    result->height = 1;
+    result->is_dense = false;
+    return result;
+}
+
+std::vector<jfloat> matrixToRowMajorTuple(const Eigen::Matrix4f& matrix)
+{
+    std::vector<jfloat> values;
+    values.reserve(16);
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            values.push_back(matrix(row, col));
+        }
+    }
+    return values;
+}
+
+Eigen::Matrix4f matrixFromRowMajorTuple(const std::vector<jfloat>& row_major_matrix)
+{
+    Eigen::Matrix4f matrix = Eigen::Matrix4f::Identity();
+    if (row_major_matrix.size() < 16) {
+        return matrix;
+    }
+
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            matrix(row, col) = row_major_matrix[static_cast<std::size_t>(row * 4 + col)];
+        }
+    }
+    return matrix;
+}
+
+template <typename RegistrationT>
+std::vector<jfloat> registrationResultTuple(RegistrationT& registration)
+{
+    std::vector<jfloat> values;
+    values.reserve(18);
+    values.push_back(registration.hasConverged() ? 1.0f : 0.0f);
+    values.push_back(static_cast<jfloat>(registration.getFitnessScore()));
+
+    std::vector<jfloat> matrix_values = matrixToRowMajorTuple(registration.getFinalTransformation());
+    values.insert(values.end(), matrix_values.begin(), matrix_values.end());
+    return values;
+}
+
+} // namespace
+
+std::vector<jfloat> estimateRigidTransformSVD(const std::vector<jfloat>& packed_target_xyz)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr target = cloudFromPackedXYZ(packed_target_xyz);
+    if (source->empty() || source->points.size() != target->points.size()) {
+        LOGE("TransformationEstimationSVD refused input: source=%zu target=%zu",
+             source->points.size(), target->points.size());
+        return {};
+    }
+
+    Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+    pcl::registration::TransformationEstimationSVD<pcl::PointXYZ, pcl::PointXYZ> estimation;
+    estimation.estimateRigidTransformation(*source, *target, transform);
+    LOGI("TransformationEstimationSVD: source=%zu target=%zu", source->points.size(), target->points.size());
+    return matrixToRowMajorTuple(transform);
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr transformActiveCloud(const std::vector<jfloat>& row_major_matrix)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    if (source->empty()) {
+        clearFilteredCloud();
+        return filteredCloud();
+    }
+
+    Eigen::Matrix4f transform = matrixFromRowMajorTuple(row_major_matrix);
+    pcl::transformPointCloud(*source, *filteredCloud(), transform);
+    LOGI("transformPointCloud: input=%zu output=%zu", source->points.size(), filteredCloud()->points.size());
+    return filteredCloud();
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr translateActiveCloud(float tx, float ty, float tz)
+{
+    Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+    transform(0, 3) = tx;
+    transform(1, 3) = ty;
+    transform(2, 3) = tz;
+    return transformActiveCloud(matrixToRowMajorTuple(transform));
+}
+
+std::vector<jfloat> alignToTargetICP(
+        const std::vector<jfloat>& packed_target_xyz,
+        int max_iterations,
+        double max_correspondence_distance,
+        double transformation_epsilon,
+        double euclidean_fitness_epsilon)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr target = cloudFromPackedXYZ(packed_target_xyz);
+    if (source->empty() || target->empty()) {
+        clearFilteredCloud();
+        return {};
+    }
+
+    pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ>* icp =
+            new pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ>();
+    icp->setInputSource(source);
+    icp->setInputTarget(target);
+    icp->setMaximumIterations(max_iterations);
+    if (max_correspondence_distance > 0.0) {
+        icp->setMaxCorrespondenceDistance(max_correspondence_distance);
+    }
+    if (transformation_epsilon > 0.0) {
+        icp->setTransformationEpsilon(transformation_epsilon);
+    }
+    if (euclidean_fitness_epsilon > 0.0) {
+        icp->setEuclideanFitnessEpsilon(euclidean_fitness_epsilon);
+    }
+    icp->align(*filteredCloud());
+
+    LOGI("IterativeClosestPoint target: source=%zu target=%zu output=%zu converged=%d fitness=%.6f",
+         source->points.size(), target->points.size(), filteredCloud()->points.size(),
+         icp->hasConverged() ? 1 : 0, icp->getFitnessScore());
+    return registrationResultTuple(*icp);
+}
+
+std::vector<jfloat> alignToTargetGICP(
+        const std::vector<jfloat>& packed_target_xyz,
+        int max_iterations,
+        double max_correspondence_distance,
+        double transformation_epsilon,
+        double rotation_epsilon,
+        int max_optimizer_iterations)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr target = cloudFromPackedXYZ(packed_target_xyz);
+    if (source->empty() || target->empty()) {
+        clearFilteredCloud();
+        return {};
+    }
+
+    pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ>* gicp =
+            new pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ>();
+    gicp->setInputSource(source);
+    gicp->setInputTarget(target);
+    gicp->setMaximumIterations(max_iterations);
+    if (max_correspondence_distance > 0.0) {
+        gicp->setMaxCorrespondenceDistance(max_correspondence_distance);
+    }
+    if (transformation_epsilon > 0.0) {
+        gicp->setTransformationEpsilon(transformation_epsilon);
+    }
+    if (rotation_epsilon > 0.0) {
+        gicp->setRotationEpsilon(rotation_epsilon);
+    }
+    if (max_optimizer_iterations > 0) {
+        gicp->setMaximumOptimizerIterations(max_optimizer_iterations);
+    }
+    gicp->align(*filteredCloud());
+
+    LOGI("GeneralizedIterativeClosestPoint target: source=%zu target=%zu output=%zu converged=%d fitness=%.6f",
+         source->points.size(), target->points.size(), filteredCloud()->points.size(),
+         gicp->hasConverged() ? 1 : 0, gicp->getFitnessScore());
+    return registrationResultTuple(*gicp);
+}
+
 std::vector<jfloat> alignToTranslatedCopyICP(float tx, float ty, float tz, int max_iterations)
 {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr source = activeCloud();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
     if (source->empty()) {
+        clearFilteredCloud();
         return {};
     }
 
@@ -31,20 +207,11 @@ std::vector<jfloat> alignToTranslatedCopyICP(float tx, float ty, float tz, int m
     icp->setInputTarget(target);
     icp->setMaximumIterations(max_iterations);
     icp->align(aligned);
+    *filteredCloud() = aligned;
 
-    Eigen::Matrix4f matrix = icp->getFinalTransformation();
-    std::vector<jfloat> values;
-    values.reserve(18);
-    values.push_back(icp->hasConverged() ? 1.0f : 0.0f);
-    values.push_back(static_cast<jfloat>(icp->getFitnessScore()));
-    for (int row = 0; row < 4; row++) {
-        for (int col = 0; col < 4; col++) {
-            values.push_back(matrix(row, col));
-        }
-    }
     LOGI("IterativeClosestPoint: input=%zu converged=%d fitness=%.6f translation=(%.3f, %.3f, %.3f)",
          source->points.size(), icp->hasConverged() ? 1 : 0, icp->getFitnessScore(), tx, ty, tz);
-    return values;
+    return registrationResultTuple(*icp);
 }
 
 } // namespace pclmobile

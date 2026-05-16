@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 @RunWith(AndroidJUnit4.class)
@@ -32,7 +33,65 @@ public class PclMobileDeviceSampleTest {
         pclmobileJNILib.load(samplePcd.getAbsolutePath());
         float[] rawPoints = pclmobileJNILib.getCloudPoints();
         assertPointTriples("raw point cloud", rawPoints);
+        int rawCount = rawPoints.length / 3;
 
+        float[] covarianceMatrix = pclmobileJNILib.computeCovarianceMatrix();
+        assertEquals("covariance tuple should contain centroid, 3x3 matrix, and count",
+                13, covarianceMatrix.length);
+        assertEquals("covariance count should match raw point count",
+                rawCount, Math.round(covarianceMatrix[12]));
+
+        float[] principalAxes = pclmobileJNILib.computePrincipalAxes();
+        assertEquals("PCA tuple should contain mean, eigenvalues, eigenvectors, and count",
+                16, principalAxes.length);
+        assertEquals("PCA count should match raw point count",
+                rawCount, Math.round(principalAxes[15]));
+
+        float[] momentOfInertiaAndObb = pclmobileJNILib.computeMomentOfInertiaAndOBB();
+        assertTrue("moment/OBB tuple should include descriptors and bounds",
+                momentOfInertiaAndObb.length >= 28);
+        assertEquals("moment/OBB count should match raw point count",
+                rawCount, Math.round(momentOfInertiaAndObb[momentOfInertiaAndObb.length - 1]));
+
+        float[] squaredDistancesToOrigin = pclmobileJNILib.computeSquaredDistancesToPoint(0.0f, 0.0f, 0.0f);
+        assertEquals("squared distance count should match raw point count",
+                rawCount, squaredDistancesToOrigin.length);
+        assertTrue("squared distances should be non-negative", squaredDistancesToOrigin[0] >= 0.0f);
+
+        float[] maxDistanceFromCentroid = pclmobileJNILib.computeMaxDistanceFromCentroid();
+        assertEquals("max-distance tuple should contain centroid, point, distance, and count",
+                8, maxDistanceFromCentroid.length);
+        assertEquals("max-distance count should match raw point count",
+                rawCount, Math.round(maxDistanceFromCentroid[7]));
+        assertTrue("max distance should be positive", maxDistanceFromCentroid[6] > 0.0f);
+
+        float[] demeanedPoints = pclmobileJNILib.demeanActiveCloud();
+        assertEquals("demeaned cloud should preserve raw tuple count", rawPoints.length, demeanedPoints.length);
+
+        float[] translatedPoints = pclmobileJNILib.translateActiveCloud(0.04f, -0.02f, 0.03f);
+        assertPointTriples("translated points", translatedPoints);
+        assertEquals("translated cloud should preserve raw tuple count", rawPoints.length, translatedPoints.length);
+
+        pclmobileJNILib.load(samplePcd.getAbsolutePath());
+        float[] rigidTransform = pclmobileJNILib.estimateRigidTransformSVD(translatedPoints);
+        assertEquals("SVD rigid transform should be a row-major 4x4 matrix", 16, rigidTransform.length);
+
+        float[] transformedPoints = pclmobileJNILib.transformActiveCloud(rigidTransform);
+        assertPointTriples("transformed points", transformedPoints);
+        assertEquals("transformed cloud should preserve raw tuple count", rawPoints.length, transformedPoints.length);
+
+        pclmobileJNILib.load(samplePcd.getAbsolutePath());
+        float[] targetIcpResult = pclmobileJNILib.alignToTargetICP(translatedPoints, 35, 0.20, 1.0e-8, 1.0e-8);
+        assertEquals("target ICP result should contain convergence, fitness, and a 4x4 matrix",
+                18, targetIcpResult.length);
+        assertTrue("target ICP should converge on a translated target", targetIcpResult[0] == 1.0f);
+
+        pclmobileJNILib.load(samplePcd.getAbsolutePath());
+        float[] targetGicpResult = pclmobileJNILib.alignToTargetGICP(translatedPoints, 35, 0.20, 1.0e-8, 1.0e-8, 20);
+        assertEquals("target GICP result should contain convergence, fitness, and a 4x4 matrix",
+                18, targetGicpResult.length);
+
+        pclmobileJNILib.load(samplePcd.getAbsolutePath());
         pclmobileJNILib.filterVoxelGrid(VOXEL_LEAF_SIZE, VOXEL_LEAF_SIZE, VOXEL_LEAF_SIZE);
         float[] voxelGridPoints = pclmobileJNILib.getFilteredPoints();
         assertPointTriples("voxel-grid point cloud", voxelGridPoints);
@@ -45,6 +104,15 @@ public class PclMobileDeviceSampleTest {
         float[] normals = pclmobileJNILib.estimateNormals(16);
         assertTrue("normals should contain x/y/z/curvature tuples", normals.length >= 4);
         assertTrue("normal tuple packing", normals.length % 4 == 0);
+
+        float[] shotFeatures = pclmobileJNILib.computeSHOTFeatures(16, 0.18);
+        assertTrue("SHOT descriptors should be 352-bin tuples", shotFeatures.length % 352 == 0);
+
+        float[] boundaryPoints = pclmobileJNILib.computeBoundaryPoints(16, 0.18, 90.0);
+        assertTrue("boundary results should be x/y/z/flag tuples", boundaryPoints.length % 4 == 0);
+
+        float[] differenceOfNormals = pclmobileJNILib.computeDifferenceOfNormals(0.08, 0.20);
+        assertTrue("DoN should contain normal/curvature tuples", differenceOfNormals.length % 4 == 0);
 
         float[] planeModel = pclmobileJNILib.segmentPlane(0.03, 100);
         assertTrue("plane model should contain coefficients and counts", planeModel.length >= 6);
@@ -81,6 +149,30 @@ public class PclMobileDeviceSampleTest {
         assertTrue("ICP should converge on a translated copy", icpResult[0] == 1.0f);
 
         pclmobileJNILib.load(samplePcd.getAbsolutePath());
+        pclmobileJNILib.filterAxisOutside("z", -0.10, 0.10);
+        float[] passThroughOutsidePoints = pclmobileJNILib.getFilteredPoints();
+        assertPointTriples("pass-through outside points", passThroughOutsidePoints);
+
+        pclmobileJNILib.load(samplePcd.getAbsolutePath());
+        pclmobileJNILib.filterGridMinimum(0.10);
+        float[] gridMinimumPoints = pclmobileJNILib.getFilteredPoints();
+        assertPointTriples("grid-minimum points", gridMinimumPoints);
+        assertTrue("GridMinimum should not increase this sample",
+                gridMinimumPoints.length <= rawPoints.length);
+
+        pclmobileJNILib.load(samplePcd.getAbsolutePath());
+        pclmobileJNILib.filterNormalSpaceSampling(128, 17, 4, 4, 4, 16);
+        float[] normalSpacePoints = pclmobileJNILib.getFilteredPoints();
+        assertPointTriples("normal-space sampled points", normalSpacePoints);
+
+        pclmobileJNILib.load(samplePcd.getAbsolutePath());
+        pclmobileJNILib.removeNaNFromActiveCloud();
+        float[] finitePoints = pclmobileJNILib.getFilteredPoints();
+        assertPointTriples("finite points", finitePoints);
+        assertEquals("NaN removal should keep every finite sample point",
+                rawPoints.length, finitePoints.length);
+
+        pclmobileJNILib.load(samplePcd.getAbsolutePath());
         pclmobileJNILib.filterStatisticalOutlierRemoval(20, 1.0);
         float[] statisticalInliers = pclmobileJNILib.getFilteredPoints();
         assertPointTriples("statistical inliers", statisticalInliers);
@@ -100,15 +192,31 @@ public class PclMobileDeviceSampleTest {
         float[] planeInliers = pclmobileJNILib.getFilteredPoints();
         assertPointTriples("plane inliers", planeInliers);
 
+        pclmobileJNILib.load(samplePcd.getAbsolutePath());
+        pclmobileJNILib.extractModelOutliers(pclmobileJNILib.SACMODEL_PLANE, 0.03, 100);
+        float[] planeOutliers = pclmobileJNILib.getFilteredPoints();
+        assertPointTriples("plane outliers", planeOutliers);
+
         runCompatibilityCategorySamples(samplePcd);
 
-        int rawCount = rawPoints.length / 3;
         int voxelCount = voxelGridPoints.length / 3;
         int reduction = Math.round((1.0f - (voxelCount / (float) rawCount)) * 100.0f);
         Log.i(TAG, "device sample passed: raw=" + rawCount
                 + " voxel=" + voxelCount
                 + " reduction=" + reduction + "%"
+                + " covariance=" + covarianceMatrix.length
+                + " pca=" + principalAxes.length
+                + " momentObb=" + momentOfInertiaAndObb.length
+                + " distances=" + squaredDistancesToOrigin.length
+                + " maxDistance=" + maxDistanceFromCentroid[6]
+                + " demeaned=" + (demeanedPoints.length / 3)
+                + " translated=" + (translatedPoints.length / 3)
+                + " rigidTransform=" + rigidTransform.length
+                + " transformed=" + (transformedPoints.length / 3)
                 + " normals=" + (normals.length / 4)
+                + " shot=" + (shotFeatures.length / 352)
+                + " boundary=" + (boundaryPoints.length / 4)
+                + " don=" + (differenceOfNormals.length / 4)
                 + " planeInliers=" + Math.round(planeModel[4])
                 + " sphereInliers=" + Math.round(sphereModel[4])
                 + " nearest=" + (nearestNeighbors.length / 4)
@@ -118,11 +226,18 @@ public class PclMobileDeviceSampleTest {
                 + " concaveHull=" + (concaveHullPoints.length / 3)
                 + " projectedPlane=" + (projectedPlanePoints.length / 3)
                 + " mls=" + (mlsPoints.length / 3)
+                + " passThroughOutside=" + (passThroughOutsidePoints.length / 3)
+                + " gridMinimum=" + (gridMinimumPoints.length / 3)
+                + " normalSpace=" + (normalSpacePoints.length / 3)
+                + " finite=" + (finitePoints.length / 3)
                 + " sor=" + (statisticalInliers.length / 3)
                 + " radius=" + (radiusInliers.length / 3)
                 + " cropBox=" + (cropBoxPoints.length / 3)
                 + " extractedPlane=" + (planeInliers.length / 3)
+                + " planeOutliers=" + (planeOutliers.length / 3)
                 + " icpFitness=" + icpResult[1]
+                + " targetIcpFitness=" + targetIcpResult[1]
+                + " targetGicpFitness=" + targetGicpResult[1]
                 + " file=" + samplePcd.getAbsolutePath());
     }
 

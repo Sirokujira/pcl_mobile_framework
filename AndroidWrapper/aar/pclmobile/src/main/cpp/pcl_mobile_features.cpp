@@ -1,8 +1,20 @@
 #include "pcl_mobile_features.h"
 
+#include <algorithm>
+#include <cmath>
+
+#include <pcl/features/boundary.h>
+#include <pcl/features/don.h>
+#include <pcl/features/esf.h>
 #include <pcl/features/fpfh.h>
+#include <pcl/features/gasd.h>
+#include <pcl/features/moment_invariants.h>
 #include <pcl/features/normal_3d.h>
+#include <pcl/features/pfh.h>
 #include <pcl/features/principal_curvatures.h>
+#include <pcl/features/rsd.h>
+#include <pcl/features/shot.h>
+#include <pcl/features/vfh.h>
 #include <pcl/search/kdtree.h>
 
 #include "pcl_mobile_context.h"
@@ -70,6 +82,36 @@ std::vector<jfloat> estimateNormalsRadius(double radius_search)
     return values;
 }
 
+std::vector<jfloat> computePFHFeatures(int normal_k_search, double feature_radius)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || feature_radius <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::PFHSignature125>::Ptr descriptors(new pcl::PointCloud<pcl::PFHSignature125>);
+
+    pcl::PFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::PFHSignature125> pfh;
+    pfh.setInputCloud(input);
+    pfh.setInputNormals(normals);
+    pfh.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    pfh.setRadiusSearch(feature_radius);
+    pfh.compute(*descriptors);
+
+    std::vector<jfloat> values;
+    values.reserve(descriptors->points.size() * 125);
+    for (const auto& descriptor : descriptors->points) {
+        for (float value : descriptor.histogram) {
+            values.push_back(value);
+        }
+    }
+    LOGI("PFHEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d radius=%.3f",
+         input->points.size(), descriptors->points.size(), normal_k_search, feature_radius);
+    return values;
+}
+
 std::vector<jfloat> computeFPFHFeatures(int normal_k_search, double feature_radius)
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
@@ -97,6 +139,149 @@ std::vector<jfloat> computeFPFHFeatures(int normal_k_search, double feature_radi
     }
     LOGI("FPFHEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d radius=%.3f",
          input->points.size(), descriptors->points.size(), normal_k_search, feature_radius);
+    return values;
+}
+
+std::vector<jfloat> computeVFHFeatures(int normal_k_search)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::VFHSignature308>::Ptr descriptors(new pcl::PointCloud<pcl::VFHSignature308>);
+
+    pcl::VFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::VFHSignature308> vfh;
+    vfh.setInputCloud(input);
+    vfh.setInputNormals(normals);
+    vfh.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    vfh.compute(*descriptors);
+
+    std::vector<jfloat> values;
+    values.reserve(descriptors->points.size() * 308);
+    for (const auto& descriptor : descriptors->points) {
+        for (float value : descriptor.histogram) {
+            values.push_back(value);
+        }
+    }
+    LOGI("VFHEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d",
+         input->points.size(), descriptors->points.size(), normal_k_search);
+    return values;
+}
+
+std::vector<jfloat> computeESFDescriptor()
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::ESFSignature640>::Ptr descriptors(new pcl::PointCloud<pcl::ESFSignature640>);
+    pcl::ESFEstimation<pcl::PointXYZ, pcl::ESFSignature640> esf;
+    esf.setInputCloud(input);
+    esf.compute(*descriptors);
+
+    std::vector<jfloat> values;
+    values.reserve(descriptors->points.size() * 640);
+    for (const auto& descriptor : descriptors->points) {
+        for (float value : descriptor.histogram) {
+            values.push_back(value);
+        }
+    }
+    LOGI("ESFEstimation computed descriptors: input=%zu descriptors=%zu",
+         input->points.size(), descriptors->points.size());
+    return values;
+}
+
+std::vector<jfloat> computeGASDDescriptor()
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::GASDSignature512>::Ptr descriptors(new pcl::PointCloud<pcl::GASDSignature512>);
+    pcl::GASDEstimation<pcl::PointXYZ, pcl::GASDSignature512> gasd;
+    gasd.setInputCloud(input);
+    gasd.compute(*descriptors);
+
+    std::vector<jfloat> values;
+    values.reserve(descriptors->points.size() * 512);
+    for (const auto& descriptor : descriptors->points) {
+        for (float value : descriptor.histogram) {
+            values.push_back(value);
+        }
+    }
+    LOGI("GASDEstimation computed descriptors: input=%zu descriptors=%zu",
+         input->points.size(), descriptors->points.size());
+    return values;
+}
+
+std::vector<jfloat> computeMomentInvariants(double radius_search)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || radius_search <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::MomentInvariants>::Ptr descriptors(new pcl::PointCloud<pcl::MomentInvariants>);
+    pcl::MomentInvariantsEstimation<pcl::PointXYZ, pcl::MomentInvariants> estimation;
+    estimation.setInputCloud(input);
+    estimation.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    estimation.setRadiusSearch(radius_search);
+    estimation.compute(*descriptors);
+
+    std::vector<jfloat> values;
+    values.reserve(descriptors->points.size() * 3);
+    for (const auto& descriptor : descriptors->points) {
+        values.push_back(descriptor.j1);
+        values.push_back(descriptor.j2);
+        values.push_back(descriptor.j3);
+    }
+    LOGI("MomentInvariantsEstimation computed descriptors: input=%zu descriptors=%zu radius=%.3f",
+         input->points.size(), descriptors->points.size(), radius_search);
+    return values;
+}
+
+std::vector<jfloat> computeRSDFeatures(
+        int normal_k_search,
+        double radius_search,
+        double plane_radius,
+        int subdivisions)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()
+            || normal_k_search <= 0
+            || radius_search <= 0.0
+            || plane_radius <= 0.0
+            || subdivisions <= 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::PrincipalRadiiRSD>::Ptr descriptors(new pcl::PointCloud<pcl::PrincipalRadiiRSD>);
+
+    pcl::RSDEstimation<pcl::PointXYZ, pcl::Normal, pcl::PrincipalRadiiRSD> rsd;
+    rsd.setInputCloud(input);
+    rsd.setInputNormals(normals);
+    rsd.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    rsd.setRadiusSearch(radius_search);
+    rsd.setPlaneRadius(plane_radius);
+    rsd.setNrSubdivisions(subdivisions);
+    rsd.compute(*descriptors);
+
+    std::vector<jfloat> values;
+    values.reserve(descriptors->points.size() * 2);
+    for (const auto& descriptor : descriptors->points) {
+        values.push_back(descriptor.r_min);
+        values.push_back(descriptor.r_max);
+    }
+    LOGI("RSDEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d radius=%.3f",
+         input->points.size(), descriptors->points.size(), normal_k_search, radius_search);
     return values;
 }
 
@@ -129,6 +314,97 @@ std::vector<jfloat> computePrincipalCurvatures(int normal_k_search, int curvatur
     }
     LOGI("PrincipalCurvaturesEstimation computed curvatures: input=%zu curvatures=%zu normal_k=%d curvature_k=%d",
          input->points.size(), curvatures->points.size(), normal_k_search, curvature_k_search);
+    return values;
+}
+
+std::vector<jfloat> computeSHOTFeatures(int normal_k_search, double feature_radius)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || feature_radius <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::SHOT352>::Ptr descriptors(new pcl::PointCloud<pcl::SHOT352>);
+
+    pcl::SHOTEstimation<pcl::PointXYZ, pcl::Normal, pcl::SHOT352> shot;
+    shot.setInputCloud(input);
+    shot.setInputNormals(normals);
+    shot.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    shot.setRadiusSearch(feature_radius);
+    shot.compute(*descriptors);
+
+    std::vector<jfloat> values;
+    values.reserve(descriptors->points.size() * 352);
+    for (const auto& descriptor : descriptors->points) {
+        for (float value : descriptor.descriptor) {
+            values.push_back(value);
+        }
+    }
+    LOGI("SHOTEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d radius=%.3f",
+         input->points.size(), descriptors->points.size(), normal_k_search, feature_radius);
+    return values;
+}
+
+std::vector<jfloat> computeBoundaryPoints(
+        int normal_k_search,
+        double radius_search,
+        double angle_threshold_degrees)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || radius_search <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::Boundary>::Ptr boundaries(new pcl::PointCloud<pcl::Boundary>);
+
+    pcl::BoundaryEstimation<pcl::PointXYZ, pcl::Normal, pcl::Boundary> estimation;
+    estimation.setInputCloud(input);
+    estimation.setInputNormals(normals);
+    estimation.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    estimation.setRadiusSearch(radius_search);
+    if (angle_threshold_degrees > 0.0) {
+        estimation.setAngleThreshold(static_cast<float>(angle_threshold_degrees * M_PI / 180.0));
+    }
+    estimation.compute(*boundaries);
+
+    std::vector<jfloat> values;
+    values.reserve(boundaries->points.size() * 4);
+    const std::size_t count = std::min(input->points.size(), boundaries->points.size());
+    for (std::size_t i = 0; i < count; i++) {
+        values.push_back(input->points[i].x);
+        values.push_back(input->points[i].y);
+        values.push_back(input->points[i].z);
+        values.push_back(static_cast<jfloat>(boundaries->points[i].boundary_point));
+    }
+    LOGI("BoundaryEstimation computed boundaries: input=%zu boundaries=%zu radius=%.3f",
+         input->points.size(), boundaries->points.size(), radius_search);
+    return values;
+}
+
+std::vector<jfloat> computeDifferenceOfNormals(double small_radius, double large_radius)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || small_radius <= 0.0 || large_radius <= small_radius) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr small_normals = computeNormals(input, 0, small_radius);
+    pcl::PointCloud<pcl::Normal>::Ptr large_normals = computeNormals(input, 0, large_radius);
+    pcl::PointCloud<pcl::Normal>::Ptr don_normals(new pcl::PointCloud<pcl::Normal>);
+
+    pcl::DifferenceOfNormalsEstimation<pcl::PointXYZ, pcl::Normal, pcl::Normal> don;
+    don.setInputCloud(input);
+    don.setNormalScaleSmall(small_normals);
+    don.setNormalScaleLarge(large_normals);
+    don.computeFeature(*don_normals);
+
+    std::vector<jfloat> values = packNormals(*don_normals);
+    LOGI("DifferenceOfNormalsEstimation computed normals: input=%zu output=%zu small=%.3f large=%.3f",
+         input->points.size(), don_normals->points.size(), small_radius, large_radius);
     return values;
 }
 

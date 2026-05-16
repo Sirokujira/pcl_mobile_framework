@@ -29,13 +29,29 @@ package com.sirokujira.pclmobile;
  * <ul>
  *     <li>Point clouds: {@code x, y, z, x, y, z, ...}</li>
  *     <li>Normals: {@code normal_x, normal_y, normal_z, curvature, ...}</li>
+ *     <li>PFH descriptors: 125-bin histogram per input point</li>
  *     <li>FPFH descriptors: 33-bin histogram per input point</li>
+ *     <li>VFH descriptors: one 308-bin histogram for the active cloud</li>
+ *     <li>ESF descriptors: one 640-bin histogram for the active cloud</li>
+ *     <li>GASD descriptors: one 512-bin histogram for the active cloud</li>
+ *     <li>SHOT descriptors: 352-bin histogram per input point</li>
+ *     <li>Moment invariants: {@code j1, j2, j3, ...}</li>
+ *     <li>RSD descriptors: {@code r_min, r_max, ...}</li>
  *     <li>Principal curvatures: {@code principal_curvature_x/y/z, pc1, pc2, ...}</li>
- *     <li>Plane model: {@code a, b, c, d, inlier_count, input_count}</li>
- *     <li>Sphere model: {@code center_x, center_y, center_z, radius, inlier_count, input_count}</li>
- *     <li>Nearest/radius/voxel search: {@code x, y, z, squared_distance, ...}</li>
+ *     <li>Boundary points: {@code x, y, z, boundary_flag, ...}</li>
+     *     <li>Plane model: {@code a, b, c, d, inlier_count, input_count}</li>
+     *     <li>Sphere model: {@code center_x, center_y, center_z, radius, inlier_count, input_count}</li>
+     *     <li>SAC inlier indices: native point indices as {@code int[]}</li>
+     *     <li>Nearest/radius/voxel search: {@code x, y, z, squared_distance, ...}</li>
+     *     <li>Search indices: {@code point_index, squared_distance, ...}</li>
+ *     <li>SIFT/Harris keypoints: {@code x, y, z, response, ...}</li>
+ *     <li>Range image points: {@code x, y, z, range, ...}</li>
  *     <li>Hull and smoothed clouds: {@code x, y, z, x, y, z, ...}</li>
  *     <li>Centroid/bounds: {@code centroid_xyz, min_xyz, max_xyz, point_count}</li>
+ *     <li>Covariance: {@code centroid_xyz, row-major 3x3 covariance, point_count}</li>
+ *     <li>PCA axes: {@code mean_xyz, eigenvalues_xyz, row-major 3x3 eigenvectors, point_count}</li>
+ *     <li>Distances: {@code squared_distance, squared_distance, ...}</li>
+ *     <li>Rigid transform matrix: row-major 4x4 matrix</li>
  *     <li>ICP: {@code has_converged, fitness_score, row-major 4x4 matrix}</li>
  * </ul>
  */
@@ -59,6 +75,11 @@ public final class pclmobileJNILib {
     public static final int SACMODEL_NORMAL_PARALLEL_PLANE = 16;
     public static final int SACMODEL_STICK = 17;
     public static final int SACMODEL_ELLIPSE3D = 18;
+    public static final int HARRIS_RESPONSE_HARRIS = 1;
+    public static final int HARRIS_RESPONSE_NOBLE = 2;
+    public static final int HARRIS_RESPONSE_LOWE = 3;
+    public static final int HARRIS_RESPONSE_TOMASI = 4;
+    public static final int HARRIS_RESPONSE_CURVATURE = 5;
 
     static {
         System.loadLibrary("native-lib");
@@ -160,11 +181,63 @@ public final class pclmobileJNILib {
     public static native boolean writeActivePLYFile(String filename);
 
     /**
+     * Writes the source cloud to an ASCII PLY file.
+     */
+    public static native boolean writeSourcePLYFile(String filename);
+
+    /**
+     * Writes the filtered cloud to an ASCII PLY file.
+     */
+    public static native boolean writeFilteredPLYFile(String filename);
+
+    /**
      * Computes centroid, min bounds, max bounds, and point count for the active cloud.
      *
      * <p>The active cloud is the filtered cloud when non-empty, otherwise the source cloud.</p>
      */
     public static native float[] computeCentroidAndBounds();
+
+    /**
+     * Computes normalized covariance for the active cloud.
+     *
+     * @return {@code centroid_x, centroid_y, centroid_z, row-major 3x3 covariance, point_count}
+     */
+    public static native float[] computeCovarianceMatrix();
+
+    /**
+     * Computes PCA mean, eigenvalues, and eigenvectors for the active cloud.
+     *
+     * @return {@code mean_xyz, eigenvalues_xyz, row-major 3x3 eigenvectors, point_count}
+     */
+    public static native float[] computePrincipalAxes();
+
+    /**
+     * Computes moment-of-inertia descriptors plus AABB/OBB for the active cloud.
+     *
+     * @return moments, eccentricities, AABB min/max, OBB min/max/position, row-major OBB rotation, point_count
+     */
+    public static native float[] computeMomentOfInertiaAndOBB();
+
+    /**
+     * Computes squared Euclidean distance from each active-cloud point to a query point.
+     *
+     * @return one squared distance per active-cloud point
+     */
+    public static native float[] computeSquaredDistancesToPoint(float x, float y, float z);
+
+    /**
+     * Finds the active-cloud point farthest from the computed centroid.
+     *
+     * @return {@code centroid_xyz, farthest_point_xyz, distance, point_count}
+     */
+    public static native float[] computeMaxDistanceFromCentroid();
+
+    /**
+     * Subtracts the active-cloud centroid from each point.
+     *
+     * @return demeaned points packed as {@code x, y, z} triples
+     */
+    public static native float[] demeanActiveCloud();
 
     /**
      * Estimates normals for the active cloud using KdTree-backed neighborhood search.
@@ -182,6 +255,15 @@ public final class pclmobileJNILib {
     public static native float[] estimateNormalsRadius(double radiusSearch);
 
     /**
+     * Computes Point Feature Histograms for the active cloud.
+     *
+     * @param normalKSearch nearest neighbors used to estimate normals before descriptor computation
+     * @param featureRadius radius used for each PFH descriptor neighborhood
+     * @return 125 histogram values per descriptor
+     */
+    public static native float[] computePFHFeatures(int normalKSearch, double featureRadius);
+
+    /**
      * Computes Fast Point Feature Histograms for the active cloud.
      *
      * @param normalKSearch nearest neighbors used to estimate normals before descriptor computation
@@ -191,6 +273,46 @@ public final class pclmobileJNILib {
     public static native float[] computeFPFHFeatures(int normalKSearch, double featureRadius);
 
     /**
+     * Computes a Viewpoint Feature Histogram for the active cloud.
+     *
+     * @param normalKSearch nearest neighbors used to estimate normals before descriptor computation
+     * @return one 308-bin histogram for the active cloud
+     */
+    public static native float[] computeVFHFeatures(int normalKSearch);
+
+    /**
+     * Computes an Ensemble of Shape Functions descriptor for the active cloud.
+     *
+     * @return one 640-bin histogram for the active cloud
+     */
+    public static native float[] computeESFDescriptor();
+
+    /**
+     * Computes a Globally Aligned Spatial Distribution descriptor for the active cloud.
+     *
+     * @return one 512-bin histogram for the active cloud
+     */
+    public static native float[] computeGASDDescriptor();
+
+    /**
+     * Computes moment invariants for the active cloud.
+     *
+     * @return {@code j1, j2, j3} tuples
+     */
+    public static native float[] computeMomentInvariants(double radiusSearch);
+
+    /**
+     * Computes Radius-based Surface Descriptor features for the active cloud.
+     *
+     * @return {@code r_min, r_max} tuples
+     */
+    public static native float[] computeRSDFeatures(
+            int normalKSearch,
+            double radiusSearch,
+            double planeRadius,
+            int subdivisions);
+
+    /**
      * Computes principal curvatures for the active cloud.
      *
      * @param normalKSearch nearest neighbors used to estimate normals before curvature computation
@@ -198,6 +320,30 @@ public final class pclmobileJNILib {
      * @return {@code principal_curvature_x, principal_curvature_y, principal_curvature_z, pc1, pc2} tuples
      */
     public static native float[] computePrincipalCurvatures(int normalKSearch, int curvatureKSearch);
+
+    /**
+     * Computes Signature of Histograms of Orientations descriptors for the active cloud.
+     *
+     * @return 352 histogram values per descriptor
+     */
+    public static native float[] computeSHOTFeatures(int normalKSearch, double featureRadius);
+
+    /**
+     * Computes PCL BoundaryEstimation flags for the active cloud.
+     *
+     * @return {@code x, y, z, boundary_flag} tuples
+     */
+    public static native float[] computeBoundaryPoints(
+            int normalKSearch,
+            double radiusSearch,
+            double angleThresholdDegrees);
+
+    /**
+     * Computes Difference of Normals vectors for the active cloud.
+     *
+     * @return {@code normal_x, normal_y, normal_z, curvature} tuples
+     */
+    public static native float[] computeDifferenceOfNormals(double smallRadius, double largeRadius);
 
     /**
      * Fits a plane model to the active cloud using RANSAC sample consensus.
@@ -227,11 +373,28 @@ public final class pclmobileJNILib {
     public static native float[] segmentSACModel(int modelType, double distanceThreshold, int maxIterations);
 
     /**
+     * Returns active-cloud point indices that inlie a fitted PCL SAC model.
+     *
+     * <p>{@code modelType} uses the {@code SACMODEL_*} constants exposed by this class.</p>
+     */
+    public static native int[] segmentSACModelInlierIndices(
+            int modelType,
+            double distanceThreshold,
+            int maxIterations);
+
+    /**
      * Runs nearest-neighbor search against the active cloud.
      *
      * @return {@code x, y, z, squared_distance} tuples for found neighbors
      */
     public static native float[] nearestKSearch(float x, float y, float z, int k);
+
+    /**
+     * Runs nearest-neighbor search and returns active-cloud indices.
+     *
+     * @return {@code point_index, squared_distance} tuples for found neighbors
+     */
+    public static native float[] nearestKSearchIndices(float x, float y, float z, int k);
 
     /**
      * Runs KdTree radius search against the active cloud.
@@ -241,12 +404,44 @@ public final class pclmobileJNILib {
     public static native float[] radiusSearch(float x, float y, float z, double radius);
 
     /**
+     * Runs KdTree radius search and returns active-cloud indices.
+     *
+     * @return {@code point_index, squared_distance} tuples for found neighbors
+     */
+    public static native float[] radiusSearchIndices(float x, float y, float z, double radius);
+
+    /**
+     * Runs KdTree radius search with PCL's {@code max_nn} result bound.
+     *
+     * <p>Pass {@code 0} or a negative value for {@code maxNeighbors} to keep PCL's unbounded behavior.</p>
+     *
+     * @return {@code x, y, z, squared_distance} tuples for found neighbors
+     */
+    public static native float[] radiusSearchLimited(
+            float x, float y, float z, double radius, int maxNeighbors);
+
+    /**
+     * Runs bounded KdTree radius search and returns active-cloud indices.
+     *
+     * @return {@code point_index, squared_distance} tuples for found neighbors
+     */
+    public static native float[] radiusSearchIndicesLimited(
+            float x, float y, float z, double radius, int maxNeighbors);
+
+    /**
      * Runs octree nearest-neighbor search against the active cloud.
      *
      * @param resolution octree voxel resolution
      * @return {@code x, y, z, squared_distance} tuples for found neighbors
      */
     public static native float[] octreeNearestKSearch(float x, float y, float z, double resolution, int k);
+
+    /**
+     * Runs octree nearest-neighbor search and returns active-cloud indices.
+     *
+     * @return {@code point_index, squared_distance} tuples for found neighbors
+     */
+    public static native float[] octreeNearestKSearchIndices(float x, float y, float z, double resolution, int k);
 
     /**
      * Runs octree radius search against the active cloud.
@@ -258,6 +453,31 @@ public final class pclmobileJNILib {
     public static native float[] octreeRadiusSearch(float x, float y, float z, double resolution, double radius);
 
     /**
+     * Runs octree radius search and returns active-cloud indices.
+     *
+     * @return {@code point_index, squared_distance} tuples for found neighbors
+     */
+    public static native float[] octreeRadiusSearchIndices(float x, float y, float z, double resolution, double radius);
+
+    /**
+     * Runs octree radius search with PCL's {@code max_nn} result bound.
+     *
+     * <p>Pass {@code 0} or a negative value for {@code maxNeighbors} to keep PCL's unbounded behavior.</p>
+     *
+     * @return {@code x, y, z, squared_distance} tuples for found neighbors
+     */
+    public static native float[] octreeRadiusSearchLimited(
+            float x, float y, float z, double resolution, double radius, int maxNeighbors);
+
+    /**
+     * Runs bounded octree radius search and returns active-cloud indices.
+     *
+     * @return {@code point_index, squared_distance} tuples for found neighbors
+     */
+    public static native float[] octreeRadiusSearchIndicesLimited(
+            float x, float y, float z, double resolution, double radius, int maxNeighbors);
+
+    /**
      * Returns active-cloud points that share the query point's octree voxel.
      *
      * @param resolution octree voxel resolution
@@ -266,11 +486,127 @@ public final class pclmobileJNILib {
     public static native float[] octreeVoxelSearch(float x, float y, float z, double resolution);
 
     /**
+     * Returns active-cloud indices that share the query point's octree voxel.
+     *
+     * @return {@code point_index, squared_distance_from_query} tuples for found points
+     */
+    public static native float[] octreeVoxelSearchIndices(float x, float y, float z, double resolution);
+
+    /**
+     * Runs PCL octree approximate nearest-neighbor search against the active cloud.
+     *
+     * @return one {@code x, y, z, squared_distance} tuple, or an empty array when unavailable
+     */
+    public static native float[] octreeApproxNearestSearch(float x, float y, float z, double resolution);
+
+    /**
+     * Runs octree approximate nearest-neighbor search and returns the active-cloud index.
+     *
+     * @return one {@code point_index, squared_distance} tuple, or an empty array when unavailable
+     */
+    public static native float[] octreeApproxNearestSearchIndex(float x, float y, float z, double resolution);
+
+    /**
      * Extracts Euclidean clusters from the active cloud.
      *
      * @return one cluster size per element
      */
     public static native float[] extractEuclideanClusters(double tolerance, int minClusterSize, int maxClusterSize);
+
+    /**
+     * Extracts RegionGrowing clusters from the active cloud.
+     *
+     * @return one cluster size per element
+     */
+    public static native float[] extractRegionGrowingClusters(
+            int normalKSearch,
+            int numberOfNeighbours,
+            int minClusterSize,
+            int maxClusterSize,
+            double smoothnessThresholdDegrees,
+            double curvatureThreshold);
+
+    /**
+     * Extracts the largest Euclidean cluster from the active cloud into the filtered cloud.
+     */
+    public static native void extractLargestEuclideanCluster(
+            double tolerance,
+            int minClusterSize,
+            int maxClusterSize);
+
+    /**
+     * Extracts the largest Euclidean cluster and returns the filtered points.
+     */
+    public static float[] extractLargestEuclideanClusterPoints(
+            double tolerance,
+            int minClusterSize,
+            int maxClusterSize) {
+        extractLargestEuclideanCluster(tolerance, minClusterSize, maxClusterSize);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Segments points from the active cloud that differ from {@code packedTargetXYZ}.
+     *
+     * @return difference points packed as {@code x, y, z} triples
+     */
+    public static native float[] segmentDifferencesAgainstTarget(
+            float[] packedTargetXYZ,
+            double distanceThreshold);
+
+    /**
+     * Computes Intrinsic Shape Signatures 3D keypoints for the active cloud.
+     *
+     * @return keypoint positions packed as {@code x, y, z} triples
+     */
+    public static native float[] computeISSKeypoints(
+            double salientRadius,
+            double nonMaxRadius,
+            double threshold21,
+            double threshold32,
+            int minNeighbors);
+
+    /**
+     * Computes SIFT keypoints for the active cloud.
+     *
+     * <p>The wrapper stores XYZ points only, while PCL SIFT expects an intensity field.
+     * This method derives intensity from distance to the origin before invoking PCL
+     * {@code SIFTKeypoint}, so results depend on the cloud coordinate frame.</p>
+     *
+     * @return {@code x, y, z, scale} tuples
+     */
+    public static native float[] computeSIFTKeypoints(
+            double minScale,
+            int nrOctaves,
+            int nrScalesPerOctave,
+            double minContrast);
+
+    /**
+     * Computes Harris 3D keypoints for the active cloud.
+     *
+     * @param responseMethod one of the {@code HARRIS_RESPONSE_*} constants
+     * @return {@code x, y, z, response} tuples
+     */
+    public static native float[] computeHarrisKeypoints(
+            int responseMethod,
+            double radius,
+            double threshold,
+            boolean nonMaxSuppression,
+            boolean refine);
+
+    /**
+     * Builds a PCL {@code RangeImage} from the active cloud and returns finite range pixels.
+     *
+     * @return {@code x, y, z, range} tuples for finite range-image points
+     */
+    public static native float[] computeRangeImageFromActiveCloud(
+            float angularResolutionDegrees,
+            float maxAngleWidthDegrees,
+            float maxAngleHeightDegrees,
+            float sensorX,
+            float sensorY,
+            float sensorZ,
+            float minRange);
 
     /**
      * Reconstructs a convex hull from the active cloud.
@@ -305,9 +641,67 @@ public final class pclmobileJNILib {
     /**
      * Aligns the active cloud to a translated copy with ICP.
      *
+     * <p>The aligned points are stored as the filtered cloud.</p>
+     *
      * @return {@code has_converged, fitness_score, row-major 4x4 matrix}
      */
     public static native float[] alignToTranslatedCopyICP(float tx, float ty, float tz, int maxIterations);
+
+    /**
+     * Estimates a rigid transform from the active cloud to {@code packedTargetXYZ} using PCL SVD.
+     *
+     * <p>The source and target clouds must contain the same number of {@code x, y, z} point tuples.
+     * Returns an empty array when either cloud is empty or the tuple counts differ.</p>
+     *
+     * @return row-major 4x4 matrix
+     */
+    public static native float[] estimateRigidTransformSVD(float[] packedTargetXYZ);
+
+    /**
+     * Applies a row-major 4x4 transform to the active cloud with PCL {@code transformPointCloud}.
+     *
+     * <p>The transformed points are stored as the filtered cloud and returned as {@code x, y, z} triples.
+     * Arrays shorter than 16 values are treated as an identity transform.</p>
+     */
+    public static native float[] transformActiveCloud(float[] rowMajor4x4);
+
+    /**
+     * Translates the active cloud with PCL {@code transformPointCloud}.
+     *
+     * <p>The transformed points are stored as the filtered cloud and returned as {@code x, y, z} triples.</p>
+     */
+    public static native float[] translateActiveCloud(float tx, float ty, float tz);
+
+    /**
+     * Aligns the active cloud to {@code packedTargetXYZ} with PCL IterativeClosestPoint.
+     *
+     * <p>The target is packed as {@code x, y, z} triples. The aligned points are stored as the filtered
+     * cloud. Pass {@code 0.0} for optional epsilon/distance values to keep PCL defaults.</p>
+     *
+     * @return {@code has_converged, fitness_score, row-major 4x4 matrix}
+     */
+    public static native float[] alignToTargetICP(
+            float[] packedTargetXYZ,
+            int maxIterations,
+            double maxCorrespondenceDistance,
+            double transformationEpsilon,
+            double euclideanFitnessEpsilon);
+
+    /**
+     * Aligns the active cloud to {@code packedTargetXYZ} with PCL GeneralizedIterativeClosestPoint.
+     *
+     * <p>The target is packed as {@code x, y, z} triples. The aligned points are stored as the filtered
+     * cloud. Pass {@code 0.0} or {@code 0} for optional values to keep PCL defaults.</p>
+     *
+     * @return {@code has_converged, fitness_score, row-major 4x4 matrix}
+     */
+    public static native float[] alignToTargetGICP(
+            float[] packedTargetXYZ,
+            int maxIterations,
+            double maxCorrespondenceDistance,
+            double transformationEpsilon,
+            double rotationEpsilon,
+            int maxOptimizerIterations);
 
     //region Compatibility category samples
 
@@ -326,10 +720,65 @@ public final class pclmobileJNILib {
     public static native void filterAxis(String filename, double min, double max);
 
     /**
+     * Removes points inside an axis range with PassThrough negative mode.
+     */
+    public static native void filterAxisOutside(String filename, double min, double max);
+
+    /**
      * Applies PassThrough and returns the filtered points.
      */
     public static float[] passThroughFiltered(String axis, double min, double max) {
         filterAxis(axis, min, max);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Applies PassThrough negative mode and returns the filtered points.
+     */
+    public static float[] passThroughOutsideFiltered(String axis, double min, double max) {
+        filterAxisOutside(axis, min, max);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Applies PCL ConditionalRemoval on one active-cloud axis range.
+     */
+    public static native void filterConditionalAxisRange(
+            String axis,
+            double min,
+            double max,
+            boolean keepOrganized);
+
+    /**
+     * Applies ConditionalRemoval and returns the filtered points.
+     */
+    public static float[] conditionalAxisRange(String axis, double min, double max, boolean keepOrganized) {
+        filterConditionalAxisRange(axis, min, max, keepOrganized);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Applies PassThrough with PCL negative, keep-organized, and replacement-value options.
+     */
+    public static native void filterPassThroughAdvanced(
+            String axis,
+            double min,
+            double max,
+            boolean negative,
+            boolean keepOrganized,
+            float userFilterValue);
+
+    /**
+     * Applies advanced PassThrough options and returns the filtered points.
+     */
+    public static float[] passThroughAdvanced(
+            String axis,
+            double min,
+            double max,
+            boolean negative,
+            boolean keepOrganized,
+            float userFilterValue) {
+        filterPassThroughAdvanced(axis, min, max, negative, keepOrganized, userFilterValue);
         return getFilteredPoints();
     }
 
@@ -347,6 +796,50 @@ public final class pclmobileJNILib {
      */
     public static void filterVoxelGrid(double leafSize) {
         filterVoxelGrid(leafSize, leafSize, leafSize);
+    }
+
+    /**
+     * Downsamples with VoxelGrid and drops voxels below the minimum point count.
+     */
+    public static native void filterVoxelGridMinimumPoints(
+            double x,
+            double y,
+            double z,
+            int minimumPointsPerVoxel);
+
+    /**
+     * Applies VoxelGrid minimum-points filtering and returns the filtered points.
+     */
+    public static float[] voxelGridMinimumPointsDownsample(
+            double x,
+            double y,
+            double z,
+            int minimumPointsPerVoxel) {
+        filterVoxelGridMinimumPoints(x, y, z, minimumPointsPerVoxel);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Downsamples the source cloud with VoxelGridCovariance.
+     */
+    public static native void filterVoxelGridCovariance(
+            double x,
+            double y,
+            double z,
+            int minPointsPerVoxel,
+            double minCovarEigvalueMult);
+
+    /**
+     * Applies VoxelGridCovariance and returns the filtered points.
+     */
+    public static float[] voxelGridCovarianceDownsample(
+            double x,
+            double y,
+            double z,
+            int minPointsPerVoxel,
+            double minCovarEigvalueMult) {
+        filterVoxelGridCovariance(x, y, z, minPointsPerVoxel, minCovarEigvalueMult);
+        return getFilteredPoints();
     }
 
     /**
@@ -384,6 +877,45 @@ public final class pclmobileJNILib {
     }
 
     /**
+     * Downsamples the source cloud with GridMinimum's 2D minimum-z grid.
+     */
+    public static native void filterGridMinimum(double resolution);
+
+    /**
+     * Applies GridMinimum and returns the filtered points.
+     */
+    public static float[] gridMinimum(double resolution) {
+        filterGridMinimum(resolution);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Keeps local z maxima inside the configured radius.
+     */
+    public static native void filterLocalMaximum(double radius);
+
+    /**
+     * Applies LocalMaximum and returns the filtered points.
+     */
+    public static float[] localMaximum(double radius) {
+        filterLocalMaximum(radius);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Applies MedianFilter to organized source-cloud points.
+     */
+    public static native void filterMedian(int windowSize, double maxAllowedMovement);
+
+    /**
+     * Applies MedianFilter and returns the filtered points.
+     */
+    public static float[] medianFilter(int windowSize, double maxAllowedMovement) {
+        filterMedian(windowSize, maxAllowedMovement);
+        return getFilteredPoints();
+    }
+
+    /**
      * Randomly samples up to {@code sample} source-cloud points with a deterministic seed.
      */
     public static native void filterRandomSample(int sample, int seed);
@@ -406,6 +938,44 @@ public final class pclmobileJNILib {
      */
     public static float[] farthestPointSample(int sample, int seed) {
         filterFarthestPointSampling(sample, seed);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Samples source-cloud points across normal-direction bins.
+     */
+    public static native void filterNormalSpaceSampling(
+            int sample,
+            int seed,
+            int binsX,
+            int binsY,
+            int binsZ,
+            int normalKSearch);
+
+    /**
+     * Applies NormalSpaceSampling and returns the filtered points.
+     */
+    public static float[] normalSpaceSample(
+            int sample,
+            int seed,
+            int binsX,
+            int binsY,
+            int binsZ,
+            int normalKSearch) {
+        filterNormalSpaceSampling(sample, seed, binsX, binsY, binsZ, normalKSearch);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Removes NaN points from the active cloud into the filtered cloud.
+     */
+    public static native void removeNaNFromActiveCloud();
+
+    /**
+     * Removes NaN points from the active cloud and returns the filtered points.
+     */
+    public static float[] removeNaNPoints() {
+        removeNaNFromActiveCloud();
         return getFilteredPoints();
     }
 
@@ -453,6 +1023,51 @@ public final class pclmobileJNILib {
     }
 
     /**
+     * Keeps source-cloud points inside a translated/rotated CropBox.
+     */
+    public static native void filterCropBoxTransformed(
+            double minX, double minY, double minZ,
+            double maxX, double maxY, double maxZ,
+            double translationX, double translationY, double translationZ,
+            double rotationX, double rotationY, double rotationZ);
+
+    /**
+     * Applies transformed CropBox and returns the filtered points.
+     */
+    public static float[] cropBoxTransformed(
+            double minX, double minY, double minZ,
+            double maxX, double maxY, double maxZ,
+            double translationX, double translationY, double translationZ,
+            double rotationX, double rotationY, double rotationZ) {
+        filterCropBoxTransformed(
+                minX, minY, minZ, maxX, maxY, maxZ,
+                translationX, translationY, translationZ,
+                rotationX, rotationY, rotationZ);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Extracts active-cloud points by index with PCL ExtractIndices.
+     */
+    public static native void filterExtractIndices(int[] indices, boolean negative);
+
+    /**
+     * Extracts indexed points and returns the filtered points.
+     */
+    public static float[] extractIndexedPoints(int[] indices) {
+        filterExtractIndices(indices, false);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Removes indexed points and returns the filtered points.
+     */
+    public static float[] removeIndexedPoints(int[] indices) {
+        filterExtractIndices(indices, true);
+        return getFilteredPoints();
+    }
+
+    /**
      * Extracts fitted plane inliers into the filtered cloud.
      */
     public static native void extractPlaneInliers(double distanceThreshold, int maxIterations);
@@ -479,6 +1094,19 @@ public final class pclmobileJNILib {
     }
 
     /**
+     * Extracts points outside a fitted SAC model into the filtered cloud.
+     */
+    public static native void extractModelOutliers(int modelType, double distanceThreshold, int maxIterations);
+
+    /**
+     * Extracts points outside a fitted SAC model and returns the filtered points.
+     */
+    public static float[] extractModelOutlierPoints(int modelType, double distanceThreshold, int maxIterations) {
+        extractModelOutliers(modelType, distanceThreshold, maxIterations);
+        return getFilteredPoints();
+    }
+
+    /**
      * Compatibility geometry sample. Loads {@code filename} when supplied and computes centroid/bounds.
      */
     public static native void geometry1(String filename);
@@ -489,7 +1117,7 @@ public final class pclmobileJNILib {
     public static native void kdtree1(String filename);
 
     /**
-     * Compatibility keypoint sample. Loads {@code filename} when supplied and runs a KdTree probe.
+     * Compatibility keypoint sample. Loads {@code filename} when supplied and computes ISS/SIFT keypoints.
      */
     public static native void keypoint1(String filename);
 

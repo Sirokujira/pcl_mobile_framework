@@ -27,6 +27,9 @@ object PclMobileKotlinSample {
 
         val centroidAndBounds = pclmobileJNILib.computeCentroidAndBounds()
         val normals = pclmobileJNILib.estimateNormals(16)
+        val shotFeatures = pclmobileJNILib.computeSHOTFeatures(16, 0.18)
+        val boundaryPoints = pclmobileJNILib.computeBoundaryPoints(16, 0.18, 90.0)
+        val differenceOfNormals = pclmobileJNILib.computeDifferenceOfNormals(0.08, 0.20)
         val planeModel = pclmobileJNILib.segmentPlane(0.03, 100)
         val sphereModel = pclmobileJNILib.segmentSphere(0.05, 100)
         val nearestNeighbors = pclmobileJNILib.nearestKSearch(0.0f, 0.0f, 0.0f, 8)
@@ -37,6 +40,14 @@ object PclMobileKotlinSample {
         val projectedPlanePoints = pclmobileJNILib.projectInliersToPlane(0.03, 100)
         val mlsPoints = pclmobileJNILib.smoothMovingLeastSquares(0.12)
         val icpResult = pclmobileJNILib.alignToTranslatedCopyICP(0.05f, -0.03f, 0.02f, 35)
+        pclmobileJNILib.load(pcdFile.absolutePath)
+        val translatedPoints = pclmobileJNILib.translateActiveCloud(0.04f, -0.02f, 0.03f)
+        pclmobileJNILib.load(pcdFile.absolutePath)
+        val gicpResult = pclmobileJNILib.alignToTargetGICP(translatedPoints, 35, 0.20, 1.0e-8, 1.0e-8, 20)
+
+        pclmobileJNILib.load(pcdFile.absolutePath)
+        pclmobileJNILib.filterNormalSpaceSampling(96, 17, 4, 4, 4, 16)
+        val normalSpacePoints = pclmobileJNILib.getFilteredPoints()
 
         pclmobileJNILib.load(pcdFile.absolutePath)
         pclmobileJNILib.filterStatisticalOutlierRemoval(20, 1.0)
@@ -63,6 +74,9 @@ object PclMobileKotlinSample {
             voxelGridPoints = voxelGridPoints,
             centroidAndBounds = centroidAndBounds,
             normals = normals,
+            shotFeatures = shotFeatures,
+            boundaryPoints = boundaryPoints,
+            differenceOfNormals = differenceOfNormals,
             planeModel = planeModel,
             sphereModel = sphereModel,
             nearestNeighbors = nearestNeighbors,
@@ -73,6 +87,8 @@ object PclMobileKotlinSample {
             projectedPlanePoints = projectedPlanePoints,
             mlsPoints = mlsPoints,
             icpResult = icpResult,
+            gicpResult = gicpResult,
+            normalSpacePoints = normalSpacePoints,
             statisticalInliers = statisticalInliers,
             radiusInliers = radiusInliers,
             cropBoxPoints = cropBoxPoints,
@@ -135,6 +151,9 @@ object PclMobileKotlinSample {
         val voxelGridPoints: FloatArray,
         val centroidAndBounds: FloatArray,
         val normals: FloatArray,
+        val shotFeatures: FloatArray,
+        val boundaryPoints: FloatArray,
+        val differenceOfNormals: FloatArray,
         val planeModel: FloatArray,
         val sphereModel: FloatArray,
         val nearestNeighbors: FloatArray,
@@ -145,6 +164,8 @@ object PclMobileKotlinSample {
         val projectedPlanePoints: FloatArray,
         val mlsPoints: FloatArray,
         val icpResult: FloatArray,
+        val gicpResult: FloatArray,
+        val normalSpacePoints: FloatArray,
         val statisticalInliers: FloatArray,
         val radiusInliers: FloatArray,
         val cropBoxPoints: FloatArray,
@@ -153,6 +174,9 @@ object PclMobileKotlinSample {
         val rawPointCount: Int = rawPoints.size / 3
         val voxelGridPointCount: Int = voxelGridPoints.size / 3
         val normalCount: Int = normals.size / 4
+        val shotDescriptorCount: Int = shotFeatures.size / 352
+        val boundaryPointCount: Int = boundaryPoints.size / 4
+        val differenceOfNormalsCount: Int = differenceOfNormals.size / 4
         val nearestNeighborCount: Int = nearestNeighbors.size / 4
         val octreeNeighborCount: Int = octreeNeighbors.size / 4
         val clusterCount: Int = clusterSizes.size
@@ -160,11 +184,14 @@ object PclMobileKotlinSample {
         val concaveHullPointCount: Int = concaveHullPoints.size / 3
         val projectedPlanePointCount: Int = projectedPlanePoints.size / 3
         val mlsPointCount: Int = mlsPoints.size / 3
+        val normalSpacePointCount: Int = normalSpacePoints.size / 3
         val statisticalInlierCount: Int = statisticalInliers.size / 3
         val radiusInlierCount: Int = radiusInliers.size / 3
         val cropBoxPointCount: Int = cropBoxPoints.size / 3
         val planeInlierCount: Int = planeInliers.size / 3
         val icpConverged: Boolean = icpResult.firstOrNull() == 1.0f
         val icpFitness: Float = icpResult.getOrNull(1) ?: Float.NaN
+        val gicpConverged: Boolean = gicpResult.firstOrNull() == 1.0f
+        val gicpFitness: Float = gicpResult.getOrNull(1) ?: Float.NaN
     }
 }

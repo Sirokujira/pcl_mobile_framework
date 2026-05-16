@@ -96,10 +96,29 @@ public class MainActivity extends Activity {
 
             pclmobileJNILib.load(samplePcd.getAbsolutePath());
             float[] rawPoints = pclmobileJNILib.getCloudPoints();
+            float[] covarianceMatrix = pclmobileJNILib.computeCovarianceMatrix();
+            float[] principalAxes = pclmobileJNILib.computePrincipalAxes();
+            float[] momentOfInertiaAndObb = pclmobileJNILib.computeMomentOfInertiaAndOBB();
+            float[] squaredDistancesToOrigin = pclmobileJNILib.computeSquaredDistancesToPoint(0.0f, 0.0f, 0.0f);
+            float[] maxDistanceFromCentroid = pclmobileJNILib.computeMaxDistanceFromCentroid();
+            float[] demeanedPoints = pclmobileJNILib.demeanActiveCloud();
+            float[] translatedPoints = pclmobileJNILib.translateActiveCloud(0.04f, -0.02f, 0.03f);
+            pclmobileJNILib.load(samplePcd.getAbsolutePath());
+            float[] rigidTransform = pclmobileJNILib.estimateRigidTransformSVD(translatedPoints);
+            float[] transformedPoints = pclmobileJNILib.transformActiveCloud(rigidTransform);
+            pclmobileJNILib.load(samplePcd.getAbsolutePath());
+            float[] targetIcpResult = pclmobileJNILib.alignToTargetICP(translatedPoints, 35, 0.20, 1.0e-8, 1.0e-8);
+            pclmobileJNILib.load(samplePcd.getAbsolutePath());
+            float[] targetGicpResult = pclmobileJNILib.alignToTargetGICP(translatedPoints, 35, 0.20, 1.0e-8, 1.0e-8, 20);
+
+            pclmobileJNILib.load(samplePcd.getAbsolutePath());
             pclmobileJNILib.filterVoxelGrid(VOXEL_LEAF_SIZE, VOXEL_LEAF_SIZE, VOXEL_LEAF_SIZE);
             float[] filteredPoints = pclmobileJNILib.getFilteredPoints();
             float[] centroidAndBounds = pclmobileJNILib.computeCentroidAndBounds();
             float[] normals = pclmobileJNILib.estimateNormals(16);
+            float[] shotFeatures = pclmobileJNILib.computeSHOTFeatures(16, 0.18);
+            float[] boundaryPoints = pclmobileJNILib.computeBoundaryPoints(16, 0.18, 90.0);
+            float[] differenceOfNormals = pclmobileJNILib.computeDifferenceOfNormals(0.08, 0.20);
             float[] planeModel = pclmobileJNILib.segmentPlane(0.03, 100);
             float[] sphereModel = pclmobileJNILib.segmentSphere(0.05, 100);
             float[] nearestNeighbors = pclmobileJNILib.nearestKSearch(0.0f, 0.0f, 0.0f, 8);
@@ -108,6 +127,22 @@ public class MainActivity extends Activity {
             float[] convexHullPoints = pclmobileJNILib.computeConvexHull();
             float[] projectedPlanePoints = pclmobileJNILib.projectInliersToPlane(0.03, 100);
             float[] icpResult = pclmobileJNILib.alignToTranslatedCopyICP(0.05f, -0.03f, 0.02f, 35);
+
+            pclmobileJNILib.load(samplePcd.getAbsolutePath());
+            pclmobileJNILib.filterAxisOutside("z", -0.10, 0.10);
+            float[] passThroughOutsidePoints = pclmobileJNILib.getFilteredPoints();
+
+            pclmobileJNILib.load(samplePcd.getAbsolutePath());
+            pclmobileJNILib.filterGridMinimum(0.10);
+            float[] gridMinimumPoints = pclmobileJNILib.getFilteredPoints();
+
+            pclmobileJNILib.load(samplePcd.getAbsolutePath());
+            pclmobileJNILib.filterNormalSpaceSampling(128, 17, 4, 4, 4, 16);
+            float[] normalSpacePoints = pclmobileJNILib.getFilteredPoints();
+
+            pclmobileJNILib.load(samplePcd.getAbsolutePath());
+            pclmobileJNILib.removeNaNFromActiveCloud();
+            float[] finitePoints = pclmobileJNILib.getFilteredPoints();
 
             pclmobileJNILib.load(samplePcd.getAbsolutePath());
             pclmobileJNILib.filterStatisticalOutlierRemoval(20, 1.0);
@@ -125,6 +160,10 @@ public class MainActivity extends Activity {
             pclmobileJNILib.extractPlaneInliers(0.03, 100);
             float[] extractedPlaneInliers = pclmobileJNILib.getFilteredPoints();
 
+            pclmobileJNILib.load(samplePcd.getAbsolutePath());
+            pclmobileJNILib.extractModelOutliers(pclmobileJNILib.SACMODEL_PLANE, 0.03, 100);
+            float[] extractedPlaneOutliers = pclmobileJNILib.getFilteredPoints();
+
             if (rawPoints.length == 0 || filteredPoints.length == 0) {
                 throw new IllegalStateException("PCL returned an empty point cloud");
             }
@@ -132,41 +171,75 @@ public class MainActivity extends Activity {
             int rawCount = rawPoints.length / 3;
             int filteredCount = filteredPoints.length / 3;
             int centroidStatsCount = centroidAndBounds.length;
+            int covarianceStatsCount = covarianceMatrix.length;
+            int principalAxisStatsCount = principalAxes.length;
+            int momentStatsCount = momentOfInertiaAndObb.length;
+            int distanceCount = squaredDistancesToOrigin.length;
+            int demeanedPointCount = demeanedPoints.length / 3;
+            int translatedPointCount = translatedPoints.length / 3;
+            int transformedPointCount = transformedPoints.length / 3;
             int normalCount = normals.length / 4;
+            int shotDescriptorCount = shotFeatures.length / 352;
+            int boundaryPointCount = boundaryPoints.length / 4;
+            int differenceOfNormalsCount = differenceOfNormals.length / 4;
             int sphereInlierCount = sphereModel.length >= 5 ? Math.round(sphereModel[4]) : 0;
+            int passThroughOutsidePointCount = passThroughOutsidePoints.length / 3;
+            int gridMinimumPointCount = gridMinimumPoints.length / 3;
+            int normalSpacePointCount = normalSpacePoints.length / 3;
+            int finitePointCount = finitePoints.length / 3;
             int statisticalInlierCount = statisticalInliers.length / 3;
             int radiusInlierCount = radiusInliers.length / 3;
             int cropBoxPointCount = cropBoxPoints.length / 3;
             int planeInlierCount = planeModel.length >= 5 ? Math.round(planeModel[4]) : 0;
             int extractedPlaneInlierCount = extractedPlaneInliers.length / 3;
+            int extractedPlaneOutlierCount = extractedPlaneOutliers.length / 3;
             int nearestNeighborCount = nearestNeighbors.length / 4;
             int octreeNeighborCount = octreeNeighbors.length / 4;
             int clusterCount = clusterSizes.length;
             int convexHullPointCount = convexHullPoints.length / 3;
             int projectedPlanePointCount = projectedPlanePoints.length / 3;
             boolean icpConverged = icpResult.length > 0 && icpResult[0] == 1.0f;
+            boolean targetIcpConverged = targetIcpResult.length > 0 && targetIcpResult[0] == 1.0f;
+            boolean targetGicpConverged = targetGicpResult.length > 0 && targetGicpResult[0] == 1.0f;
             int reduction = Math.round((1.0f - (filteredCount / (float) rawCount)) * 100.0f);
             android.util.Log.i(TAG, "PCL OpenGL sample completed: raw=" + rawCount
                     + " filtered=" + filteredCount + " centroidStats=" + centroidStatsCount
-                    + " normals=" + normalCount + " sphereInliers=" + sphereInlierCount
+                    + " covarianceStats=" + covarianceStatsCount
+                    + " pcaStats=" + principalAxisStatsCount + " momentStats=" + momentStatsCount
+                    + " distances=" + distanceCount + " maxDistanceTuple=" + maxDistanceFromCentroid.length
+                    + " demeaned=" + demeanedPointCount + " translated=" + translatedPointCount
+                    + " rigidTransform=" + rigidTransform.length + " transformed=" + transformedPointCount
+                    + " normals=" + normalCount + " shot=" + shotDescriptorCount
+                    + " boundary=" + boundaryPointCount + " don=" + differenceOfNormalsCount
+                    + " sphereInliers=" + sphereInlierCount
                     + " planeInliers=" + planeInlierCount + " extractedPlane=" + extractedPlaneInlierCount
+                    + " planeOutliers=" + extractedPlaneOutlierCount
                     + " projectedPlane=" + projectedPlanePointCount
+                    + " passThroughOutside=" + passThroughOutsidePointCount
+                    + " gridMinimum=" + gridMinimumPointCount + " normalSpace=" + normalSpacePointCount
+                    + " finite=" + finitePointCount
                     + " sor=" + statisticalInlierCount + " radius=" + radiusInlierCount
                     + " cropBox=" + cropBoxPointCount
                     + " nearest=" + nearestNeighborCount + " octree=" + octreeNeighborCount
                     + " clusters=" + clusterCount + " hull=" + convexHullPointCount
-                    + " icp=" + icpConverged
+                    + " icp=" + icpConverged + " targetIcp=" + targetIcpConverged
+                    + " targetGicp=" + targetGicpConverged
                     + " reduction=" + reduction + "% file=" + samplePcd);
             runOnUiThread(() -> {
                 statusText.setText("pclMobile OpenGL point cloud\n"
                         + "Raw PCD: " + rawCount + " pts   VoxelGrid: " + filteredCount
                         + " pts   -" + reduction + "%\n"
-                        + "Normals: " + normalCount + "   Plane inliers: " + planeInlierCount
+                        + "Normals: " + normalCount + "   SHOT: " + shotDescriptorCount
+                        + "   Boundary: " + boundaryPointCount
+                        + "\nPlane inliers: " + planeInlierCount
                         + " / " + extractedPlaneInlierCount + "   SOR: " + statisticalInlierCount
                         + "\nKdTree: " + nearestNeighborCount + "   Octree: " + octreeNeighborCount
                         + "   Clusters: " + clusterCount + "   Hull: " + convexHullPointCount
                         + "\nSphere: " + sphereInlierCount + "   CropBox: " + cropBoxPointCount
-                        + "   ICP: " + icpConverged);
+                        + "   GridMin: " + gridMinimumPointCount + "   NormalSpace: " + normalSpacePointCount
+                        + "\nPCA: " + principalAxisStatsCount + "   Dist: " + distanceCount
+                        + "   Transform: " + transformedPointCount + "   ICP: " + icpConverged
+                        + "/" + targetIcpConverged + "/" + targetGicpConverged);
                 pointCloudSurface.setPointClouds(rawPoints, filteredPoints);
             });
         } catch (Throwable error) {
