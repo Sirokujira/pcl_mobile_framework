@@ -2,6 +2,7 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("maven-publish")
+    id("signing")
 }
 
 group = "io.github.sirokujira"
@@ -39,6 +40,16 @@ val mavenUsername = providers.environmentVariable("MAVEN_USERNAME")
     .orElse(providers.environmentVariable("GITHUB_ACTOR"))
 val mavenPassword = providers.environmentVariable("MAVEN_PASSWORD")
     .orElse(providers.environmentVariable("GITHUB_TOKEN"))
+
+// GPG signing — required by Maven Central / Sonatype OSSRH.
+// SIGNING_KEY:        Armored ASCII GPG private key (multi-line, kept in a secret).
+// SIGNING_PASSWORD:   Passphrase guarding the private key.
+// SIGNING_KEY_ID:     Optional 8-char short key ID (use last 8 chars of fingerprint).
+// When all three are unset, signing is skipped and publishing still works for
+// non-Central targets (GitHub Packages, local maven, internal Nexus, etc.).
+val signingKey = providers.environmentVariable("SIGNING_KEY")
+val signingPassword = providers.environmentVariable("SIGNING_PASSWORD")
+val signingKeyId = providers.environmentVariable("SIGNING_KEY_ID")
 
 android {
     namespace = "com.sirokujira.pclmobile"
@@ -153,6 +164,24 @@ afterEvaluate {
                     }
                 }
             }
+        }
+    }
+
+    signing {
+        // Only sign when GPG credentials are wired in — otherwise non-Central
+        // publishing targets (GitHub Packages, internal Nexus, local repo)
+        // still work without signing.
+        if (signingKey.isPresent && signingPassword.isPresent) {
+            if (signingKeyId.isPresent) {
+                useInMemoryPgpKeys(
+                    signingKeyId.get(),
+                    signingKey.get(),
+                    signingPassword.get(),
+                )
+            } else {
+                useInMemoryPgpKeys(signingKey.get(), signingPassword.get())
+            }
+            sign(publishing.publications)
         }
     }
 }
