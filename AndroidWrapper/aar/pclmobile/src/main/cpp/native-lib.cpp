@@ -424,6 +424,40 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
     return pclmobile::makeFloatArray(env, pclmobile::computeGASDDescriptor());
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeSpinImageFeatures(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jdouble featureRadius,
+        jint imageWidth,
+        jdouble supportAngleCos,
+        jint minPointCount)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeSpinImageFeatures(
+                    normalKSearch,
+                    featureRadius,
+                    imageWidth,
+                    supportAngleCos,
+                    minPointCount));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeGRSDDescriptor(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jdouble radiusSearch,
+        jdouble planeRadius,
+        jint subdivisions)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeGRSDDescriptor(normalKSearch, radiusSearch, planeRadius, subdivisions));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeMomentInvariants(
         JNIEnv* env, jclass clazz, jdouble radiusSearch)
 {
@@ -684,12 +718,65 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extr
                     curvatureThreshold));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractConditionalEuclideanClusters(
+        JNIEnv* env,
+        jclass clazz,
+        jdouble tolerance,
+        jint minClusterSize,
+        jint maxClusterSize,
+        jdouble maxZDelta)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::extractConditionalEuclideanClusters(
+                    tolerance, minClusterSize, maxClusterSize, maxZDelta));
+}
+
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractLargestEuclideanCluster(
         JNIEnv* env, jclass clazz, jdouble tolerance, jint minClusterSize, jint maxClusterSize)
 {
     (void) env;
     (void) clazz;
     extractLargestEuclideanCluster(tolerance, minClusterSize, maxClusterSize);
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractMinCutForeground(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray packedForegroundXYZ,
+        jdouble sigma,
+        jdouble radius,
+        jdouble sourceWeight,
+        jint numberOfNeighbours)
+{
+    (void) clazz;
+    pclmobile::extractMinCutForeground(
+            readFloatArray(env, packedForegroundXYZ),
+            sigma,
+            radius,
+            sourceWeight,
+            numberOfNeighbours);
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractMinCutForegroundStats(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray packedForegroundXYZ,
+        jdouble sigma,
+        jdouble radius,
+        jdouble sourceWeight,
+        jint numberOfNeighbours)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::extractMinCutForegroundStats(
+                    readFloatArray(env, packedForegroundXYZ),
+                    sigma,
+                    radius,
+                    sourceWeight,
+                    numberOfNeighbours));
 }
 
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_segmentDifferencesAgainstTarget(
@@ -761,6 +848,48 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
                     refine == JNI_TRUE));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeSUSANKeypoints(
+        JNIEnv* env,
+        jclass clazz,
+        jdouble radius,
+        jdouble distanceThreshold,
+        jdouble angularThreshold,
+        jdouble intensityThreshold,
+        jboolean nonMaxSuppression,
+        jboolean geometricValidation)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeSUSANKeypoints(
+                    radius,
+                    distanceThreshold,
+                    angularThreshold,
+                    intensityThreshold,
+                    nonMaxSuppression == JNI_TRUE,
+                    geometricValidation == JNI_TRUE));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeTrajkovicKeypoints(
+        JNIEnv* env,
+        jclass clazz,
+        jint method,
+        jint windowSize,
+        jdouble firstThreshold,
+        jdouble secondThreshold,
+        jint normalKSearch)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeTrajkovicKeypoints(
+                    method,
+                    windowSize,
+                    firstThreshold,
+                    secondThreshold,
+                    normalKSearch));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeRangeImageFromActiveCloud(
         JNIEnv* env,
         jclass clazz,
@@ -828,6 +957,14 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_esti
             env, pclmobile::estimateRigidTransformSVD(readFloatArray(env, packedTargetXYZ)));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_estimateRigidTransformSVDScale(
+        JNIEnv* env, jclass clazz, jfloatArray packedTargetXYZ)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env, pclmobile::estimateRigidTransformSVDScale(readFloatArray(env, packedTargetXYZ)));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_transformActiveCloud(
         JNIEnv* env, jclass clazz, jfloatArray rowMajor4x4)
 {
@@ -884,6 +1021,48 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_alig
                     maxOptimizerIterations));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_alignToTargetICPNonLinear(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray packedTargetXYZ,
+        jint maxIterations,
+        jdouble maxCorrespondenceDistance,
+        jdouble transformationEpsilon,
+        jdouble euclideanFitnessEpsilon)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::alignToTargetICPNonLinear(
+                    readFloatArray(env, packedTargetXYZ),
+                    maxIterations,
+                    maxCorrespondenceDistance,
+                    transformationEpsilon,
+                    euclideanFitnessEpsilon));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_alignToTargetNDT(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray packedTargetXYZ,
+        jint maxIterations,
+        jdouble resolution,
+        jdouble stepSize,
+        jdouble transformationEpsilon,
+        jint minPointsPerVoxel)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::alignToTargetNDT(
+                    readFloatArray(env, packedTargetXYZ),
+                    maxIterations,
+                    resolution,
+                    stepSize,
+                    transformationEpsilon,
+                    minPointsPerVoxel));
+}
+
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(
         JNIEnv* env, jobject obj, jstring filename)
 {
@@ -900,6 +1079,10 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(
                   pclmobile::computeESFDescriptor().size(), 640);
     logTupleCount("feature1", "GASDEstimation",
                   pclmobile::computeGASDDescriptor().size(), 512);
+    logTupleCount("feature1", "SpinImageEstimation",
+                  pclmobile::computeSpinImageFeatures(16, 0.18, 8, 0.0, 0).size(), 153);
+    logTupleCount("feature1", "GRSDEstimation",
+                  pclmobile::computeGRSDDescriptor(16, 0.18, 0.06, 5).size(), 21);
     logTupleCount("feature1", "MomentInvariantsEstimation",
                   pclmobile::computeMomentInvariants(0.18).size(), 3);
     logTupleCount("feature1", "RSDEstimation",
@@ -1065,6 +1248,30 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterNorma
     pclmobile::filterNormalSpaceSampling(sample, seed, binsX, binsY, binsZ, normalKSearch);
 }
 
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterCovarianceSampling(
+        JNIEnv* env, jclass clazz, jint samples, jint normalKSearch)
+{
+    (void) env;
+    (void) clazz;
+    pclmobile::filterCovarianceSampling(samples, normalKSearch);
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeCovarianceSamplingConditionNumber(
+        JNIEnv* env, jclass clazz, jint samples, jint normalKSearch)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env, pclmobile::computeCovarianceSamplingConditionNumber(samples, normalKSearch));
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterFastBilateral(
+        JNIEnv* env, jclass clazz, jdouble sigmaS, jdouble sigmaR)
+{
+    (void) env;
+    (void) clazz;
+    pclmobile::filterFastBilateral(sigmaS, sigmaR);
+}
+
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_removeNaNFromActiveCloud(
         JNIEnv* env, jclass clazz)
 {
@@ -1087,6 +1294,14 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterRadiu
     (void) env;
     (void) clazz;
     pclmobile::filterRadiusOutlierRemoval(radius, minNeighbors);
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterShadowPoints(
+        JNIEnv* env, jclass clazz, jint normalKSearch, jdouble threshold)
+{
+    (void) env;
+    (void) clazz;
+    pclmobile::filterShadowPoints(normalKSearch, threshold);
 }
 
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterCropBox(
@@ -1127,6 +1342,48 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterCropB
             maxX, maxY, maxZ,
             translationX, translationY, translationZ,
             rotationX, rotationY, rotationZ);
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterFrustumCulling(
+        JNIEnv* env,
+        jclass clazz,
+        jdouble horizontalFov,
+        jdouble verticalFov,
+        jdouble nearPlaneDistance,
+        jdouble farPlaneDistance,
+        jfloatArray rowMajorCameraPose)
+{
+    (void) clazz;
+    pclmobile::filterFrustumCulling(
+            horizontalFov,
+            verticalFov,
+            nearPlaneDistance,
+            farPlaneDistance,
+            readFloatArray(env, rowMajorCameraPose));
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterModelOutlierRemoval(
+        JNIEnv* env,
+        jclass clazz,
+        jint modelType,
+        jfloatArray modelCoefficients,
+        jdouble threshold,
+        jboolean negative)
+{
+    (void) clazz;
+    pclmobile::filterModelOutlierRemoval(
+            modelType,
+            readFloatArray(env, modelCoefficients),
+            threshold,
+            negative == JNI_TRUE);
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterMorphological(
+        JNIEnv* env, jclass clazz, jdouble resolution, jint morphologicalOperator)
+{
+    (void) env;
+    (void) clazz;
+    pclmobile::filterMorphological(resolution, morphologicalOperator);
 }
 
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterExtractIndices(
@@ -1201,6 +1458,10 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_keypoint1(
                   pclmobile::computeSIFTKeypoints(0.02, 3, 4, 0.001).size(), 4);
     logTupleCount("keypoint1", "HarrisKeypoint3D",
                   pclmobile::computeHarrisKeypoints(1, 0.05, 0.0001, true, true).size(), 4);
+    logTupleCount("keypoint1", "SUSANKeypoint",
+                  pclmobile::computeSUSANKeypoints(0.05, 0.001, 0.0001, 7.0, true, false).size(), 4);
+    logTupleCount("keypoint1", "TrajkovicKeypoint3D",
+                  pclmobile::computeTrajkovicKeypoints(0, 3, 0.00046, 0.03589, 16).size(), 4);
 }
 
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_octree1(

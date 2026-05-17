@@ -8,12 +8,14 @@
 #include <pcl/features/esf.h>
 #include <pcl/features/fpfh.h>
 #include <pcl/features/gasd.h>
+#include <pcl/features/grsd.h>
 #include <pcl/features/moment_invariants.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/pfh.h>
 #include <pcl/features/principal_curvatures.h>
 #include <pcl/features/rsd.h>
 #include <pcl/features/shot.h>
+#include <pcl/features/spin_image.h>
 #include <pcl/features/vfh.h>
 #include <pcl/search/kdtree.h>
 
@@ -56,6 +58,19 @@ std::vector<jfloat> packNormals(const pcl::PointCloud<pcl::Normal>& normals)
         values.push_back(normal.normal_y);
         values.push_back(normal.normal_z);
         values.push_back(normal.curvature);
+    }
+    return values;
+}
+
+template <typename DescriptorT, std::size_t Size>
+std::vector<jfloat> packHistogramDescriptors(const pcl::PointCloud<DescriptorT>& descriptors)
+{
+    std::vector<jfloat> values;
+    values.reserve(descriptors.points.size() * Size);
+    for (const auto& descriptor : descriptors.points) {
+        for (float value : descriptor.histogram) {
+            values.push_back(value);
+        }
     }
     return values;
 }
@@ -216,6 +231,72 @@ std::vector<jfloat> computeGASDDescriptor()
     }
     LOGI("GASDEstimation computed descriptors: input=%zu descriptors=%zu",
          input->points.size(), descriptors->points.size());
+    return values;
+}
+
+std::vector<jfloat> computeSpinImageFeatures(
+        int normal_k_search,
+        double feature_radius,
+        int image_width,
+        double support_angle_cos,
+        int min_point_count)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || feature_radius <= 0.0 || image_width <= 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::Histogram<153>>::Ptr descriptors(new pcl::PointCloud<pcl::Histogram<153>>);
+
+    pcl::SpinImageEstimation<pcl::PointXYZ, pcl::Normal, pcl::Histogram<153>> spin_image(
+            static_cast<unsigned int>(image_width),
+            support_angle_cos,
+            static_cast<unsigned int>(std::max(min_point_count, 0)));
+    spin_image.setInputCloud(input);
+    spin_image.setInputNormals(normals);
+    spin_image.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    spin_image.setRadiusSearch(feature_radius);
+    spin_image.compute(*descriptors);
+
+    std::vector<jfloat> values = packHistogramDescriptors<pcl::Histogram<153>, 153>(*descriptors);
+    LOGI("SpinImageEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d radius=%.3f width=%d",
+         input->points.size(), descriptors->points.size(), normal_k_search, feature_radius, image_width);
+    return values;
+}
+
+std::vector<jfloat> computeGRSDDescriptor(
+        int normal_k_search,
+        double radius_search,
+        double plane_radius,
+        int subdivisions)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()
+            || normal_k_search <= 0
+            || radius_search <= 0.0
+            || plane_radius <= 0.0
+            || subdivisions <= 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::GRSDSignature21>::Ptr descriptors(new pcl::PointCloud<pcl::GRSDSignature21>);
+
+    pcl::GRSDEstimation<pcl::PointXYZ, pcl::Normal, pcl::GRSDSignature21> grsd;
+    grsd.setInputCloud(input);
+    grsd.setInputNormals(normals);
+    grsd.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    grsd.setRadiusSearch(radius_search);
+    grsd.setPlaneRadius(plane_radius);
+    grsd.setNrSubdivisions(subdivisions);
+    grsd.compute(*descriptors);
+
+    std::vector<jfloat> values = packHistogramDescriptors<pcl::GRSDSignature21, 21>(*descriptors);
+    LOGI("GRSDEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d radius=%.3f",
+         input->points.size(), descriptors->points.size(), normal_k_search, radius_search);
     return values;
 }
 

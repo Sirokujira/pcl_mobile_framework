@@ -31,6 +31,22 @@ std::vector<jfloat> extractRegionGrowingClusters(int normal_k_search,
                                                  int max_cluster_size,
                                                  double smoothness_threshold_degrees,
                                                  double curvature_threshold);
+std::vector<jfloat> extractConditionalEuclideanClusters(double tolerance,
+                                                        int min_cluster_size,
+                                                        int max_cluster_size,
+                                                        double max_z_delta);
+pcl::PointCloud<pcl::PointXYZ>::Ptr extractMinCutForeground(
+        const std::vector<jfloat>& packed_foreground_xyz,
+        double sigma,
+        double radius,
+        double source_weight,
+        int number_of_neighbours);
+std::vector<jfloat> extractMinCutForegroundStats(
+        const std::vector<jfloat>& packed_foreground_xyz,
+        double sigma,
+        double radius,
+        double source_weight,
+        int number_of_neighbours);
 pcl::PointCloud<pcl::PointXYZ>::Ptr segmentDifferencesAgainstTarget(
         const std::vector<jfloat>& packed_target_xyz,
         double distance_threshold);

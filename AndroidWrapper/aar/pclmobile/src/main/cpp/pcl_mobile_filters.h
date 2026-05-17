@@ -28,9 +28,13 @@ void filterMedian(int window_size, double max_allowed_movement);
 void filterRandomSample(int sample, int seed);
 void filterFarthestPointSampling(int sample, int seed);
 void filterNormalSpaceSampling(int sample, int seed, int bins_x, int bins_y, int bins_z, int normal_k_search);
+void filterCovarianceSampling(int samples, int normal_k_search);
+std::vector<float> computeCovarianceSamplingConditionNumber(int samples, int normal_k_search);
+void filterFastBilateral(double sigma_s, double sigma_r);
 void removeNaNFromActiveCloud();
 void filterStatisticalOutlierRemoval(int mean_k, double stddev_mul_thresh);
 void filterRadiusOutlierRemoval(double radius, int min_neighbors);
+void filterShadowPoints(int normal_k_search, double threshold);
 void filterCropBox(double min_x, double min_y, double min_z, double max_x, double max_y, double max_z);
 void filterCropBoxTransformed(
         double min_x,
@@ -45,6 +49,18 @@ void filterCropBoxTransformed(
         double rotation_x,
         double rotation_y,
         double rotation_z);
+void filterFrustumCulling(
+        double horizontal_fov,
+        double vertical_fov,
+        double near_plane_distance,
+        double far_plane_distance,
+        const std::vector<float>& row_major_camera_pose);
+void filterModelOutlierRemoval(
+        int model_type,
+        const std::vector<float>& model_coefficients,
+        double threshold,
+        bool negative);
+void filterMorphological(double resolution, int morphological_operator);
 void filterExtractIndices(const std::vector<int>& indices, bool negative);
 void extractPlaneInliers(double distance_threshold, int max_iterations);
 void extractModelInliers(int model_type, double distance_threshold, int max_iterations);

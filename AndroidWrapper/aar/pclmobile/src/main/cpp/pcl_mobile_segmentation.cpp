@@ -1,10 +1,13 @@
 #include "pcl_mobile_segmentation.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include <pcl/features/normal_3d.h>
 #include <pcl/search/kdtree.h>
+#include <pcl/segmentation/conditional_euclidean_clustering.h>
 #include <pcl/segmentation/extract_clusters.h>
+#include <pcl/segmentation/min_cut_segmentation.h>
 #include <pcl/segmentation/region_growing.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/segment_differences.h>
@@ -210,6 +213,113 @@ std::vector<jfloat> extractRegionGrowingClusters(
     LOGI("RegionGrowing: input=%zu clusters=%zu normal_k=%d neighbours=%d",
          input->points.size(), clusters.size(), normal_k_search, number_of_neighbours);
     return values;
+}
+
+std::vector<jfloat> extractConditionalEuclideanClusters(
+        double tolerance,
+        int min_cluster_size,
+        int max_cluster_size,
+        double max_z_delta)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || tolerance <= 0.0 || max_z_delta < 0.0) {
+        return {};
+    }
+
+    pcl::ConditionalEuclideanClustering<pcl::PointXYZ> clustering;
+    clustering.setInputCloud(input);
+    clustering.setClusterTolerance(static_cast<float>(tolerance));
+    clustering.setMinClusterSize(static_cast<pcl::uindex_t>(std::max(min_cluster_size, 1)));
+    clustering.setMaxClusterSize(static_cast<pcl::uindex_t>(std::max(max_cluster_size, min_cluster_size)));
+    clustering.setConditionFunction(
+            [max_z_delta](const pcl::PointXYZ& a, const pcl::PointXYZ& b, float squared_distance) {
+                (void) squared_distance;
+                return std::fabs(a.z - b.z) <= max_z_delta;
+            });
+
+    std::vector<pcl::PointIndices> clusters;
+    clustering.segment(clusters);
+
+    std::vector<jfloat> values;
+    values.reserve(clusters.size());
+    for (const auto& cluster : clusters) {
+        values.push_back(static_cast<jfloat>(cluster.indices.size()));
+    }
+    LOGI("ConditionalEuclideanClustering: input=%zu clusters=%zu tolerance=%.3f maxZDelta=%.3f",
+         input->points.size(), clusters.size(), tolerance, max_z_delta);
+    return values;
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr extractMinCutForeground(
+        const std::vector<jfloat>& packed_foreground_xyz,
+        double sigma,
+        double radius,
+        double source_weight,
+        int number_of_neighbours)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr foreground = cloudFromPackedXYZ(packed_foreground_xyz);
+    if (input->empty()
+            || foreground->empty()
+            || sigma <= 0.0
+            || radius <= 0.0
+            || source_weight <= 0.0
+            || number_of_neighbours <= 0) {
+        clearFilteredCloud();
+        return filteredCloud();
+    }
+
+    pcl::MinCutSegmentation<pcl::PointXYZ> min_cut;
+    min_cut.setInputCloud(input);
+    min_cut.setForegroundPoints(foreground);
+    min_cut.setSigma(sigma);
+    min_cut.setRadius(radius);
+    min_cut.setSourceWeight(source_weight);
+    min_cut.setNumberOfNeighbours(static_cast<unsigned int>(number_of_neighbours));
+
+    std::vector<pcl::PointIndices> clusters;
+    min_cut.extract(clusters);
+    clearFilteredCloud();
+    if (!clusters.empty()) {
+        const pcl::PointIndices* largest_cluster = &clusters.front();
+        for (const auto& cluster : clusters) {
+            if (cluster.indices.size() > largest_cluster->indices.size()) {
+                largest_cluster = &cluster;
+            }
+        }
+        filteredCloud()->points.reserve(largest_cluster->indices.size());
+        for (int index : largest_cluster->indices) {
+            if (index >= 0 && static_cast<std::size_t>(index) < input->points.size()) {
+                filteredCloud()->points.push_back(input->points[static_cast<std::size_t>(index)]);
+            }
+        }
+        filteredCloud()->width = static_cast<std::uint32_t>(filteredCloud()->points.size());
+        filteredCloud()->height = 1;
+        filteredCloud()->is_dense = input->is_dense;
+    }
+
+    LOGI("MinCutSegmentation: input=%zu foreground=%zu clusters=%zu output=%zu flow=%.6f",
+         input->points.size(), foreground->points.size(), clusters.size(), filteredCloud()->points.size(),
+         min_cut.getMaxFlow());
+    return filteredCloud();
+}
+
+std::vector<jfloat> extractMinCutForegroundStats(
+        const std::vector<jfloat>& packed_foreground_xyz,
+        double sigma,
+        double radius,
+        double source_weight,
+        int number_of_neighbours)
+{
+    const std::size_t input_count = activeCloud()->points.size();
+    const std::size_t foreground_count = packed_foreground_xyz.size() / 3;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr foreground = extractMinCutForeground(
+            packed_foreground_xyz, sigma, radius, source_weight, number_of_neighbours);
+    return {
+            static_cast<jfloat>(foreground->points.size()),
+            static_cast<jfloat>(input_count),
+            static_cast<jfloat>(foreground_count),
+    };
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr segmentDifferencesAgainstTarget(

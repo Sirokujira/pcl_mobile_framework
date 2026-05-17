@@ -14,6 +14,17 @@ std::vector<jfloat> computeFPFHFeatures(int normal_k_search, double feature_radi
 std::vector<jfloat> computeVFHFeatures(int normal_k_search);
 std::vector<jfloat> computeESFDescriptor();
 std::vector<jfloat> computeGASDDescriptor();
+std::vector<jfloat> computeSpinImageFeatures(
+        int normal_k_search,
+        double feature_radius,
+        int image_width,
+        double support_angle_cos,
+        int min_point_count);
+std::vector<jfloat> computeGRSDDescriptor(
+        int normal_k_search,
+        double radius_search,
+        double plane_radius,
+        int subdivisions);
 std::vector<jfloat> computeMomentInvariants(double radius_search);
 std::vector<jfloat> computeRSDFeatures(
         int normal_k_search,
