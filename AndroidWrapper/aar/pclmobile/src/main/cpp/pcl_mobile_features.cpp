@@ -4,6 +4,8 @@
 #include <cmath>
 
 #include <pcl/features/boundary.h>
+#include <pcl/features/crh.h>
+#include <pcl/features/cvfh.h>
 #include <pcl/features/don.h>
 #include <pcl/features/esf.h>
 #include <pcl/features/fpfh.h>
@@ -11,12 +13,14 @@
 #include <pcl/features/grsd.h>
 #include <pcl/features/moment_invariants.h>
 #include <pcl/features/normal_3d.h>
+#include <pcl/features/our_cvfh.h>
 #include <pcl/features/pfh.h>
 #include <pcl/features/principal_curvatures.h>
 #include <pcl/features/rsd.h>
 #include <pcl/features/shot.h>
 #include <pcl/features/spin_image.h>
 #include <pcl/features/vfh.h>
+#include <pcl/common/centroid.h>
 #include <pcl/search/kdtree.h>
 
 #include "pcl_mobile_context.h"
@@ -231,6 +235,124 @@ std::vector<jfloat> computeGASDDescriptor()
     }
     LOGI("GASDEstimation computed descriptors: input=%zu descriptors=%zu",
          input->points.size(), descriptors->points.size());
+    return values;
+}
+
+std::vector<jfloat> computeCRHDescriptor(int normal_k_search, float viewpoint_x, float viewpoint_y, float viewpoint_z)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::Histogram<90>>::Ptr descriptors(new pcl::PointCloud<pcl::Histogram<90>>);
+
+    Eigen::Vector4f centroid;
+    pcl::compute3DCentroid(*input, centroid);
+
+    pcl::CRHEstimation<pcl::PointXYZ, pcl::Normal, pcl::Histogram<90>> crh;
+    crh.setInputCloud(input);
+    crh.setInputNormals(normals);
+    crh.setCentroid(centroid);
+    crh.setViewPoint(viewpoint_x, viewpoint_y, viewpoint_z);
+    crh.compute(*descriptors);
+
+    std::vector<jfloat> values = packHistogramDescriptors<pcl::Histogram<90>, 90>(*descriptors);
+    LOGI("CRHEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d viewpoint=(%.3f, %.3f, %.3f)",
+         input->points.size(), descriptors->points.size(), normal_k_search, viewpoint_x, viewpoint_y, viewpoint_z);
+    return values;
+}
+
+std::vector<jfloat> computeCVFHFeatures(
+        int normal_k_search,
+        double cluster_tolerance,
+        double eps_angle_threshold,
+        double curvature_threshold,
+        int min_points,
+        bool normalize_bins)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::VFHSignature308>::Ptr descriptors(new pcl::PointCloud<pcl::VFHSignature308>);
+
+    pcl::CVFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::VFHSignature308> cvfh;
+    cvfh.setInputCloud(input);
+    cvfh.setInputNormals(normals);
+    if (cluster_tolerance > 0.0) {
+        cvfh.setClusterTolerance(static_cast<float>(cluster_tolerance));
+    }
+    if (eps_angle_threshold > 0.0) {
+        cvfh.setEPSAngleThreshold(static_cast<float>(eps_angle_threshold));
+    }
+    if (curvature_threshold >= 0.0) {
+        cvfh.setCurvatureThreshold(static_cast<float>(curvature_threshold));
+    }
+    if (min_points > 0) {
+        cvfh.setMinPoints(static_cast<std::size_t>(min_points));
+    }
+    cvfh.setNormalizeBins(normalize_bins);
+    cvfh.compute(*descriptors);
+
+    std::vector<jfloat> values = packHistogramDescriptors<pcl::VFHSignature308, 308>(*descriptors);
+    LOGI("CVFHEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d tolerance=%.3f minPoints=%d",
+         input->points.size(), descriptors->points.size(), normal_k_search, cluster_tolerance, min_points);
+    return values;
+}
+
+std::vector<jfloat> computeOURCVFHFeatures(
+        int normal_k_search,
+        double cluster_tolerance,
+        double eps_angle_threshold,
+        double curvature_threshold,
+        int min_points,
+        bool normalize_bins,
+        double refine_clusters,
+        double axis_ratio,
+        double min_axis_value)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::VFHSignature308>::Ptr descriptors(new pcl::PointCloud<pcl::VFHSignature308>);
+
+    pcl::OURCVFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::VFHSignature308> our_cvfh;
+    our_cvfh.setInputCloud(input);
+    our_cvfh.setInputNormals(normals);
+    if (cluster_tolerance > 0.0) {
+        our_cvfh.setClusterTolerance(static_cast<float>(cluster_tolerance));
+    }
+    if (eps_angle_threshold > 0.0) {
+        our_cvfh.setEPSAngleThreshold(static_cast<float>(eps_angle_threshold));
+    }
+    if (curvature_threshold >= 0.0) {
+        our_cvfh.setCurvatureThreshold(static_cast<float>(curvature_threshold));
+    }
+    if (min_points > 0) {
+        our_cvfh.setMinPoints(static_cast<std::size_t>(min_points));
+    }
+    our_cvfh.setNormalizeBins(normalize_bins);
+    if (refine_clusters > 0.0) {
+        our_cvfh.setRefineClusters(static_cast<float>(refine_clusters));
+    }
+    if (axis_ratio > 0.0) {
+        our_cvfh.setAxisRatio(static_cast<float>(axis_ratio));
+    }
+    if (min_axis_value > 0.0) {
+        our_cvfh.setMinAxisValue(static_cast<float>(min_axis_value));
+    }
+    our_cvfh.compute(*descriptors);
+
+    std::vector<jfloat> values = packHistogramDescriptors<pcl::VFHSignature308, 308>(*descriptors);
+    LOGI("OURCVFHEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d tolerance=%.3f minPoints=%d",
+         input->points.size(), descriptors->points.size(), normal_k_search, cluster_tolerance, min_points);
     return values;
 }
 

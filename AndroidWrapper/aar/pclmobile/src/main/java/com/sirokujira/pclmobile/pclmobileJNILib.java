@@ -34,6 +34,9 @@ package com.sirokujira.pclmobile;
  *     <li>VFH descriptors: one 308-bin histogram for the active cloud</li>
  *     <li>ESF descriptors: one 640-bin histogram for the active cloud</li>
  *     <li>GASD descriptors: one 512-bin histogram for the active cloud</li>
+ *     <li>CRH descriptors: one 90-bin histogram for the active cloud</li>
+ *     <li>CVFH descriptors: 308-bin histogram per stable cluster</li>
+ *     <li>OUR-CVFH descriptors: 308-bin histogram per stable cluster orientation</li>
  *     <li>Spin image descriptors: 153-bin histogram per input point</li>
  *     <li>GRSD descriptors: one or more 21-bin histograms for the active cloud</li>
  *     <li>SHOT descriptors: 352-bin histogram per input point</li>
@@ -302,6 +305,52 @@ public final class pclmobileJNILib {
      * @return one 512-bin histogram for the active cloud
      */
     public static native float[] computeGASDDescriptor();
+
+    /**
+     * Computes a Camera Roll Histogram descriptor for the active cloud.
+     *
+     * @return one 90-bin histogram for the active cloud
+     */
+    public static native float[] computeCRHDescriptor(
+            int normalKSearch,
+            float viewpointX,
+            float viewpointY,
+            float viewpointZ);
+
+    /**
+     * Computes Clustered Viewpoint Feature Histograms for the active cloud.
+     *
+     * <p>Pass {@code 0.0} or {@code 0} for optional numeric parameters to keep PCL defaults,
+     * except {@code normalKSearch}, which must be positive.</p>
+     *
+     * @return 308 histogram values per stable cluster descriptor
+     */
+    public static native float[] computeCVFHFeatures(
+            int normalKSearch,
+            double clusterTolerance,
+            double epsAngleThreshold,
+            double curvatureThreshold,
+            int minPoints,
+            boolean normalizeBins);
+
+    /**
+     * Computes Oriented, Unique and Repeatable CVFH descriptors for the active cloud.
+     *
+     * <p>Pass {@code 0.0} or {@code 0} for optional numeric parameters to keep PCL defaults,
+     * except {@code normalKSearch}, which must be positive.</p>
+     *
+     * @return 308 histogram values per stable cluster orientation descriptor
+     */
+    public static native float[] computeOURCVFHFeatures(
+            int normalKSearch,
+            double clusterTolerance,
+            double epsAngleThreshold,
+            double curvatureThreshold,
+            int minPoints,
+            boolean normalizeBins,
+            double refineClusters,
+            double axisRatio,
+            double minAxisValue);
 
     /**
      * Computes Spin Image descriptors for the active cloud.

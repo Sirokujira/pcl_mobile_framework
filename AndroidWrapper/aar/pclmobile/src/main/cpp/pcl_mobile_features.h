@@ -14,6 +14,24 @@ std::vector<jfloat> computeFPFHFeatures(int normal_k_search, double feature_radi
 std::vector<jfloat> computeVFHFeatures(int normal_k_search);
 std::vector<jfloat> computeESFDescriptor();
 std::vector<jfloat> computeGASDDescriptor();
+std::vector<jfloat> computeCRHDescriptor(int normal_k_search, float viewpoint_x, float viewpoint_y, float viewpoint_z);
+std::vector<jfloat> computeCVFHFeatures(
+        int normal_k_search,
+        double cluster_tolerance,
+        double eps_angle_threshold,
+        double curvature_threshold,
+        int min_points,
+        bool normalize_bins);
+std::vector<jfloat> computeOURCVFHFeatures(
+        int normal_k_search,
+        double cluster_tolerance,
+        double eps_angle_threshold,
+        double curvature_threshold,
+        int min_points,
+        bool normalize_bins,
+        double refine_clusters,
+        double axis_ratio,
+        double min_axis_value);
 std::vector<jfloat> computeSpinImageFeatures(
         int normal_k_search,
         double feature_radius,
