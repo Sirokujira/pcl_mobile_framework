@@ -424,6 +424,70 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
     return pclmobile::makeFloatArray(env, pclmobile::computeGASDDescriptor());
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeCRHDescriptor(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jfloat viewpointX,
+        jfloat viewpointY,
+        jfloat viewpointZ)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeCRHDescriptor(normalKSearch, viewpointX, viewpointY, viewpointZ));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeCVFHFeatures(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jdouble clusterTolerance,
+        jdouble epsAngleThreshold,
+        jdouble curvatureThreshold,
+        jint minPoints,
+        jboolean normalizeBins)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeCVFHFeatures(
+                    normalKSearch,
+                    clusterTolerance,
+                    epsAngleThreshold,
+                    curvatureThreshold,
+                    minPoints,
+                    normalizeBins == JNI_TRUE));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeOURCVFHFeatures(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jdouble clusterTolerance,
+        jdouble epsAngleThreshold,
+        jdouble curvatureThreshold,
+        jint minPoints,
+        jboolean normalizeBins,
+        jdouble refineClusters,
+        jdouble axisRatio,
+        jdouble minAxisValue)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeOURCVFHFeatures(
+                    normalKSearch,
+                    clusterTolerance,
+                    epsAngleThreshold,
+                    curvatureThreshold,
+                    minPoints,
+                    normalizeBins == JNI_TRUE,
+                    refineClusters,
+                    axisRatio,
+                    minAxisValue));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeSpinImageFeatures(
         JNIEnv* env,
         jclass clazz,
@@ -1131,6 +1195,12 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(
                   pclmobile::computeESFDescriptor().size(), 640);
     logTupleCount("feature1", "GASDEstimation",
                   pclmobile::computeGASDDescriptor().size(), 512);
+    logTupleCount("feature1", "CRHEstimation",
+                  pclmobile::computeCRHDescriptor(16, 0.0f, 0.0f, 0.0f).size(), 90);
+    logTupleCount("feature1", "CVFHEstimation",
+                  pclmobile::computeCVFHFeatures(16, 0.0, 0.0, 0.03, 20, true).size(), 308);
+    logTupleCount("feature1", "OURCVFHEstimation",
+                  pclmobile::computeOURCVFHFeatures(16, 0.0, 0.0, 0.03, 20, true, 1.0, 0.8, 0.925).size(), 308);
     logTupleCount("feature1", "SpinImageEstimation",
                   pclmobile::computeSpinImageFeatures(16, 0.18, 8, 0.0, 0).size(), 153);
     logTupleCount("feature1", "GRSDEstimation",
