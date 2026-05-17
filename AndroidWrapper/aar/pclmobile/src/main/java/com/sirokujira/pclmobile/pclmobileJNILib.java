@@ -793,6 +793,25 @@ public final class pclmobileJNILib {
             boolean refine);
 
     /**
+     * Computes Harris 2D keypoints for the active organized cloud.
+     *
+     * <p>The wrapper derives an intensity field from XYZ distance before invoking
+     * PCL {@code HarrisKeypoint2D}. {@code responseMethod} accepts
+     * {@code HARRIS_RESPONSE_HARRIS}, {@code HARRIS_RESPONSE_NOBLE},
+     * {@code HARRIS_RESPONSE_LOWE}, or {@code HARRIS_RESPONSE_TOMASI}.</p>
+     *
+     * @return {@code x, y, z, response} tuples
+     */
+    public static native float[] computeHarris2DKeypoints(
+            int responseMethod,
+            int windowWidth,
+            int windowHeight,
+            int minDistance,
+            double threshold,
+            boolean nonMaxSuppression,
+            boolean refine);
+
+    /**
      * Computes SUSAN keypoints for the active cloud.
      *
      * <p>The wrapper derives an intensity field from XYZ distance before invoking
@@ -820,6 +839,48 @@ public final class pclmobileJNILib {
             double firstThreshold,
             double secondThreshold,
             int normalKSearch);
+
+    /**
+     * Computes Trajkovic 2D keypoints for the active organized cloud.
+     *
+     * <p>The wrapper derives an intensity field from XYZ distance before invoking
+     * PCL {@code TrajkovicKeypoint2D}.</p>
+     *
+     * @param method one of the {@code TRAJKOVIC_METHOD_*} constants
+     * @return {@code x, y, z, response} tuples
+     */
+    public static native float[] computeTrajkovic2DKeypoints(
+            int method,
+            int windowSize,
+            double firstThreshold,
+            double secondThreshold);
+
+    /**
+     * Computes BRISK 2D keypoints for the active organized cloud.
+     *
+     * <p>The wrapper derives an intensity field from XYZ distance before invoking
+     * PCL {@code BriskKeypoint2D}.</p>
+     *
+     * @return {@code x, y, z, scale} tuples
+     */
+    public static native float[] computeBRISK2DKeypoints(
+            int threshold,
+            int octaves,
+            boolean removeInvalid3DKeypoints);
+
+    /**
+     * Computes AGAST 2D keypoints for the active organized cloud.
+     *
+     * <p>The wrapper derives an intensity field from XYZ distance before invoking
+     * PCL {@code AgastKeypoint2D}.</p>
+     *
+     * @return {@code u, v} image-coordinate pairs
+     */
+    public static native float[] computeAGAST2DKeypoints(
+            double threshold,
+            double maxDataValue,
+            boolean nonMaxSuppression,
+            int maxKeypoints);
 
     /**
      * Builds a PCL {@code RangeImage} from the active cloud and returns finite range pixels.

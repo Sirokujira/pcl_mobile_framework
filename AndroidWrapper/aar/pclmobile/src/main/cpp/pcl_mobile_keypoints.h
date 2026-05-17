@@ -28,6 +28,14 @@ std::vector<jfloat> computeHarrisKeypoints(
         double threshold,
         bool non_max_suppression,
         bool refine);
+std::vector<jfloat> computeHarris2DKeypoints(
+        int response_method,
+        int window_width,
+        int window_height,
+        int min_distance,
+        double threshold,
+        bool non_max_suppression,
+        bool refine);
 std::vector<jfloat> computeSUSANKeypoints(
         double radius,
         double distance_threshold,
@@ -41,6 +49,20 @@ std::vector<jfloat> computeTrajkovicKeypoints(
         double first_threshold,
         double second_threshold,
         int normal_k_search);
+std::vector<jfloat> computeTrajkovic2DKeypoints(
+        int method,
+        int window_size,
+        double first_threshold,
+        double second_threshold);
+std::vector<jfloat> computeBRISK2DKeypoints(
+        int threshold,
+        int octaves,
+        bool remove_invalid_3d_keypoints);
+std::vector<jfloat> computeAGAST2DKeypoints(
+        double threshold,
+        double max_data_value,
+        bool non_max_suppression,
+        int max_keypoints);
 
 } // namespace pclmobile
 
