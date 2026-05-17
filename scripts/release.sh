@@ -5,8 +5,8 @@
 # What it does:
 #   1. Build the XCFramework (calls scripts/build_ios.sh).
 #   2. Re-zip and compute SHA256 + Swift PM checksum.
-#   3. Patch Package.swift, PCLMobile.podspec and PCLMobile.json with the
-#      new version number, URL and checksum.
+#   3. Patch Package.swift and PCLMobile.podspec with the new version
+#      number, URL and checksum.
 #   4. Optionally create a git tag and a GitHub Release with the zip
 #      attached (controlled by --publish).
 #
@@ -112,21 +112,6 @@ p.write_text(s)
 print("OK PCLMobile.podspec")
 PY
 
-echo "==> Patching iOSWrapper/PCLMobile.json (Carthage)"
-python3 - <<PY
-import json, pathlib
-p = pathlib.Path("iOSWrapper/PCLMobile.json")
-data = {}
-if p.exists():
-    try:
-        data = json.loads(p.read_text())
-    except Exception:
-        data = {}
-data["${VERSION}"] = "${ASSET_URL}"
-p.write_text(json.dumps(dict(sorted(data.items(), key=lambda kv: [int(x) for x in kv[0].split('.')])), indent=4) + "\n")
-print("OK PCLMobile.json")
-PY
-
 # ---------------------------------------------------------------------------
 # 4. Optional publish
 # ---------------------------------------------------------------------------
@@ -136,7 +121,7 @@ if ! ${PUBLISH}; then
     echo "Re-run with --publish to tag and create the GitHub Release."
     echo
     echo "Manual follow-up:"
-    echo "  git add Package.swift iOSWrapper/PCLMobile.podspec iOSWrapper/PCLMobile.json"
+    echo "  git add Package.swift iOSWrapper/PCLMobile.podspec"
     echo "  git commit -m 'release: PCLMobile ${VERSION}'"
     echo "  git tag ${TAG}"
     echo "  git push origin main ${TAG}"
@@ -151,7 +136,7 @@ if ! command -v gh >/dev/null 2>&1; then
 fi
 
 echo "==> git commit / tag / push"
-git add Package.swift iOSWrapper/PCLMobile.podspec iOSWrapper/PCLMobile.json
+git add Package.swift iOSWrapper/PCLMobile.podspec
 git diff --cached --stat
 git commit -m "release: PCLMobile ${VERSION}"
 git tag "${TAG}"

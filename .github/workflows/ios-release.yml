@@ -1,8 +1,8 @@
 name: iOS Package Release
 
 # Trigger flow:
-#   1. Locally run `scripts/release.sh <version>` to patch Package.swift,
-#      PCLMobile.podspec and PCLMobile.json with the new SHA256/URL.
+#   1. Locally run `scripts/release.sh <version>` to patch Package.swift
+#      and PCLMobile.podspec with the new SHA256/URL.
 #   2. Commit the patched manifests and push.
 #   3. Push the matching tag (`v<version>`) — this workflow takes over and:
 #        - rebuilds the 3-slice PCLMobile.xcframework on a clean macOS runner
@@ -123,7 +123,6 @@ jobs:
           Distribution channels:
           - Swift Package Manager → \`Package.swift\` (binary target)
           - CocoaPods             → \`PCLMobile.podspec\`
-          - Carthage              → \`PCLMobile.json\`
           EOF
 
           if ! gh release view "$PCLMOBILE_RELEASE_TAG" >/dev/null 2>&1; then

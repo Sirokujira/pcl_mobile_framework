@@ -6,9 +6,8 @@ PCLMobile is distributed through several channels:
 |---|---|---|---|
 | iOS | Swift Package Manager | [`Package.swift`](../Package.swift) | [`ios-release.yml`](../.github/workflows/ios-release.yml) |
 | iOS | CocoaPods | [`iOSWrapper/PCLMobile.podspec`](../iOSWrapper/PCLMobile.podspec) | `ios-release.yml` (optional Trunk push) |
-| iOS | Carthage | [`iOSWrapper/PCLMobile.json`](../iOSWrapper/PCLMobile.json) | `ios-release.yml` (binary lives on the GitHub Release) |
-| Android | GitHub Packages | [`pclmobile/build.gradle.kts`](../AndroidWrapper/aar/pclmobile/build.gradle.kts) | [`android-release.yml`](../.github/workflows/android-release.yml) |
-| Android | Sonatype Maven Central | same | [`android-maven-central.yml`](../.github/workflows/android-maven-central.yml) |
+| Android | Sonatype Maven Central | [`pclmobile/build.gradle.kts`](../AndroidWrapper/aar/pclmobile/build.gradle.kts) | [`android-maven-central.yml`](../.github/workflows/android-maven-central.yml) |
+| Android | GitHub Packages (snapshots) | same | [`android-release.yml`](../.github/workflows/android-release.yml) |
 
 This doc covers the user-side setup (account creation, key generation,
 secret wiring) needed for each channel beyond what CI already automates.
