@@ -964,6 +964,30 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
                     refine == JNI_TRUE));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeHarris2DKeypoints(
+        JNIEnv* env,
+        jclass clazz,
+        jint responseMethod,
+        jint windowWidth,
+        jint windowHeight,
+        jint minDistance,
+        jdouble threshold,
+        jboolean nonMaxSuppression,
+        jboolean refine)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeHarris2DKeypoints(
+                    responseMethod,
+                    windowWidth,
+                    windowHeight,
+                    minDistance,
+                    threshold,
+                    nonMaxSuppression == JNI_TRUE,
+                    refine == JNI_TRUE));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeSUSANKeypoints(
         JNIEnv* env,
         jclass clazz,
@@ -1004,6 +1028,58 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
                     firstThreshold,
                     secondThreshold,
                     normalKSearch));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeTrajkovic2DKeypoints(
+        JNIEnv* env,
+        jclass clazz,
+        jint method,
+        jint windowSize,
+        jdouble firstThreshold,
+        jdouble secondThreshold)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeTrajkovic2DKeypoints(
+                    method,
+                    windowSize,
+                    firstThreshold,
+                    secondThreshold));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeBRISK2DKeypoints(
+        JNIEnv* env,
+        jclass clazz,
+        jint threshold,
+        jint octaves,
+        jboolean removeInvalid3DKeypoints)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeBRISK2DKeypoints(
+                    threshold,
+                    octaves,
+                    removeInvalid3DKeypoints == JNI_TRUE));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeAGAST2DKeypoints(
+        JNIEnv* env,
+        jclass clazz,
+        jdouble threshold,
+        jdouble maxDataValue,
+        jboolean nonMaxSuppression,
+        jint maxKeypoints)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeAGAST2DKeypoints(
+                    threshold,
+                    maxDataValue,
+                    nonMaxSuppression == JNI_TRUE,
+                    maxKeypoints));
 }
 
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeRangeImageFromActiveCloud(
@@ -1580,10 +1656,18 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_keypoint1(
                   pclmobile::computeSIFTKeypoints(0.02, 3, 4, 0.001).size(), 4);
     logTupleCount("keypoint1", "HarrisKeypoint3D",
                   pclmobile::computeHarrisKeypoints(1, 0.05, 0.0001, true, true).size(), 4);
+    logTupleCount("keypoint1", "HarrisKeypoint2D",
+                  pclmobile::computeHarris2DKeypoints(1, 3, 3, 5, 0.0001, true, false).size(), 4);
     logTupleCount("keypoint1", "SUSANKeypoint",
                   pclmobile::computeSUSANKeypoints(0.05, 0.001, 0.0001, 7.0, true, false).size(), 4);
     logTupleCount("keypoint1", "TrajkovicKeypoint3D",
                   pclmobile::computeTrajkovicKeypoints(0, 3, 0.00046, 0.03589, 16).size(), 4);
+    logTupleCount("keypoint1", "TrajkovicKeypoint2D",
+                  pclmobile::computeTrajkovic2DKeypoints(0, 3, 0.1, 100.0).size(), 4);
+    logTupleCount("keypoint1", "BriskKeypoint2D",
+                  pclmobile::computeBRISK2DKeypoints(60, 4, true).size(), 4);
+    logTupleCount("keypoint1", "AgastKeypoint2D",
+                  pclmobile::computeAGAST2DKeypoints(30.0, 255.0, true, 0).size(), 2);
 }
 
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_octree1(

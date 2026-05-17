@@ -2,10 +2,14 @@
 
 #include <cmath>
 
+#include <pcl/keypoints/agast_2d.h>
+#include <pcl/keypoints/brisk_2d.h>
+#include <pcl/keypoints/harris_2d.h>
 #include <pcl/keypoints/harris_3d.h>
 #include <pcl/keypoints/iss_3d.h>
 #include <pcl/keypoints/sift_keypoint.h>
 #include <pcl/keypoints/susan.h>
+#include <pcl/keypoints/trajkovic_2d.h>
 #include <pcl/keypoints/trajkovic_3d.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/search/kdtree.h>
@@ -56,6 +60,43 @@ pcl::PointCloud<pcl::Normal>::Ptr computeNormals(
     normal_estimation.setKSearch(k_search);
     normal_estimation.compute(*normals);
     return normals;
+}
+
+std::vector<jfloat> packPointXYZIKeypoints(const pcl::PointCloud<pcl::PointXYZI>& keypoints)
+{
+    std::vector<jfloat> values;
+    values.reserve(keypoints.points.size() * 4);
+    for (const auto& keypoint : keypoints.points) {
+        values.push_back(keypoint.x);
+        values.push_back(keypoint.y);
+        values.push_back(keypoint.z);
+        values.push_back(keypoint.intensity);
+    }
+    return values;
+}
+
+std::vector<jfloat> packPointWithScaleKeypoints(const pcl::PointCloud<pcl::PointWithScale>& keypoints)
+{
+    std::vector<jfloat> values;
+    values.reserve(keypoints.points.size() * 4);
+    for (const auto& keypoint : keypoints.points) {
+        values.push_back(keypoint.x);
+        values.push_back(keypoint.y);
+        values.push_back(keypoint.z);
+        values.push_back(keypoint.scale);
+    }
+    return values;
+}
+
+std::vector<jfloat> packPointUVKeypoints(const pcl::PointCloud<pcl::PointUV>& keypoints)
+{
+    std::vector<jfloat> values;
+    values.reserve(keypoints.points.size() * 2);
+    for (const auto& keypoint : keypoints.points) {
+        values.push_back(keypoint.u);
+        values.push_back(keypoint.v);
+    }
+    return values;
 }
 
 } // namespace
@@ -156,6 +197,49 @@ std::vector<jfloat> computeHarrisKeypoints(
     return values;
 }
 
+std::vector<jfloat> computeHarris2DKeypoints(
+        int response_method,
+        int window_width,
+        int window_height,
+        int min_distance,
+        double threshold,
+        bool non_max_suppression,
+        bool refine)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()
+            || input->height <= 1
+            || window_width < 3
+            || window_height < 3
+            || (window_width % 2) == 0
+            || (window_height % 2) == 0
+            || min_distance <= 0) {
+        return {};
+    }
+
+    pcl::HarrisKeypoint2D<pcl::PointXYZI, pcl::PointXYZI>::ResponseMethod method =
+            response_method >= 1 && response_method <= 4
+                    ? static_cast<pcl::HarrisKeypoint2D<pcl::PointXYZI, pcl::PointXYZI>::ResponseMethod>(response_method)
+                    : pcl::HarrisKeypoint2D<pcl::PointXYZI, pcl::PointXYZI>::HARRIS;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr intensity_input = makeIntensityCloud(input);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr keypoints(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::HarrisKeypoint2D<pcl::PointXYZI, pcl::PointXYZI> harris(
+            method,
+            window_width,
+            window_height,
+            min_distance,
+            static_cast<float>(threshold));
+    harris.setInputCloud(intensity_input);
+    harris.setNonMaxSupression(non_max_suppression);
+    harris.setRefine(refine);
+    harris.compute(*keypoints);
+
+    std::vector<jfloat> values = packPointXYZIKeypoints(*keypoints);
+    LOGI("HarrisKeypoint2D computed keypoints: input=%zu keypoints=%zu method=%d window=(%d,%d)",
+         input->points.size(), keypoints->points.size(), response_method, window_width, window_height);
+    return values;
+}
+
 std::vector<jfloat> computeSUSANKeypoints(
         double radius,
         double distance_threshold,
@@ -181,14 +265,7 @@ std::vector<jfloat> computeSUSANKeypoints(
     susan.setGeometricValidation(geometric_validation);
     susan.compute(*keypoints);
 
-    std::vector<jfloat> values;
-    values.reserve(keypoints->points.size() * 4);
-    for (const auto& keypoint : keypoints->points) {
-        values.push_back(keypoint.x);
-        values.push_back(keypoint.y);
-        values.push_back(keypoint.z);
-        values.push_back(keypoint.intensity);
-    }
+    std::vector<jfloat> values = packPointXYZIKeypoints(*keypoints);
     LOGI("SUSANKeypoint computed keypoints: input=%zu keypoints=%zu radius=%.3f nonMax=%d geometric=%d",
          input->points.size(), keypoints->points.size(), radius, non_max_suppression, geometric_validation);
     return values;
@@ -229,6 +306,89 @@ std::vector<jfloat> computeTrajkovicKeypoints(
     }
     LOGI("TrajkovicKeypoint3D computed keypoints: input=%zu keypoints=%zu method=%d window=%d normalK=%d",
          input->points.size(), keypoints->points.size(), method, window_size, normal_k_search);
+    return values;
+}
+
+std::vector<jfloat> computeTrajkovic2DKeypoints(
+        int method,
+        int window_size,
+        double first_threshold,
+        double second_threshold)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || input->height <= 1 || window_size < 3 || (window_size % 2) == 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZI>::Ptr intensity_input = makeIntensityCloud(input);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr keypoints(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::TrajkovicKeypoint2D<pcl::PointXYZI, pcl::PointXYZI> trajkovic(
+            method == 1
+                    ? pcl::TrajkovicKeypoint2D<pcl::PointXYZI, pcl::PointXYZI>::EIGHT_CORNERS
+                    : pcl::TrajkovicKeypoint2D<pcl::PointXYZI, pcl::PointXYZI>::FOUR_CORNERS,
+            window_size,
+            static_cast<float>(first_threshold),
+            static_cast<float>(second_threshold));
+    trajkovic.setInputCloud(intensity_input);
+    trajkovic.compute(*keypoints);
+
+    std::vector<jfloat> values = packPointXYZIKeypoints(*keypoints);
+    LOGI("TrajkovicKeypoint2D computed keypoints: input=%zu keypoints=%zu method=%d window=%d",
+         input->points.size(), keypoints->points.size(), method, window_size);
+    return values;
+}
+
+std::vector<jfloat> computeBRISK2DKeypoints(
+        int threshold,
+        int octaves,
+        bool remove_invalid_3d_keypoints)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || input->height <= 1 || threshold < 0 || octaves < 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZI>::Ptr intensity_input = makeIntensityCloud(input);
+    pcl::PointCloud<pcl::PointWithScale>::Ptr keypoints(new pcl::PointCloud<pcl::PointWithScale>);
+    pcl::BriskKeypoint2D<pcl::PointXYZI, pcl::PointWithScale> brisk(octaves, threshold);
+    brisk.setInputCloud(intensity_input);
+    brisk.setRemoveInvalid3DKeypoints(remove_invalid_3d_keypoints);
+    brisk.compute(*keypoints);
+
+    std::vector<jfloat> values = packPointWithScaleKeypoints(*keypoints);
+    LOGI("BriskKeypoint2D computed keypoints: input=%zu keypoints=%zu threshold=%d octaves=%d removeInvalid=%d",
+         input->points.size(), keypoints->points.size(), threshold, octaves, remove_invalid_3d_keypoints ? 1 : 0);
+    return values;
+}
+
+std::vector<jfloat> computeAGAST2DKeypoints(
+        double threshold,
+        double max_data_value,
+        bool non_max_suppression,
+        int max_keypoints)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || input->height <= 1 || threshold < 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZI>::Ptr intensity_input = makeIntensityCloud(input);
+    pcl::PointCloud<pcl::PointUV>::Ptr keypoints(new pcl::PointCloud<pcl::PointUV>);
+    pcl::AgastKeypoint2D<pcl::PointXYZI, pcl::PointUV> agast;
+    agast.setInputCloud(intensity_input);
+    agast.setThreshold(threshold);
+    agast.setNonMaxSuppression(non_max_suppression);
+    if (max_data_value > 0.0) {
+        agast.setMaxDataValue(max_data_value);
+    }
+    if (max_keypoints > 0) {
+        agast.setMaxKeypoints(static_cast<unsigned int>(max_keypoints));
+    }
+    agast.compute(*keypoints);
+
+    std::vector<jfloat> values = packPointUVKeypoints(*keypoints);
+    LOGI("AgastKeypoint2D computed keypoints: input=%zu keypoints=%zu threshold=%.3f nonMax=%d max=%d",
+         input->points.size(), keypoints->points.size(), threshold, non_max_suppression ? 1 : 0, max_keypoints);
     return values;
 }
 
