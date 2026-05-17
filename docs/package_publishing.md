@@ -135,8 +135,15 @@ Don't commit `signing-key.asc` anywhere — it lands in GitHub Secrets only.
 
 ### 5. First publish
 
-1. **Dry-run first** — verifies the build, signing and POM without
-   touching Sonatype:
+The workflow uses the [gradle-nexus-publish-plugin] to drive staging,
+closing and releasing through one Gradle invocation — no Sonatype UI
+clicks needed once the secrets are wired in.
+
+[gradle-nexus-publish-plugin]: https://github.com/gradle-nexus/publish-plugin
+
+1. **Dry-run first** — builds + signs + publishes to a local repo and
+   uploads the bundle as a workflow artifact for inspection. Nothing
+   touches Sonatype:
    ```
    gh workflow run android-maven-central.yml \
      -f version=0.1.0 \
@@ -146,22 +153,31 @@ Don't commit `signing-key.asc` anywhere — it lands in GitHub Secrets only.
    `.pom`, `-sources.jar`, plus matching `.asc` + `.md5` + `.sha1` next
    to each.
 
-2. **Real upload** — flip `dry_run` to false:
+2. **Staging-only upload** — uploads to Sonatype but stops before
+   promoting to Maven Central. Useful for the very first publish so
+   you can poke around the staging repo in the Sonatype UI:
    ```
    gh workflow run android-maven-central.yml \
      -f version=0.1.0 \
-     -f dry_run=false
+     -f dry_run=false \
+     -f auto_release=false
+   ```
+   Then log in to the matching Sonatype UI and click **Close** →
+   **Release** (legacy OSSRH) or **Publish** (Central Portal).
+
+3. **Full automated release** — uploads, closes the staging repo,
+   waits for Nexus validation, and promotes to Maven Central in one
+   shot. Use this once the dry-run path is validated:
+   ```
+   gh workflow run android-maven-central.yml \
+     -f version=0.1.0 \
+     -f dry_run=false \
+     -f auto_release=true
    ```
 
-3. **Close + release the staging repo**:
-   - *OSSRH (legacy URL)*: log in to <https://s01.oss.sonatype.org/>,
-     find the open staging repo, click **Close**, wait for validations
-     to pass (~1 min), then **Release**.
-   - *Central Portal (new)*: log in to <https://central.sonatype.com>,
-     review the deployment in the portal UI and click **Publish**.
-
 4. Released artifacts appear on Maven Central within ~30 minutes and
-   become indexed (searchable) within ~4 hours.
+   become indexed (searchable in <https://search.maven.org>) within
+   ~4 hours.
 
 ### Consuming from Maven Central
 

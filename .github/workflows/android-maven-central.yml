@@ -22,15 +22,20 @@ on:
         description: "Release version without the leading v (e.g. 0.1.0)"
         required: true
         default: "0.1.0"
-      maven_repository_url:
-        description: "Maven endpoint. Default is Sonatype OSSRH staging."
+      sonatype_url:
+        description: "Sonatype base URL. Default = legacy OSSRH s01."
         required: true
-        default: "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+        default: "https://s01.oss.sonatype.org/service/local/"
       dry_run:
         description: "Dry-run: build + sign + publish to local repo only, no upload."
         required: true
         type: boolean
         default: true
+      auto_release:
+        description: "After publishToSonatype, also close + release the staging repo."
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -118,22 +123,33 @@ jobs:
           echo "=== Local repo contents ==="
           find pclmobile/build/repo -type f | sort
 
-      - name: Publish to Maven Central staging
+      - name: Publish to Maven Central staging (via Nexus Publish Plugin)
         if: inputs.dry_run == false
         working-directory: AndroidWrapper/aar
         env:
           PCLMOBILE_VERSION: ${{ env.PCLMOBILE_VERSION }}
-          MAVEN_REPOSITORY_URL: ${{ inputs.maven_repository_url }}
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          SONATYPE_URL: ${{ inputs.sonatype_url }}
+          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+          OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
         run: |
-          ./gradlew :pclmobile:publishReleasePublicationToRemoteRepository --info
+          # publishToSonatype uploads to the staging repo. When auto_release
+          # is true, chain closeAndReleaseSonatypeStagingRepository so the
+          # release is promoted to Maven Central without any manual UI step.
+          TASKS=(":pclmobile:publishReleasePublicationToSonatypeRepository")
+          if [[ "${{ inputs.auto_release }}" == "true" ]]; then
+            TASKS+=(closeAndReleaseSonatypeStagingRepository)
+          fi
+          ./gradlew "${TASKS[@]}" --info
           echo
-          echo "::notice::Uploaded to ${MAVEN_REPOSITORY_URL}"
-          echo "::notice::Sonatype OSSRH: log in to https://s01.oss.sonatype.org/ to close + release the staging repo (or use the Central Portal UI for Portal-published namespaces)."
+          if [[ "${{ inputs.auto_release }}" == "true" ]]; then
+            echo "::notice::Release promoted to Maven Central. Indexing typically completes within ~30 minutes."
+          else
+            echo "::notice::Staging upload complete at ${SONATYPE_URL}."
+            echo "::notice::Manual close + release required: log in to the Sonatype UI matching the URL."
+          fi
 
       - name: Upload local-repo artifacts (dry-run only)
         if: inputs.dry_run == true
