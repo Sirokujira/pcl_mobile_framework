@@ -16,7 +16,7 @@ import PackageDescription
 let useLocalXCFramework = false
 
 let xcframeworkURL =
-    "https://github.com/Sirokujira/pcl_mobile_framework/releases/download/v0.1.0/PCLMobile.xcframework.zip" // x-release-please-version
+    "https://github.com/Sirokujira/pcl_mobile_framework/releases/download/v0.1.1/PCLMobile.xcframework.zip" // x-release-please-version
 let xcframeworkChecksum =
     "6df7b44b01d83d7c09aba3ce33de6927ff7f48bc6b976a50c06744077522a338"
 
