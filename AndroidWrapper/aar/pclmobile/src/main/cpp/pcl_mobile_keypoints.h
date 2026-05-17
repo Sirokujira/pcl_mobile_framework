@@ -28,6 +28,19 @@ std::vector<jfloat> computeHarrisKeypoints(
         double threshold,
         bool non_max_suppression,
         bool refine);
+std::vector<jfloat> computeSUSANKeypoints(
+        double radius,
+        double distance_threshold,
+        double angular_threshold,
+        double intensity_threshold,
+        bool non_max_suppression,
+        bool geometric_validation);
+std::vector<jfloat> computeTrajkovicKeypoints(
+        int method,
+        int window_size,
+        double first_threshold,
+        double second_threshold,
+        int normal_k_search);
 
 } // namespace pclmobile
 

@@ -5,21 +5,29 @@
 
 #include <pcl/filters/approximate_voxel_grid.h>
 #include <pcl/filters/conditional_removal.h>
+#include <pcl/filters/covariance_sampling.h>
 #include <pcl/filters/crop_box.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/farthest_point_sampling.h>
+#include <pcl/filters/fast_bilateral.h>
 #include <pcl/filters/filter.h>
+#include <pcl/filters/frustum_culling.h>
 #include <pcl/filters/grid_minimum.h>
 #include <pcl/filters/local_maximum.h>
 #include <pcl/filters/median_filter.h>
+#include <pcl/filters/model_outlier_removal.h>
+#include <pcl/filters/morphological_filter.h>
 #include <pcl/filters/normal_space.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/random_sample.h>
+#include <pcl/filters/shadowpoints.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/uniform_sampling.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/voxel_grid_covariance.h>
+#include <pcl/filters/impl/covariance_sampling.hpp>
+#include <pcl/filters/impl/fast_bilateral.hpp>
 #include <pcl/features/normal_3d.h>
 #include <pcl/search/kdtree.h>
 
@@ -32,6 +40,47 @@ namespace pclmobile {
 namespace {
 
 constexpr int kSacModelPlane = 0;
+
+Eigen::Matrix4f makeRowMajorMatrix4f(const std::vector<float>& values)
+{
+    Eigen::Matrix4f matrix = Eigen::Matrix4f::Identity();
+    if (values.size() < 16) {
+        return matrix;
+    }
+
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            matrix(row, col) = values[static_cast<std::size_t>(row * 4 + col)];
+        }
+    }
+    return matrix;
+}
+
+bool isModelOutlierRemovalSupported(int model_type)
+{
+    switch (model_type) {
+        case 0:  // SACMODEL_PLANE
+        case 1:  // SACMODEL_LINE
+        case 2:  // SACMODEL_CIRCLE2D
+        case 4:  // SACMODEL_SPHERE
+        case 5:  // SACMODEL_CYLINDER
+        case 6:  // SACMODEL_CONE
+        case 8:  // SACMODEL_PARALLEL_LINE
+        case 9:  // SACMODEL_PERPENDICULAR_PLANE
+        case 11: // SACMODEL_NORMAL_PLANE
+        case 12: // SACMODEL_NORMAL_SPHERE
+        case 15: // SACMODEL_PARALLEL_PLANE
+        case 16: // SACMODEL_NORMAL_PARALLEL_PLANE
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool modelOutlierRemovalRequiresNormals(int model_type)
+{
+    return model_type == 5 || model_type == 6 || model_type == 11 || model_type == 12 || model_type == 16;
+}
 
 } // namespace
 
@@ -250,6 +299,75 @@ void filterNormalSpaceSampling(int sample, int seed, int bins_x, int bins_y, int
          input->points.size(), filteredCloud()->points.size(), sample, bins_x, bins_y, bins_z, normal_k_search);
 }
 
+void filterCovarianceSampling(int samples, int normal_k_search)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || samples <= 0 || normal_k_search <= 0) {
+        clearFilteredCloud();
+        return;
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+    pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normal_estimation;
+    normal_estimation.setInputCloud(input);
+    normal_estimation.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    normal_estimation.setKSearch(normal_k_search);
+    normal_estimation.compute(*normals);
+
+    pcl::CovarianceSampling<pcl::PointXYZ, pcl::Normal> sampling;
+    sampling.setInputCloud(input);
+    sampling.setNormals(normals);
+    sampling.setNumberOfSamples(static_cast<unsigned int>(samples));
+    sampling.filter(*filteredCloud());
+    LOGI("CovarianceSampling filtered points: input=%zu output=%zu samples=%d normalK=%d condition=%.6f",
+         input->points.size(), filteredCloud()->points.size(), samples, normal_k_search,
+         sampling.computeConditionNumber());
+}
+
+std::vector<float> computeCovarianceSamplingConditionNumber(int samples, int normal_k_search)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || samples <= 0 || normal_k_search <= 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+    pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normal_estimation;
+    normal_estimation.setInputCloud(input);
+    normal_estimation.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    normal_estimation.setKSearch(normal_k_search);
+    normal_estimation.compute(*normals);
+
+    pcl::CovarianceSampling<pcl::PointXYZ, pcl::Normal> sampling;
+    sampling.setInputCloud(input);
+    sampling.setNormals(normals);
+    sampling.setNumberOfSamples(static_cast<unsigned int>(samples));
+    return {
+            static_cast<float>(sampling.computeConditionNumber()),
+            static_cast<float>(input->points.size()),
+            static_cast<float>(samples),
+    };
+}
+
+void filterFastBilateral(double sigma_s, double sigma_r)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || input->height <= 1 || sigma_s <= 0.0 || sigma_r <= 0.0) {
+        clearFilteredCloud();
+        return;
+    }
+
+    pcl::FastBilateralFilter<pcl::PointXYZ> filter;
+    filter.setInputCloud(input);
+    filter.setSigmaS(static_cast<float>(sigma_s));
+    filter.setSigmaR(static_cast<float>(sigma_r));
+    filter.filter(*filteredCloud());
+    LOGI("FastBilateralFilter filtered points: input=%zu output=%zu width=%u height=%u sigmaS=%.3f sigmaR=%.3f",
+         input->points.size(), filteredCloud()->points.size(), input->width, input->height, sigma_s, sigma_r);
+}
+
 void removeNaNFromActiveCloud()
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr input(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
@@ -286,6 +404,31 @@ void filterRadiusOutlierRemoval(double radius, int min_neighbors)
          cloud()->points.size(), filteredCloud()->points.size(), radius, min_neighbors);
 }
 
+void filterShadowPoints(int normal_k_search, double threshold)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0) {
+        clearFilteredCloud();
+        return;
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+    pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normal_estimation;
+    normal_estimation.setInputCloud(input);
+    normal_estimation.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    normal_estimation.setKSearch(normal_k_search);
+    normal_estimation.compute(*normals);
+
+    pcl::ShadowPoints<pcl::PointXYZ, pcl::Normal> shadow_points;
+    shadow_points.setInputCloud(input);
+    shadow_points.setNormals(normals);
+    shadow_points.setThreshold(static_cast<float>(threshold));
+    shadow_points.filter(*filteredCloud());
+    LOGI("ShadowPoints filtered points: input=%zu output=%zu normalK=%d threshold=%.3f",
+         input->points.size(), filteredCloud()->points.size(), normal_k_search, threshold);
+}
+
 void filterCropBox(double min_x, double min_y, double min_z, double max_x, double max_y, double max_z)
 {
     pcl::CropBox<pcl::PointXYZ> crop_box;
@@ -295,6 +438,94 @@ void filterCropBox(double min_x, double min_y, double min_z, double max_x, doubl
     crop_box.filter(*filteredCloud());
     LOGI("CropBox filtered points: input=%zu output=%zu min=(%.3f, %.3f, %.3f) max=(%.3f, %.3f, %.3f)",
          cloud()->points.size(), filteredCloud()->points.size(), min_x, min_y, min_z, max_x, max_y, max_z);
+}
+
+void filterFrustumCulling(
+        double horizontal_fov,
+        double vertical_fov,
+        double near_plane_distance,
+        double far_plane_distance,
+        const std::vector<float>& row_major_camera_pose)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()
+            || horizontal_fov <= 0.0
+            || horizontal_fov >= 180.0
+            || vertical_fov <= 0.0
+            || vertical_fov >= 180.0
+            || near_plane_distance < 0.0
+            || far_plane_distance <= near_plane_distance) {
+        clearFilteredCloud();
+        return;
+    }
+
+    pcl::FrustumCulling<pcl::PointXYZ> frustum;
+    frustum.setInputCloud(input);
+    frustum.setHorizontalFOV(static_cast<float>(horizontal_fov));
+    frustum.setVerticalFOV(static_cast<float>(vertical_fov));
+    frustum.setNearPlaneDistance(static_cast<float>(near_plane_distance));
+    frustum.setFarPlaneDistance(static_cast<float>(far_plane_distance));
+    frustum.setCameraPose(makeRowMajorMatrix4f(row_major_camera_pose));
+    frustum.filter(*filteredCloud());
+    LOGI("FrustumCulling filtered points: input=%zu output=%zu hfov=%.3f vfov=%.3f near=%.3f far=%.3f",
+         input->points.size(), filteredCloud()->points.size(), horizontal_fov, vertical_fov,
+         near_plane_distance, far_plane_distance);
+}
+
+void filterModelOutlierRemoval(
+        int model_type,
+        const std::vector<float>& model_coefficients,
+        double threshold,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()
+            || model_coefficients.empty()
+            || threshold < 0.0
+            || !isModelOutlierRemovalSupported(model_type)) {
+        clearFilteredCloud();
+        return;
+    }
+
+    pcl::ModelCoefficients coefficients;
+    coefficients.values.assign(model_coefficients.begin(), model_coefficients.end());
+
+    pcl::ModelOutlierRemoval<pcl::PointXYZ> removal;
+    removal.setInputCloud(input);
+    removal.setModelType(static_cast<pcl::SacModel>(model_type));
+    removal.setModelCoefficients(coefficients);
+    removal.setThreshold(static_cast<float>(threshold));
+    removal.setNegative(negative);
+    if (modelOutlierRemovalRequiresNormals(model_type)) {
+        pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+        pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normal_estimation;
+        normal_estimation.setInputCloud(input);
+        normal_estimation.setSearchMethod(
+                pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+        normal_estimation.setKSearch(16);
+        normal_estimation.compute(*normals);
+        removal.setInputNormals(normals);
+    }
+    removal.filter(*filteredCloud());
+    LOGI("ModelOutlierRemoval filtered points: input=%zu output=%zu model=%d threshold=%.3f negative=%d",
+         input->points.size(), filteredCloud()->points.size(), model_type, threshold, negative ? 1 : 0);
+}
+
+void filterMorphological(double resolution, int morphological_operator)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || resolution <= 0.0 || morphological_operator < 0 || morphological_operator > 3) {
+        clearFilteredCloud();
+        return;
+    }
+
+    pcl::applyMorphologicalOperator<pcl::PointXYZ>(
+            input,
+            static_cast<float>(resolution),
+            morphological_operator,
+            *filteredCloud());
+    LOGI("applyMorphologicalOperator filtered points: input=%zu output=%zu resolution=%.3f operator=%d",
+         input->points.size(), filteredCloud()->points.size(), resolution, morphological_operator);
 }
 
 void filterCropBoxTransformed(
