@@ -48,6 +48,11 @@ jobs:
     steps:
       - name: Checkout (tag commit)
         uses: actions/checkout@v6
+        with:
+          # The "patch checksum + move tag" step below needs master history
+          # so it can fast-forward and commit there.
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Resolve release version
         run: |
@@ -93,18 +98,52 @@ jobs:
           echo "PCLMOBILE_XCFW_SHA256=${SHA256}" >> "$GITHUB_ENV"
           echo "PCLMOBILE_XCFW_MB=${ZIP_MB}" >> "$GITHUB_ENV"
 
-      - name: Sanity-check checksum against Package.swift
+      - name: Patch Package.swift checksum + move tag if needed
+        # The XCFramework SHA256 is only known after the CI build, so the
+        # tag commit always has a placeholder/stale checksum. Patch
+        # Package.swift on master, then force-update the tag to the new
+        # commit so SPM consumers resolving `from: "X.Y.Z"` see the
+        # matching checksum at the tag. The race window between the
+        # original tag creation (by release-please) and this patch is a
+        # few minutes — consumers won't have fetched the tag yet.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           MANIFEST_SHA=$(grep -E 'let xcframeworkChecksum' Package.swift | sed -E 's/.*"([^"]+)".*/\1/')
-          if [[ -z "$MANIFEST_SHA" || "$MANIFEST_SHA" == "REPLACE_WITH_SHA256_FROM_make_xcframework.sh" ]]; then
-            echo "::warning::Package.swift checksum placeholder is unset; SPM consumers will fail to verify."
-          elif [[ "$MANIFEST_SHA" != "$PCLMOBILE_XCFW_SHA256" ]]; then
-            echo "::error::Package.swift checksum (${MANIFEST_SHA}) does not match the built zip (${PCLMOBILE_XCFW_SHA256})."
-            echo "Run scripts/release.sh ${PCLMOBILE_VERSION} locally, commit the patched manifests, retag and re-push."
-            exit 1
-          else
-            echo "Package.swift checksum matches built XCFramework."
+          if [[ "$MANIFEST_SHA" == "$PCLMOBILE_XCFW_SHA256" ]]; then
+            echo "Package.swift checksum already matches; skipping patch."
+            exit 0
           fi
+          echo "Patching Package.swift checksum: ${MANIFEST_SHA:-<empty>} → $PCLMOBILE_XCFW_SHA256"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Switch to master so the patch commit lands on the branch and
+          # release-please sees it on the next pass. release-please skips
+          # `chore:` commits when computing the next bump.
+          git fetch origin master
+          git checkout -B master origin/master
+
+          python3 - <<PY
+          import pathlib, re
+          p = pathlib.Path("Package.swift")
+          s = p.read_text()
+          s = re.sub(
+              r'(let xcframeworkChecksum\s*=\s*\n?\s*")[^"]*(")',
+              r'\g<1>${PCLMOBILE_XCFW_SHA256}\g<2>',
+              s, count=1)
+          p.write_text(s)
+          PY
+
+          git add Package.swift
+          git commit -m "chore: update XCFramework checksum for ${PCLMOBILE_RELEASE_TAG} [skip ci]"
+          git push origin master
+
+          # Move the tag to the patched commit so SPM consumers see the
+          # correct checksum when they resolve the tag.
+          git tag -fa "$PCLMOBILE_RELEASE_TAG" -m "PCLMobile $PCLMOBILE_VERSION"
+          git push origin --force "$PCLMOBILE_RELEASE_TAG"
 
       - name: Create or update GitHub Release
         env:

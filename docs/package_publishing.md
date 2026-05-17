@@ -1,5 +1,35 @@
 # Package publishing setup
 
+## TL;DR — release flow
+
+PCLMobile releases are driven by Conventional Commits + release-please:
+
+1. Land changes on `master` with Conventional Commits
+   (`feat:`, `fix:`, `feat!:`, etc.).
+2. [`release-please.yml`](../.github/workflows/release-please.yml)
+   maintains a rolling **Release PR** with the next version + CHANGELOG.
+3. Merge the Release PR. release-please tags `vX.Y.Z` automatically.
+4. The tag push triggers
+   [`ios-release.yml`](../.github/workflows/ios-release.yml):
+   builds the XCFramework, patches `Package.swift` with the actual
+   build-time SHA256, force-moves the tag onto the patched commit, then
+   uploads the zip to the GitHub Release.
+5. The matching GitHub Release `published` event triggers
+   [`android-release.yml`](../.github/workflows/android-release.yml)
+   to publish the AAR to GitHub Packages.
+6. **Maven Central release is manual** — run
+   [`android-maven-central.yml`](../.github/workflows/android-maven-central.yml)
+   via `workflow_dispatch` once the tag exists. See §"Android — Sonatype
+   Maven Central" below for the secret/key setup.
+7. **CocoaPods Trunk push is manual** — run `ios-release.yml` via
+   `workflow_dispatch` with `publish_cocoapods=true`. See §"iOS —
+   CocoaPods Trunk".
+
+The chicken-and-egg between the SPM checksum and the build output is
+absorbed by step 4: the tag commit's `Package.swift` is updated in-place
+to match the freshly built XCFramework, so SPM consumers resolving
+`from: "X.Y.Z"` always see a checksum that matches the published zip.
+
 PCLMobile is distributed through several channels:
 
 | Platform | Channel | Manifest | Workflow |
