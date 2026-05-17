@@ -6,8 +6,8 @@
 Cross-compile a curated subset of [PCL](https://pointclouds.org/) plus its
 dependencies (Boost, Eigen, FLANN, Qhull) into shippable mobile libraries:
 
-* **iOS** — `PCLMobile.xcframework` (consumable via Swift Package Manager,
-  CocoaPods or Carthage).
+* **iOS** — `PCLMobile.xcframework` (consumable via Swift Package Manager
+  or CocoaPods).
 * **Android** — `pclmobile` AAR (consumable via Gradle / Maven).
 
 ## Repository layout
@@ -158,17 +158,6 @@ print(cropped.pointCount)
 pod 'PCLMobile', '~> 0.1'
 ```
 
-### Carthage
-
-Add a single line to your `Cartfile`:
-
-```
-binary "https://raw.githubusercontent.com/Sirokujira/pcl_mobile_framework/main/iOSWrapper/PCLMobile.json"
-```
-
-then run `carthage update --use-xcframeworks --platform iOS`. Drag the
-resolved `Carthage/Build/PCLMobile.xcframework` into your Xcode target.
-
 ### Manual XCFramework drop-in
 
 If you'd rather not adopt a package manager: grab
@@ -180,25 +169,37 @@ unzip, drag the `.xcframework` into Xcode, set Embed mode to
 
 ### Maintainer release workflow
 
-`scripts/release.sh <version> [--publish]` rebuilds the XCFramework,
-patches every manifest (`Package.swift`, `PCLMobile.podspec`,
-`PCLMobile.json`) with the new version + checksum, and (optionally) tags
-the repo and uploads the zip via `gh release create`. See
-[iOSWrapper/README.md](./iOSWrapper/README.md) for details.
+Releases are driven by [Conventional Commits] +
+[release-please](https://github.com/googleapis/release-please) — no
+manual version bumping or tagging required for the iOS XCFramework or
+the Android AAR's GitHub Packages distribution.
 
-Manual iOS release:
+[Conventional Commits]: https://www.conventionalcommits.org/en/v1.0.0/
 
-```sh
-cd ~/Github/pcl_mobile_framework
-./scripts/build_ios.sh
-./scripts/lint_podspec.sh
-git tag v0.1.0
-git push origin v0.1.0
-gh release create v0.1.0 \
-  build/ios/xcframework/PCLMobile.xcframework.zip \
-  --title "PCLMobile 0.1.0" --notes "Initial release"
-pod trunk push iOSWrapper/PCLMobile.podspec --allow-warnings
-```
+1. Land changes on `master` using Conventional Commit prefixes:
+   - `feat: …` → bumps minor (or patch pre-1.0)
+   - `fix: …`  → bumps patch
+   - `feat!: …` / `BREAKING CHANGE:` → bumps major (or minor pre-1.0)
+   - `chore: / docs: / refactor: / test: / ci: / build: / perf:` → no bump
+2. [`Release Please`](./.github/workflows/release-please.yml) opens a
+   rolling "Release PR" that bumps `Package.swift`, `PCLMobile.podspec`
+   and `pclmobile/build.gradle.kts` together and grows `CHANGELOG.md`.
+3. Merge the Release PR → release-please tags `vX.Y.Z` automatically.
+4. The tag push fires [`iOS Package Release`](./.github/workflows/ios-release.yml):
+   rebuilds `PCLMobile.xcframework` on Xcode 16, patches
+   `Package.swift`'s SHA256 to match the freshly built zip, force-moves
+   the tag onto the patched commit and uploads the zip to the GitHub
+   Release.
+5. The matching `release:published` event fires
+   [`Android Package Release`](./.github/workflows/android-release.yml):
+   publishes the AAR to GitHub Packages.
+6. Maven Central + CocoaPods Trunk pushes are intentionally manual —
+   see [docs/package_publishing.md](./docs/package_publishing.md).
+
+The legacy local-only flow via `scripts/release.sh <version> [--publish]`
+still works (rebuilds the XCFramework, patches manifests, optionally
+tags and uploads via `gh release create`) for one-off out-of-band
+releases that bypass release-please.
 
 Android package release for the same tag:
 
