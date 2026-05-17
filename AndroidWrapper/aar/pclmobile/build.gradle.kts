@@ -171,15 +171,21 @@ afterEvaluate {
         // Only sign when GPG credentials are wired in — otherwise non-Central
         // publishing targets (GitHub Packages, internal Nexus, local repo)
         // still work without signing.
-        if (signingKey.isPresent && signingPassword.isPresent) {
-            if (signingKeyId.isPresent) {
-                useInMemoryPgpKeys(
-                    signingKeyId.get(),
-                    signingKey.get(),
-                    signingPassword.get(),
-                )
+        //
+        // `providers.environmentVariable(...)` reports `isPresent == true`
+        // when the env var is set to an empty string, which GitHub Actions
+        // does for missing secrets. Treat empty as absent so dry-runs and
+        // GitHub Packages publishes without a key configured don't try to
+        // sign with an empty key (and fail with "key ID must be in a valid
+        // form").
+        val key = signingKey.orNull?.takeIf { it.isNotBlank() }
+        val password = signingPassword.orNull?.takeIf { it.isNotBlank() }
+        val keyId = signingKeyId.orNull?.takeIf { it.isNotBlank() }
+        if (key != null && password != null) {
+            if (keyId != null) {
+                useInMemoryPgpKeys(keyId, key, password)
             } else {
-                useInMemoryPgpKeys(signingKey.get(), signingPassword.get())
+                useInMemoryPgpKeys(key, password)
             }
             sign(publishing.publications)
         }
