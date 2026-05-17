@@ -35,6 +35,25 @@ std::vector<jfloat> extractConditionalEuclideanClusters(double tolerance,
                                                         int min_cluster_size,
                                                         int max_cluster_size,
                                                         double max_z_delta);
+pcl::PointCloud<pcl::PointXYZ>::Ptr extractProgressiveMorphologicalGround(
+        int max_window_size,
+        double slope,
+        double initial_distance,
+        double max_distance,
+        double cell_size,
+        double base,
+        bool exponential,
+        bool negative);
+pcl::PointCloud<pcl::PointXYZ>::Ptr extractApproximateProgressiveMorphologicalGround(
+        int max_window_size,
+        double slope,
+        double initial_distance,
+        double max_distance,
+        double cell_size,
+        double base,
+        bool exponential,
+        int number_of_threads,
+        bool negative);
 pcl::PointCloud<pcl::PointXYZ>::Ptr extractMinCutForeground(
         const std::vector<jfloat>& packed_foreground_xyz,
         double sigma,

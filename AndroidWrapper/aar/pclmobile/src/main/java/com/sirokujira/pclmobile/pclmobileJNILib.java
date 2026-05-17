@@ -576,6 +576,73 @@ public final class pclmobileJNILib {
             double maxZDelta);
 
     /**
+     * Runs PCL ProgressiveMorphologicalFilter and stores ground or non-ground points.
+     *
+     * <p>Set {@code negative} to keep non-ground points instead of ground points.</p>
+     */
+    public static native void extractProgressiveMorphologicalGround(
+            int maxWindowSize,
+            double slope,
+            double initialDistance,
+            double maxDistance,
+            double cellSize,
+            double base,
+            boolean exponential,
+            boolean negative);
+
+    /**
+     * Runs ProgressiveMorphologicalFilter and returns the selected points.
+     */
+    public static float[] progressiveMorphologicalGround(
+            int maxWindowSize,
+            double slope,
+            double initialDistance,
+            double maxDistance,
+            double cellSize,
+            double base,
+            boolean exponential,
+            boolean negative) {
+        extractProgressiveMorphologicalGround(
+                maxWindowSize, slope, initialDistance, maxDistance, cellSize, base, exponential, negative);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Runs PCL ApproximateProgressiveMorphologicalFilter and stores ground or non-ground points.
+     *
+     * <p>Set {@code negative} to keep non-ground points instead of ground points.</p>
+     */
+    public static native void extractApproximateProgressiveMorphologicalGround(
+            int maxWindowSize,
+            double slope,
+            double initialDistance,
+            double maxDistance,
+            double cellSize,
+            double base,
+            boolean exponential,
+            int numberOfThreads,
+            boolean negative);
+
+    /**
+     * Runs ApproximateProgressiveMorphologicalFilter and returns the selected points.
+     */
+    public static float[] approximateProgressiveMorphologicalGround(
+            int maxWindowSize,
+            double slope,
+            double initialDistance,
+            double maxDistance,
+            double cellSize,
+            double base,
+            boolean exponential,
+            int numberOfThreads,
+            boolean negative) {
+        extractApproximateProgressiveMorphologicalGround(
+                maxWindowSize, slope, initialDistance, maxDistance, cellSize, base,
+                exponential, numberOfThreads, negative);
+        return getFilteredPoints();
+    }
+
+    /**
      * Extracts the largest Euclidean cluster from the active cloud into the filtered cloud.
      */
     public static native void extractLargestEuclideanCluster(

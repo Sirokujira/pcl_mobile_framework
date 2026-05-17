@@ -733,6 +733,58 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extr
                     tolerance, minClusterSize, maxClusterSize, maxZDelta));
 }
 
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractProgressiveMorphologicalGround(
+        JNIEnv* env,
+        jclass clazz,
+        jint maxWindowSize,
+        jdouble slope,
+        jdouble initialDistance,
+        jdouble maxDistance,
+        jdouble cellSize,
+        jdouble base,
+        jboolean exponential,
+        jboolean negative)
+{
+    (void) env;
+    (void) clazz;
+    pclmobile::extractProgressiveMorphologicalGround(
+            maxWindowSize,
+            slope,
+            initialDistance,
+            maxDistance,
+            cellSize,
+            base,
+            exponential == JNI_TRUE,
+            negative == JNI_TRUE);
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractApproximateProgressiveMorphologicalGround(
+        JNIEnv* env,
+        jclass clazz,
+        jint maxWindowSize,
+        jdouble slope,
+        jdouble initialDistance,
+        jdouble maxDistance,
+        jdouble cellSize,
+        jdouble base,
+        jboolean exponential,
+        jint numberOfThreads,
+        jboolean negative)
+{
+    (void) env;
+    (void) clazz;
+    pclmobile::extractApproximateProgressiveMorphologicalGround(
+            maxWindowSize,
+            slope,
+            initialDistance,
+            maxDistance,
+            cellSize,
+            base,
+            exponential == JNI_TRUE,
+            numberOfThreads,
+            negative == JNI_TRUE);
+}
+
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractLargestEuclideanCluster(
         JNIEnv* env, jclass clazz, jdouble tolerance, jint minClusterSize, jint maxClusterSize)
 {
@@ -1536,6 +1588,12 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_segmentatio
     LOGI("segmentation1 compatibility sample: segmentPlane values=%zu clusters=%zu",
          pclmobile::segmentPlaneModel(0.03, 100).size(),
          pclmobile::extractEuclideanClusters(0.18, 20, 5000).size());
+    logPointCount("segmentation1", "ProgressiveMorphologicalFilter",
+                  pclmobile::extractProgressiveMorphologicalGround(
+                          33, 0.7, 0.15, 10.0, 1.0, 2.0, true, false)->points.size() * 3);
+    logPointCount("segmentation1", "ApproximateProgressiveMorphologicalFilter",
+                  pclmobile::extractApproximateProgressiveMorphologicalGround(
+                          33, 0.7, 0.15, 10.0, 1.0, 2.0, true, 0, false)->points.size() * 3);
 }
 
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_stereo1(
