@@ -5,9 +5,11 @@
 
 #include <pcl/features/normal_3d.h>
 #include <pcl/search/kdtree.h>
+#include <pcl/segmentation/approximate_progressive_morphological_filter.h>
 #include <pcl/segmentation/conditional_euclidean_clustering.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/segmentation/min_cut_segmentation.h>
+#include <pcl/segmentation/progressive_morphological_filter.h>
 #include <pcl/segmentation/region_growing.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/segment_differences.h>
@@ -53,6 +55,39 @@ pcl::PointCloud<pcl::Normal>::Ptr computeNormals(
 float degreesToRadians(double degrees)
 {
     return static_cast<float>(degrees * 3.14159265358979323846 / 180.0);
+}
+
+void setFilteredCloudFromIndices(
+        const pcl::PointCloud<pcl::PointXYZ>::Ptr& input,
+        const pcl::Indices& indices,
+        bool negative)
+{
+    clearFilteredCloud();
+    if (input->empty()) {
+        return;
+    }
+
+    std::vector<bool> selected(input->points.size(), false);
+    std::size_t valid_selected_count = 0;
+    for (int index : indices) {
+        if (index >= 0 && static_cast<std::size_t>(index) < selected.size()) {
+            std::size_t point_index = static_cast<std::size_t>(index);
+            if (!selected[point_index]) {
+                selected[point_index] = true;
+                ++valid_selected_count;
+            }
+        }
+    }
+
+    filteredCloud()->points.reserve(negative ? input->points.size() - valid_selected_count : valid_selected_count);
+    for (std::size_t i = 0; i < input->points.size(); ++i) {
+        if (selected[i] != negative) {
+            filteredCloud()->points.push_back(input->points[i]);
+        }
+    }
+    filteredCloud()->width = static_cast<std::uint32_t>(filteredCloud()->points.size());
+    filteredCloud()->height = 1;
+    filteredCloud()->is_dense = input->is_dense;
 }
 
 } // namespace
@@ -248,6 +283,77 @@ std::vector<jfloat> extractConditionalEuclideanClusters(
     LOGI("ConditionalEuclideanClustering: input=%zu clusters=%zu tolerance=%.3f maxZDelta=%.3f",
          input->points.size(), clusters.size(), tolerance, max_z_delta);
     return values;
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr extractProgressiveMorphologicalGround(
+        int max_window_size,
+        double slope,
+        double initial_distance,
+        double max_distance,
+        double cell_size,
+        double base,
+        bool exponential,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || max_window_size <= 0 || cell_size <= 0.0 || base <= 0.0) {
+        clearFilteredCloud();
+        return filteredCloud();
+    }
+
+    pcl::ProgressiveMorphologicalFilter<pcl::PointXYZ> filter;
+    filter.setInputCloud(input);
+    filter.setMaxWindowSize(max_window_size);
+    filter.setSlope(static_cast<float>(slope));
+    filter.setInitialDistance(static_cast<float>(initial_distance));
+    filter.setMaxDistance(static_cast<float>(max_distance));
+    filter.setCellSize(static_cast<float>(cell_size));
+    filter.setBase(static_cast<float>(base));
+    filter.setExponential(exponential);
+
+    pcl::Indices ground;
+    filter.extract(ground);
+    setFilteredCloudFromIndices(input, ground, negative);
+    LOGI("ProgressiveMorphologicalFilter: input=%zu ground=%zu output=%zu maxWindow=%d negative=%d",
+         input->points.size(), ground.size(), filteredCloud()->points.size(), max_window_size, negative ? 1 : 0);
+    return filteredCloud();
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr extractApproximateProgressiveMorphologicalGround(
+        int max_window_size,
+        double slope,
+        double initial_distance,
+        double max_distance,
+        double cell_size,
+        double base,
+        bool exponential,
+        int number_of_threads,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || max_window_size <= 0 || cell_size <= 0.0 || base <= 0.0) {
+        clearFilteredCloud();
+        return filteredCloud();
+    }
+
+    pcl::ApproximateProgressiveMorphologicalFilter<pcl::PointXYZ> filter;
+    filter.setInputCloud(input);
+    filter.setMaxWindowSize(max_window_size);
+    filter.setSlope(static_cast<float>(slope));
+    filter.setInitialDistance(static_cast<float>(initial_distance));
+    filter.setMaxDistance(static_cast<float>(max_distance));
+    filter.setCellSize(static_cast<float>(cell_size));
+    filter.setBase(static_cast<float>(base));
+    filter.setExponential(exponential);
+    filter.setNumberOfThreads(static_cast<unsigned int>(std::max(number_of_threads, 0)));
+
+    pcl::Indices ground;
+    filter.extract(ground);
+    setFilteredCloudFromIndices(input, ground, negative);
+    LOGI("ApproximateProgressiveMorphologicalFilter: input=%zu ground=%zu output=%zu maxWindow=%d threads=%d negative=%d",
+         input->points.size(), ground.size(), filteredCloud()->points.size(), max_window_size,
+         number_of_threads, negative ? 1 : 0);
+    return filteredCloud();
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr extractMinCutForeground(
