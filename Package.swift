@@ -16,7 +16,7 @@ import PackageDescription
 let useLocalXCFramework = false
 
 let xcframeworkURL =
-    "https://github.com/Sirokujira/pcl_mobile_framework/releases/download/v0.1.0/PCLMobile.xcframework.zip"
+    "https://github.com/Sirokujira/pcl_mobile_framework/releases/download/v0.1.0/PCLMobile.xcframework.zip" // x-release-please-version
 let xcframeworkChecksum =
     "REPLACE_WITH_SHA256_FROM_make_xcframework.sh"
 

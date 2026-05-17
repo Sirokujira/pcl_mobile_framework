@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'PCLMobile'
-  s.version          = '0.1.0'
+  s.version          = '0.1.0' # x-release-please-version
   s.summary          = 'Point Cloud Library wrapper for iOS.'
   s.description      = <<-DESC
     PCLMobile bundles a curated subset of PCL (Point Cloud Library) together

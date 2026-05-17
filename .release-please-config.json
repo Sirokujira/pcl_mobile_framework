@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "simple",
+  "include-component-in-tag": false,
+  "include-v-in-tag": true,
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "pclmobile",
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "Package.swift"
+        },
+        {
+          "type": "generic",
+          "path": "iOSWrapper/PCLMobile.podspec"
+        },
+        {
+          "type": "generic",
+          "path": "AndroidWrapper/aar/pclmobile/build.gradle.kts"
+        }
+      ]
+    }
+  }
+}

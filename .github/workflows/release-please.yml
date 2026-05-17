@@ -1,0 +1,40 @@
+name: Release Please
+
+# release-please reads Conventional Commits on master and maintains a
+# rolling "Release PR" that bumps the version + CHANGELOG. When that PR
+# is merged, release-please tags the new release commit and creates an
+# empty GitHub Release object — which in turn triggers ios-release.yml
+# (tag push) and android-release.yml (release published) to build and
+# attach binaries.
+#
+# Conventional Commit types that influence the bump:
+#   feat:        minor bump
+#   fix:         patch bump
+#   feat!: / BREAKING CHANGE in body:  major bump (suppressed pre-1.0 → minor)
+#
+# Bump policy is set in .release-please-config.json — currently pre-1.0
+# behaviour where breaking changes only push the minor digit.
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.GITHUB_TOKEN }}

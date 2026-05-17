@@ -8,7 +8,7 @@ plugins {
 group = "io.github.sirokujira"
 version = providers.environmentVariable("PCLMOBILE_VERSION")
     .orElse(providers.gradleProperty("PCLMOBILE_VERSION"))
-    .orElse("0.1.0-SNAPSHOT")
+    .orElse("0.1.0") // x-release-please-version
     .get()
 
 val androidAbis = providers.environmentVariable("ANDROID_ABIS")
