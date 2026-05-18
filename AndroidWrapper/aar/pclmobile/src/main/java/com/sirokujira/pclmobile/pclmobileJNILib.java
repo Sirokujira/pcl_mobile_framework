@@ -270,6 +270,13 @@ public final class pclmobileJNILib {
     public static native float[] estimateNormalsRadius(double radiusSearch);
 
     /**
+     * Estimates normals for the active cloud with PCL NormalEstimationOMP.
+     *
+     * @return {@code normal_x, normal_y, normal_z, curvature} tuples
+     */
+    public static native float[] estimateNormalsOMP(int kSearch, int numberOfThreads);
+
+    /**
      * Computes Point Feature Histograms for the active cloud.
      *
      * @param normalKSearch nearest neighbors used to estimate normals before descriptor computation
@@ -286,6 +293,16 @@ public final class pclmobileJNILib {
      * @return 33 histogram values per descriptor
      */
     public static native float[] computeFPFHFeatures(int normalKSearch, double featureRadius);
+
+    /**
+     * Computes FPFH descriptors for the active cloud with PCL FPFHEstimationOMP.
+     *
+     * @return 33 histogram values per descriptor
+     */
+    public static native float[] computeFPFHFeaturesOMP(
+            int normalKSearch,
+            double featureRadius,
+            int numberOfThreads);
 
     /**
      * Computes a Viewpoint Feature Histogram for the active cloud.

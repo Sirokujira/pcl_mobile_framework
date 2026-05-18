@@ -9,8 +9,10 @@ namespace pclmobile {
 
 std::vector<jfloat> estimateNormals(int k_search);
 std::vector<jfloat> estimateNormalsRadius(double radius_search);
+std::vector<jfloat> estimateNormalsOMP(int k_search, int number_of_threads);
 std::vector<jfloat> computePFHFeatures(int normal_k_search, double feature_radius);
 std::vector<jfloat> computeFPFHFeatures(int normal_k_search, double feature_radius);
+std::vector<jfloat> computeFPFHFeaturesOMP(int normal_k_search, double feature_radius, int number_of_threads);
 std::vector<jfloat> computeVFHFeatures(int normal_k_search);
 std::vector<jfloat> computeESFDescriptor();
 std::vector<jfloat> computeGASDDescriptor();

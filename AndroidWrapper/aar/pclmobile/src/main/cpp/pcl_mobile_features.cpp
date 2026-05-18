@@ -11,12 +11,14 @@
 #include <pcl/features/don.h>
 #include <pcl/features/esf.h>
 #include <pcl/features/fpfh.h>
+#include <pcl/features/fpfh_omp.h>
 #include <pcl/features/gasd.h>
 #include <pcl/features/grsd.h>
 #include <pcl/features/intensity_gradient.h>
 #include <pcl/features/intensity_spin.h>
 #include <pcl/features/moment_invariants.h>
 #include <pcl/features/normal_3d.h>
+#include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/normal_based_signature.h>
 #include <pcl/features/our_cvfh.h>
 #include <pcl/features/pfh.h>
@@ -128,6 +130,28 @@ std::vector<jfloat> estimateNormalsRadius(double radius_search)
     return values;
 }
 
+std::vector<jfloat> estimateNormalsOMP(int k_search, int number_of_threads)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || k_search <= 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+    pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> normal_estimation(
+            static_cast<unsigned int>(std::max(number_of_threads, 0)));
+    normal_estimation.setInputCloud(input);
+    normal_estimation.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    normal_estimation.setKSearch(k_search);
+    normal_estimation.compute(*normals);
+
+    std::vector<jfloat> values = packNormals(*normals);
+    LOGI("NormalEstimationOMP computed normals: input=%zu normals=%zu k=%d threads=%d",
+         input->points.size(), normals->points.size(), k_search, number_of_threads);
+    return values;
+}
+
 std::vector<jfloat> computePFHFeatures(int normal_k_search, double feature_radius)
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
@@ -185,6 +209,34 @@ std::vector<jfloat> computeFPFHFeatures(int normal_k_search, double feature_radi
     }
     LOGI("FPFHEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d radius=%.3f",
          input->points.size(), descriptors->points.size(), normal_k_search, feature_radius);
+    return values;
+}
+
+std::vector<jfloat> computeFPFHFeaturesOMP(
+        int normal_k_search,
+        double feature_radius,
+        int number_of_threads)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || feature_radius <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::FPFHSignature33>::Ptr descriptors(new pcl::PointCloud<pcl::FPFHSignature33>);
+
+    pcl::FPFHEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfh(
+            static_cast<unsigned int>(std::max(number_of_threads, 0)));
+    fpfh.setInputCloud(input);
+    fpfh.setInputNormals(normals);
+    fpfh.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    fpfh.setRadiusSearch(feature_radius);
+    fpfh.compute(*descriptors);
+
+    std::vector<jfloat> values = packHistogramDescriptors<pcl::FPFHSignature33, 33>(*descriptors);
+    LOGI("FPFHEstimationOMP computed descriptors: input=%zu descriptors=%zu normal_k=%d radius=%.3f threads=%d",
+         input->points.size(), descriptors->points.size(), normal_k_search, feature_radius, number_of_threads);
     return values;
 }
 
