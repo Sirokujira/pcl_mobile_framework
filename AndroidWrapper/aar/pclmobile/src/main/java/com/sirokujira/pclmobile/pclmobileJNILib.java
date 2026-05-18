@@ -1288,6 +1288,26 @@ public final class pclmobileJNILib {
     public static native float[] estimateRigidTransformDualQuaternion(float[] packedTargetXYZ);
 
     /**
+     * Estimates a rigid transform from the active cloud to {@code packedTargetXYZ} using Levenberg-Marquardt.
+     *
+     * <p>The source and target clouds must contain the same number of {@code x, y, z} point tuples.
+     * Returns an empty array when either cloud is empty or the tuple counts differ.</p>
+     *
+     * @return row-major 4x4 matrix
+     */
+    public static native float[] estimateRigidTransformLM(float[] packedTargetXYZ);
+
+    /**
+     * Estimates a 2D rigid transform from the active cloud to {@code packedTargetXYZ}.
+     *
+     * <p>The source and target clouds must contain the same number of {@code x, y, z} point tuples.
+     * Returns an empty array when either cloud is empty or the tuple counts differ.</p>
+     *
+     * @return row-major 4x4 matrix
+     */
+    public static native float[] estimateRigidTransform2D(float[] packedTargetXYZ);
+
+    /**
      * Applies a row-major 4x4 transform to the active cloud with PCL {@code transformPointCloud}.
      *
      * <p>The transformed points are stored as the filtered cloud and returned as {@code x, y, z} triples.
