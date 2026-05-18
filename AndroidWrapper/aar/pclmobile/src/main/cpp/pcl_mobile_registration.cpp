@@ -1,6 +1,12 @@
 #include "pcl_mobile_registration.h"
 
+#include <cmath>
+#include <limits>
+
 #include <pcl/common/transforms.h>
+#include <pcl/registration/correspondence_estimation.h>
+#include <pcl/registration/correspondence_rejection_distance.h>
+#include <pcl/registration/correspondence_rejection_one_to_one.h>
 #include <pcl/registration/gicp.h>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/icp_nl.h>
@@ -11,6 +17,7 @@
 #include <pcl/registration/transformation_estimation_lm.h>
 #include <pcl/registration/transformation_estimation_svd.h>
 #include <pcl/registration/transformation_estimation_svd_scale.h>
+#include <pcl/registration/transformation_validation_euclidean.h>
 
 #include "pcl_mobile_context.h"
 #include "pcl_mobile_log.h"
@@ -42,6 +49,41 @@ std::vector<jfloat> matrixToRowMajorTuple(const Eigen::Matrix4f& matrix)
         }
     }
     return values;
+}
+
+std::vector<jfloat> packCorrespondences(const pcl::Correspondences& correspondences)
+{
+    std::vector<jfloat> values;
+    values.reserve(correspondences.size() * 3);
+    for (const pcl::Correspondence& correspondence : correspondences) {
+        values.push_back(static_cast<jfloat>(correspondence.index_query));
+        values.push_back(static_cast<jfloat>(correspondence.index_match));
+        values.push_back(static_cast<jfloat>(correspondence.distance));
+    }
+    return values;
+}
+
+pcl::Correspondences unpackCorrespondences(
+        const std::vector<jfloat>& packed_correspondences,
+        int source_size = -1,
+        int target_size = -1)
+{
+    pcl::Correspondences correspondences;
+    correspondences.reserve(packed_correspondences.size() / 3);
+    for (std::size_t i = 0; i + 2 < packed_correspondences.size(); i += 3) {
+        const int index_query = static_cast<int>(packed_correspondences[i]);
+        const int index_match = static_cast<int>(packed_correspondences[i + 1]);
+        const float distance = packed_correspondences[i + 2];
+        if (index_query < 0 || index_match < 0 || !std::isfinite(distance)) {
+            continue;
+        }
+        if ((source_size >= 0 && index_query >= source_size) ||
+                (target_size >= 0 && index_match >= target_size)) {
+            continue;
+        }
+        correspondences.emplace_back(index_query, index_match, distance);
+    }
+    return correspondences;
 }
 
 Eigen::Matrix4f matrixFromRowMajorTuple(const std::vector<jfloat>& row_major_matrix)
@@ -179,6 +221,115 @@ std::vector<jfloat> estimateRigidTransform2D(const std::vector<jfloat>& packed_t
     LOGI("TransformationEstimation2D: source=%zu target=%zu",
          source->points.size(), target->points.size());
     return matrixToRowMajorTuple(transform);
+}
+
+std::vector<jfloat> findCorrespondences(
+        const std::vector<jfloat>& packed_target_xyz,
+        double max_distance,
+        bool reciprocal)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr target = cloudFromPackedXYZ(packed_target_xyz);
+    if (source->empty() || target->empty()) {
+        return {};
+    }
+
+    pcl::registration::CorrespondenceEstimation<pcl::PointXYZ, pcl::PointXYZ> estimation;
+    estimation.setInputSource(source);
+    estimation.setInputTarget(target);
+
+    pcl::Correspondences correspondences;
+    const double search_distance =
+            max_distance > 0.0 ? max_distance : std::numeric_limits<double>::max();
+    if (reciprocal) {
+        estimation.determineReciprocalCorrespondences(correspondences, search_distance);
+    } else {
+        estimation.determineCorrespondences(correspondences, search_distance);
+    }
+
+    LOGI("CorrespondenceEstimation%s: source=%zu target=%zu correspondences=%zu max_distance=%.6f",
+         reciprocal ? " reciprocal" : "", source->points.size(), target->points.size(),
+         correspondences.size(), search_distance);
+    return packCorrespondences(correspondences);
+}
+
+std::vector<jfloat> rejectCorrespondencesDistance(
+        const std::vector<jfloat>& packed_correspondences,
+        const std::vector<jfloat>& packed_target_xyz,
+        double max_distance)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr target = cloudFromPackedXYZ(packed_target_xyz);
+    if (source->empty() || target->empty() || max_distance <= 0.0) {
+        return {};
+    }
+
+    pcl::Correspondences correspondences = unpackCorrespondences(
+            packed_correspondences,
+            static_cast<int>(source->points.size()),
+            static_cast<int>(target->points.size()));
+    if (correspondences.empty()) {
+        return {};
+    }
+
+    pcl::registration::CorrespondenceRejectorDistance rejector;
+    rejector.setInputSource<pcl::PointXYZ>(source);
+    rejector.setInputTarget<pcl::PointXYZ>(target);
+    rejector.setMaximumDistance(static_cast<float>(max_distance));
+
+    pcl::Correspondences remaining;
+    rejector.getRemainingCorrespondences(correspondences, remaining);
+    LOGI("CorrespondenceRejectorDistance: input=%zu output=%zu max_distance=%.6f",
+         correspondences.size(), remaining.size(), max_distance);
+    return packCorrespondences(remaining);
+}
+
+std::vector<jfloat> rejectCorrespondencesOneToOne(const std::vector<jfloat>& packed_correspondences)
+{
+    pcl::Correspondences correspondences = unpackCorrespondences(packed_correspondences);
+    if (correspondences.empty()) {
+        return {};
+    }
+
+    pcl::registration::CorrespondenceRejectorOneToOne rejector;
+    pcl::Correspondences remaining;
+    rejector.getRemainingCorrespondences(correspondences, remaining);
+    LOGI("CorrespondenceRejectorOneToOne: input=%zu output=%zu",
+         correspondences.size(), remaining.size());
+    return packCorrespondences(remaining);
+}
+
+std::vector<jfloat> validateTransformEuclidean(
+        const std::vector<jfloat>& packed_target_xyz,
+        const std::vector<jfloat>& row_major_matrix,
+        double max_range,
+        double threshold)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr target = cloudFromPackedXYZ(packed_target_xyz);
+    if (source->empty() || target->empty()) {
+        return {};
+    }
+
+    pcl::registration::TransformationValidationEuclidean<pcl::PointXYZ, pcl::PointXYZ> validation;
+    if (max_range > 0.0) {
+        validation.setMaxRange(max_range);
+    }
+
+    const Eigen::Matrix4f transform = matrixFromRowMajorTuple(row_major_matrix);
+    const double score = validation.validateTransformation(source, target, transform);
+    bool valid = true;
+    if (threshold > 0.0) {
+        validation.setThreshold(threshold);
+        valid = validation.isValid(source, target, transform);
+    }
+
+    LOGI("TransformationValidationEuclidean: source=%zu target=%zu score=%.6f valid=%d",
+         source->points.size(), target->points.size(), score, valid ? 1 : 0);
+    return {
+            static_cast<jfloat>(score),
+            valid ? 1.0f : 0.0f,
+    };
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr transformActiveCloud(const std::vector<jfloat>& row_major_matrix)

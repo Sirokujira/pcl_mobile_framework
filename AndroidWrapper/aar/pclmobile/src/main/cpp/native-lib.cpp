@@ -1624,6 +1624,73 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_esti
             env, pclmobile::estimateRigidTransform2D(readFloatArray(env, packedTargetXYZ)));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_findCorrespondences(
+        JNIEnv* env, jclass clazz, jfloatArray packedTargetXYZ, jdouble maxDistance)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::findCorrespondences(
+                    readFloatArray(env, packedTargetXYZ),
+                    maxDistance,
+                    false));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_findReciprocalCorrespondences(
+        JNIEnv* env, jclass clazz, jfloatArray packedTargetXYZ, jdouble maxDistance)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::findCorrespondences(
+                    readFloatArray(env, packedTargetXYZ),
+                    maxDistance,
+                    true));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_rejectCorrespondencesDistance(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray packedCorrespondences,
+        jfloatArray packedTargetXYZ,
+        jdouble maxDistance)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::rejectCorrespondencesDistance(
+                    readFloatArray(env, packedCorrespondences),
+                    readFloatArray(env, packedTargetXYZ),
+                    maxDistance));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_rejectCorrespondencesOneToOne(
+        JNIEnv* env, jclass clazz, jfloatArray packedCorrespondences)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::rejectCorrespondencesOneToOne(readFloatArray(env, packedCorrespondences)));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_validateTransformEuclidean(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray packedTargetXYZ,
+        jfloatArray rowMajor4x4,
+        jdouble maxRange,
+        jdouble threshold)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::validateTransformEuclidean(
+                    readFloatArray(env, packedTargetXYZ),
+                    readFloatArray(env, rowMajor4x4),
+                    maxRange,
+                    threshold));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_transformActiveCloud(
         JNIEnv* env, jclass clazz, jfloatArray rowMajor4x4)
 {
