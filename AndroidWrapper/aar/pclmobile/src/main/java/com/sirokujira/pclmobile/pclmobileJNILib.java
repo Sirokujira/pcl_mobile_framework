@@ -1108,6 +1108,16 @@ public final class pclmobileJNILib {
             int maxKeypoints);
 
     /**
+     * Computes UniformSampling keypoints for the active cloud.
+     *
+     * <p>This invokes PCL {@code UniformSampling} and returns one representative point per occupied
+     * radius grid cell.</p>
+     *
+     * @return keypoint positions packed as {@code x, y, z} triples
+     */
+    public static native float[] computeUniformSamplingKeypoints(double radius);
+
+    /**
      * Builds a PCL {@code RangeImage} from the active cloud and returns finite range pixels.
      *
      * @return {@code x, y, z, range} tuples for finite range-image points
@@ -1872,6 +1882,25 @@ public final class pclmobileJNILib {
             double minX, double minY, double minZ,
             double maxX, double maxY, double maxZ) {
         filterCropBox(minX, minY, minZ, maxX, maxY, maxZ);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Keeps or removes source-cloud points inside an axis-aligned PCL BoxClipper3D box.
+     */
+    public static native void filterBoxClipper(
+            double minX, double minY, double minZ,
+            double maxX, double maxY, double maxZ,
+            boolean negative);
+
+    /**
+     * Applies BoxClipper3D and returns the filtered points.
+     */
+    public static float[] boxClipper(
+            double minX, double minY, double minZ,
+            double maxX, double maxY, double maxZ,
+            boolean negative) {
+        filterBoxClipper(minX, minY, minZ, maxX, maxY, maxZ, negative);
         return getFilteredPoints();
     }
 
