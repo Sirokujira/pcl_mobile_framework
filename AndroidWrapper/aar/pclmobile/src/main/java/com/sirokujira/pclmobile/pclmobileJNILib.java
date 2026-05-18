@@ -1134,6 +1134,20 @@ public final class pclmobileJNILib {
             double distanceIgnore);
 
     /**
+     * Reconstructs a mesh from the active cloud with PCL MarchingCubesRBF.
+     *
+     * <p>The returned array uses the same layout as {@link #reconstructGridProjectionMesh}.</p>
+     */
+    public static native float[] reconstructMarchingCubesRBFMesh(
+            int normalKSearch,
+            int resolutionX,
+            int resolutionY,
+            int resolutionZ,
+            double offSurfaceDisplacement,
+            double percentageExtendGrid,
+            double isoLevel);
+
+    /**
      * Reconstructs polygons from an organized active cloud with PCL OrganizedFastMesh.
      *
      * <p>{@code triangulationType} maps to PCL values: 0 right cut, 1 left cut,
