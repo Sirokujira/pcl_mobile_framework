@@ -8,7 +8,10 @@
 #include <pcl/registration/correspondence_rejection_distance.h>
 #include <pcl/registration/correspondence_rejection_median_distance.h>
 #include <pcl/registration/correspondence_rejection_one_to_one.h>
+#include <pcl/registration/correspondence_rejection_poly.h>
+#include <pcl/registration/correspondence_rejection_sample_consensus.h>
 #include <pcl/registration/correspondence_rejection_trimmed.h>
+#include <pcl/registration/correspondence_rejection_var_trimmed.h>
 #include <pcl/registration/gicp.h>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/icp_nl.h>
@@ -346,6 +349,114 @@ std::vector<jfloat> rejectCorrespondencesTrimmed(
     LOGI("CorrespondenceRejectorTrimmed: input=%zu output=%zu overlap=%.3f min=%u",
          correspondences.size(), remaining.size(), rejector.getOverlapRatio(),
          rejector.getMinCorrespondences());
+    return packCorrespondences(remaining);
+}
+
+std::vector<jfloat> rejectCorrespondencesVarTrimmed(
+        const std::vector<jfloat>& packed_correspondences,
+        double min_ratio,
+        double max_ratio)
+{
+    pcl::Correspondences correspondences = unpackCorrespondences(packed_correspondences);
+    if (correspondences.empty()) {
+        return {};
+    }
+
+    pcl::registration::CorrespondenceRejectorVarTrimmed rejector;
+    if (min_ratio >= 0.0 && min_ratio <= 1.0) {
+        rejector.setMinRatio(min_ratio);
+    }
+    if (max_ratio >= 0.0 && max_ratio <= 1.0) {
+        rejector.setMaxRatio(max_ratio);
+    }
+
+    pcl::Correspondences remaining;
+    rejector.getRemainingCorrespondences(correspondences, remaining);
+    LOGI("CorrespondenceRejectorVarTrimmed: input=%zu output=%zu trim=%.3f distance=%.6f min=%.3f max=%.3f",
+         correspondences.size(), remaining.size(), rejector.getTrimFactor(),
+         rejector.getTrimmedDistance(), rejector.getMinRatio(), rejector.getMaxRatio());
+    return packCorrespondences(remaining);
+}
+
+std::vector<jfloat> rejectCorrespondencesSampleConsensus(
+        const std::vector<jfloat>& packed_correspondences,
+        const std::vector<jfloat>& packed_target_xyz,
+        double inlier_threshold,
+        int max_iterations,
+        bool refine_model)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr target = cloudFromPackedXYZ(packed_target_xyz);
+    if (source->empty() || target->empty()) {
+        return {};
+    }
+
+    pcl::Correspondences correspondences = unpackCorrespondences(
+            packed_correspondences,
+            static_cast<int>(source->points.size()),
+            static_cast<int>(target->points.size()));
+    if (correspondences.empty()) {
+        return {};
+    }
+
+    pcl::registration::CorrespondenceRejectorSampleConsensus<pcl::PointXYZ> rejector;
+    rejector.setInputSource(source);
+    rejector.setInputTarget(target);
+    if (inlier_threshold > 0.0) {
+        rejector.setInlierThreshold(inlier_threshold);
+    }
+    if (max_iterations > 0) {
+        rejector.setMaximumIterations(max_iterations);
+    }
+    rejector.setRefineModel(refine_model);
+
+    pcl::Correspondences remaining;
+    rejector.getRemainingCorrespondences(correspondences, remaining);
+    LOGI("CorrespondenceRejectorSampleConsensus: input=%zu output=%zu threshold=%.6f iterations=%d refine=%d",
+         correspondences.size(), remaining.size(), rejector.getInlierThreshold(),
+         rejector.getMaximumIterations(), refine_model ? 1 : 0);
+    return packCorrespondences(remaining);
+}
+
+std::vector<jfloat> rejectCorrespondencesPoly(
+        const std::vector<jfloat>& packed_correspondences,
+        const std::vector<jfloat>& packed_target_xyz,
+        int cardinality,
+        double similarity_threshold,
+        int iterations)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr target = cloudFromPackedXYZ(packed_target_xyz);
+    if (source->empty() || target->empty()) {
+        return {};
+    }
+
+    pcl::Correspondences correspondences = unpackCorrespondences(
+            packed_correspondences,
+            static_cast<int>(source->points.size()),
+            static_cast<int>(target->points.size()));
+    if (correspondences.empty()) {
+        return {};
+    }
+
+    pcl::registration::CorrespondenceRejectorPoly<pcl::PointXYZ, pcl::PointXYZ> rejector;
+    rejector.setInputSource(source);
+    rejector.setInputTarget(target);
+    if (cardinality >= 2) {
+        rejector.setCardinality(cardinality);
+    }
+    if (similarity_threshold > 0.0 && similarity_threshold < 1.0) {
+        rejector.setSimilarityThreshold(static_cast<float>(similarity_threshold));
+    }
+    if (iterations > 0) {
+        rejector.setIterations(iterations);
+    }
+
+    pcl::Correspondences remaining;
+    rejector.getRemainingCorrespondences(correspondences, remaining);
+    LOGI("CorrespondenceRejectorPoly: input=%zu output=%zu cardinality=%d similarity=%.3f iterations=%d",
+         correspondences.size(), remaining.size(), rejector.getCardinality(),
+         rejector.getSimilarityThreshold(), rejector.getIterations());
     return packCorrespondences(remaining);
 }
 

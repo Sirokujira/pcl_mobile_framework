@@ -1374,6 +1374,43 @@ public final class pclmobileJNILib {
             int minCorrespondences);
 
     /**
+     * Keeps correspondences selected by PCL CorrespondenceRejectorVarTrimmed.
+     *
+     * <p>{@code packedCorrespondences} is packed as repeated {@code source_index, target_index, distance}
+     * triples. Ratios outside {@code 0.0..1.0} keep PCL defaults.</p>
+     */
+    public static native float[] rejectCorrespondencesVarTrimmed(
+            float[] packedCorrespondences,
+            double minRatio,
+            double maxRatio);
+
+    /**
+     * Rejects correspondences with PCL CorrespondenceRejectorSampleConsensus.
+     *
+     * <p>The active cloud is used as source, {@code packedTargetXYZ} as target, and
+     * {@code packedCorrespondences} as repeated {@code source_index, target_index, distance} triples.</p>
+     */
+    public static native float[] rejectCorrespondencesSampleConsensus(
+            float[] packedCorrespondences,
+            float[] packedTargetXYZ,
+            double inlierThreshold,
+            int maxIterations,
+            boolean refineModel);
+
+    /**
+     * Rejects correspondences with PCL CorrespondenceRejectorPoly.
+     *
+     * <p>The active cloud is used as source, {@code packedTargetXYZ} as target, and
+     * {@code packedCorrespondences} as repeated {@code source_index, target_index, distance} triples.</p>
+     */
+    public static native float[] rejectCorrespondencesPoly(
+            float[] packedCorrespondences,
+            float[] packedTargetXYZ,
+            int cardinality,
+            double similarityThreshold,
+            int iterations);
+
+    /**
      * Scores {@code rowMajor4x4} with PCL TransformationValidationEuclidean.
      *
      * <p>The active cloud is used as the source cloud and {@code packedTargetXYZ} as the target cloud.
