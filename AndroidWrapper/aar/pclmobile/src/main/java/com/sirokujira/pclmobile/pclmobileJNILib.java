@@ -1558,6 +1558,22 @@ public final class pclmobileJNILib {
     }
 
     /**
+     * Filters active-cloud points with PCL CropHull in 2D polygon mode.
+     *
+     * <p>{@code packedHullXYZ} must contain at least three {@code x, y, z} point tuples. Set
+     * {@code negative} to keep points outside the hull instead of inside it.</p>
+     */
+    public static native void filterCropHull2D(float[] packedHullXYZ, boolean negative);
+
+    /**
+     * Applies CropHull 2D polygon filtering and returns the filtered points.
+     */
+    public static float[] cropHull2D(float[] packedHullXYZ, boolean negative) {
+        filterCropHull2D(packedHullXYZ, negative);
+        return getFilteredPoints();
+    }
+
+    /**
      * Extracts active-cloud points by index with PCL ExtractIndices.
      */
     public static native void filterExtractIndices(int[] indices, boolean negative);

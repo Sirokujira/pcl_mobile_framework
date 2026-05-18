@@ -1680,6 +1680,13 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterMorph
     pclmobile::filterMorphological(resolution, morphologicalOperator);
 }
 
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterCropHull2D(
+        JNIEnv* env, jclass clazz, jfloatArray packedHullXYZ, jboolean negative)
+{
+    (void) clazz;
+    pclmobile::filterCropHull2D(readFloatArray(env, packedHullXYZ), negative == JNI_TRUE);
+}
+
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterExtractIndices(
         JNIEnv* env, jclass clazz, jintArray indices, jboolean negative)
 {
