@@ -14,6 +14,8 @@ std::vector<jfloat> estimateRigidTransformSVD(const std::vector<jfloat>& packed_
 std::vector<jfloat> estimateRigidTransformSVDScale(const std::vector<jfloat>& packed_target_xyz);
 std::vector<jfloat> estimateRigidTransform3Point(const std::vector<jfloat>& packed_target_xyz);
 std::vector<jfloat> estimateRigidTransformDualQuaternion(const std::vector<jfloat>& packed_target_xyz);
+std::vector<jfloat> estimateRigidTransformLM(const std::vector<jfloat>& packed_target_xyz);
+std::vector<jfloat> estimateRigidTransform2D(const std::vector<jfloat>& packed_target_xyz);
 pcl::PointCloud<pcl::PointXYZ>::Ptr transformActiveCloud(const std::vector<jfloat>& row_major_matrix);
 pcl::PointCloud<pcl::PointXYZ>::Ptr translateActiveCloud(float tx, float ty, float tz);
 std::vector<jfloat> alignToTargetICP(

@@ -6,7 +6,9 @@
 #include <pcl/registration/icp_nl.h>
 #include <pcl/registration/ndt.h>
 #include <pcl/registration/transformation_estimation_3point.h>
+#include <pcl/registration/transformation_estimation_2D.h>
 #include <pcl/registration/transformation_estimation_dual_quaternion.h>
+#include <pcl/registration/transformation_estimation_lm.h>
 #include <pcl/registration/transformation_estimation_svd.h>
 #include <pcl/registration/transformation_estimation_svd_scale.h>
 
@@ -139,6 +141,42 @@ std::vector<jfloat> estimateRigidTransformDualQuaternion(const std::vector<jfloa
     pcl::registration::TransformationEstimationDualQuaternion<pcl::PointXYZ, pcl::PointXYZ> estimation;
     estimation.estimateRigidTransformation(*source, *target, transform);
     LOGI("TransformationEstimationDualQuaternion: source=%zu target=%zu",
+         source->points.size(), target->points.size());
+    return matrixToRowMajorTuple(transform);
+}
+
+std::vector<jfloat> estimateRigidTransformLM(const std::vector<jfloat>& packed_target_xyz)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr target = cloudFromPackedXYZ(packed_target_xyz);
+    if (source->empty() || source->points.size() != target->points.size()) {
+        LOGE("TransformationEstimationLM refused input: source=%zu target=%zu",
+             source->points.size(), target->points.size());
+        return {};
+    }
+
+    Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+    pcl::registration::TransformationEstimationLM<pcl::PointXYZ, pcl::PointXYZ> estimation;
+    estimation.estimateRigidTransformation(*source, *target, transform);
+    LOGI("TransformationEstimationLM: source=%zu target=%zu",
+         source->points.size(), target->points.size());
+    return matrixToRowMajorTuple(transform);
+}
+
+std::vector<jfloat> estimateRigidTransform2D(const std::vector<jfloat>& packed_target_xyz)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr target = cloudFromPackedXYZ(packed_target_xyz);
+    if (source->empty() || source->points.size() != target->points.size()) {
+        LOGE("TransformationEstimation2D refused input: source=%zu target=%zu",
+             source->points.size(), target->points.size());
+        return {};
+    }
+
+    Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+    pcl::registration::TransformationEstimation2D<pcl::PointXYZ, pcl::PointXYZ> estimation;
+    estimation.estimateRigidTransformation(*source, *target, transform);
+    LOGI("TransformationEstimation2D: source=%zu target=%zu",
          source->points.size(), target->points.size());
     return matrixToRowMajorTuple(transform);
 }
