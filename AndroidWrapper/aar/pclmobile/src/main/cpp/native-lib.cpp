@@ -645,6 +645,19 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
             pclmobile::computePPFFeatures(normalKSearch, maxPointCount));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeCPPFPairFeature(
+        JNIEnv* env,
+        jclass clazz,
+        jint firstIndex,
+        jint secondIndex,
+        jint normalKSearch)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeCPPFPairFeatureValues(firstIndex, secondIndex, normalKSearch));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeNormalBasedSignatureFeatures(
         JNIEnv* env,
         jclass clazz,
@@ -854,6 +867,24 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_segm
 {
     (void) clazz;
     return pclmobile::makeFloatArray(env, pclmobile::segmentSACModel(modelType, distanceThreshold, maxIterations));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_segmentSACModelWithMethod(
+        JNIEnv* env,
+        jclass clazz,
+        jint modelType,
+        jint methodType,
+        jdouble distanceThreshold,
+        jint maxIterations)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::segmentSACModelWithMethod(
+                    modelType,
+                    methodType,
+                    distanceThreshold,
+                    maxIterations));
 }
 
 JNIEXPORT jintArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_segmentSACModelInlierIndices(
@@ -1717,6 +1748,8 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(
                   pclmobile::computeUniqueShapeContextFeatures(0.18, 0.02, 0.04, 0.18).size(), 1960);
     logTupleCount("feature1", "PPFEstimation",
                   pclmobile::computePPFFeatures(16, 256).size(), 5);
+    logTupleCount("feature1", "computeCPPFPairFeature",
+                  pclmobile::computeCPPFPairFeatureValues(0, 1, 16).size(), 10);
     logTupleCount("feature1", "NormalBasedSignatureEstimation",
                   pclmobile::computeNormalBasedSignatureFeatures(16, 0.18, 0.06, 36, 8).size(), 12);
     logTupleCount("feature1", "SpinImageEstimation",
@@ -2229,6 +2262,8 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_sampleconse
     loadIfProvided(env, filename);
     LOGI("sampleconsensus1 compatibility sample: segmentPlane values=%zu",
          pclmobile::segmentPlaneModel(0.03, 100).size());
+    LOGI("sampleconsensus1 compatibility sample: SAC MSAC values=%zu",
+         pclmobile::segmentSACModelWithMethod(0, 2, 0.03, 100).size());
 }
 
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_segmentation1(

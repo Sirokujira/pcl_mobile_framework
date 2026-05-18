@@ -84,6 +84,13 @@ public final class pclmobileJNILib {
     public static final int SACMODEL_NORMAL_PARALLEL_PLANE = 16;
     public static final int SACMODEL_STICK = 17;
     public static final int SACMODEL_ELLIPSE3D = 18;
+    public static final int SAC_RANSAC = 0;
+    public static final int SAC_LMEDS = 1;
+    public static final int SAC_MSAC = 2;
+    public static final int SAC_RRANSAC = 3;
+    public static final int SAC_RMSAC = 4;
+    public static final int SAC_MLESAC = 5;
+    public static final int SAC_PROSAC = 6;
     public static final int HARRIS_RESPONSE_HARRIS = 1;
     public static final int HARRIS_RESPONSE_NOBLE = 2;
     public static final int HARRIS_RESPONSE_LOWE = 3;
@@ -436,6 +443,18 @@ public final class pclmobileJNILib {
             int maximumNearestNeighbors);
 
     /**
+     * Computes PCL CPPF pair features for two active-cloud point indices.
+     *
+     * <p>The wrapper estimates normals from the active cloud and uses neutral synthetic colors.</p>
+     *
+     * @return {@code f1..f10}, or an empty array when the indices are invalid
+     */
+    public static native float[] computeCPPFPairFeature(
+            int firstIndex,
+            int secondIndex,
+            int normalKSearch);
+
+    /**
      * Computes 3D shape context descriptors for the active cloud.
      *
      * @return 1980 descriptor values per input point
@@ -631,6 +650,19 @@ public final class pclmobileJNILib {
      * @return model coefficients followed by {@code inlier_count, input_count}, or an empty array
      */
     public static native float[] segmentSACModel(int modelType, double distanceThreshold, int maxIterations);
+
+    /**
+     * Fits a PCL SAC model to the active cloud with a selected sample-consensus method.
+     *
+     * <p>{@code modelType} uses {@code SACMODEL_*}; {@code methodType} uses {@code SAC_*}.</p>
+     *
+     * @return model coefficients followed by {@code inlier_count, input_count}, or an empty array
+     */
+    public static native float[] segmentSACModelWithMethod(
+            int modelType,
+            int methodType,
+            double distanceThreshold,
+            int maxIterations);
 
     /**
      * Returns active-cloud point indices that inlie a fitted PCL SAC model.

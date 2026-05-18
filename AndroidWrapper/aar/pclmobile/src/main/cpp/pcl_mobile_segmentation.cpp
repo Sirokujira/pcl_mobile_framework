@@ -107,6 +107,22 @@ bool segmentModel(int model_type,
                   pcl::ModelCoefficients::Ptr coefficients,
                   pcl::PointIndices::Ptr inliers)
 {
+    return segmentModelWithMethod(
+            model_type,
+            pcl::SAC_RANSAC,
+            distance_threshold,
+            max_iterations,
+            coefficients,
+            inliers);
+}
+
+bool segmentModelWithMethod(int model_type,
+                            int method_type,
+                            double distance_threshold,
+                            int max_iterations,
+                            pcl::ModelCoefficients::Ptr coefficients,
+                            pcl::PointIndices::Ptr inliers)
+{
     pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
     if (input->empty()) {
         return false;
@@ -115,13 +131,13 @@ bool segmentModel(int model_type,
     pcl::SACSegmentation<pcl::PointXYZ> segmentation;
     segmentation.setOptimizeCoefficients(true);
     segmentation.setModelType(model_type);
-    segmentation.setMethodType(pcl::SAC_RANSAC);
+    segmentation.setMethodType(method_type);
     segmentation.setMaxIterations(max_iterations);
     segmentation.setDistanceThreshold(distance_threshold);
     segmentation.setInputCloud(input);
     segmentation.segment(*inliers, *coefficients);
-    LOGI("SACSegmentation model=%d: input=%zu inliers=%zu distance=%.3f maxIterations=%d",
-         model_type, input->points.size(), inliers->indices.size(), distance_threshold, max_iterations);
+    LOGI("SACSegmentation model=%d method=%d: input=%zu inliers=%zu distance=%.3f maxIterations=%d",
+         model_type, method_type, input->points.size(), inliers->indices.size(), distance_threshold, max_iterations);
     return !inliers->indices.empty() && coefficients->values.size() >= 4;
 }
 
@@ -166,9 +182,24 @@ std::vector<jfloat> segmentSphereModel(double distance_threshold, int max_iterat
 
 std::vector<jfloat> segmentSACModel(int model_type, double distance_threshold, int max_iterations)
 {
+    return segmentSACModelWithMethod(model_type, pcl::SAC_RANSAC, distance_threshold, max_iterations);
+}
+
+std::vector<jfloat> segmentSACModelWithMethod(
+        int model_type,
+        int method_type,
+        double distance_threshold,
+        int max_iterations)
+{
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
     pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
-    if (!segmentModel(model_type, distance_threshold, max_iterations, coefficients, inliers)) {
+    if (!segmentModelWithMethod(
+                model_type,
+                method_type,
+                distance_threshold,
+                max_iterations,
+                coefficients,
+                inliers)) {
         return {};
     }
 
