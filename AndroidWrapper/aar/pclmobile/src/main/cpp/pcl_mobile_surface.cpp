@@ -13,6 +13,8 @@
 #include <pcl/search/kdtree.h>
 #include <pcl/surface/concave_hull.h>
 #include <pcl/surface/convex_hull.h>
+#include <pcl/surface/grid_projection.h>
+#include <pcl/surface/impl/grid_projection.hpp>
 #include <pcl/surface/gp3.h>
 #include <pcl/surface/mls.h>
 #include <pcl/surface/organized_fast_mesh.h>
@@ -433,6 +435,58 @@ std::vector<jfloat> reconstructGreedyProjectionTriangles(
     }
     LOGI("GreedyProjectionTriangulation reconstructed triangles: input=%zu polygons=%zu triangles=%zu radius=%.3f",
          point_normals->points.size(), polygons.size(), values.size() / 3, search_radius);
+    return values;
+}
+
+std::vector<jfloat> reconstructGridProjectionMesh(
+        int normal_k_search,
+        double resolution,
+        int padding_size,
+        int nearest_neighbor_count,
+        int max_binary_search_level)
+{
+    if (normal_k_search <= 0 || resolution <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointNormal>::Ptr point_normals = computePointNormals(normal_k_search);
+    if (point_normals->empty()) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointNormal> vertices;
+    std::vector<pcl::Vertices> polygons;
+    pcl::GridProjection<pcl::PointNormal> grid_projection(resolution);
+    grid_projection.setInputCloud(point_normals);
+    grid_projection.setSearchMethod(
+            pcl::search::KdTree<pcl::PointNormal>::Ptr(new pcl::search::KdTree<pcl::PointNormal>));
+    grid_projection.setPaddingSize(std::max(padding_size, 0));
+    grid_projection.setNearestNeighborNum(std::max(nearest_neighbor_count, 1));
+    grid_projection.setMaxBinarySearchLevel(std::max(max_binary_search_level, 1));
+    grid_projection.reconstruct(vertices, polygons);
+
+    std::size_t value_count = 2 + vertices.points.size() * 3;
+    for (const auto& polygon : polygons) {
+        value_count += polygon.vertices.size() + 1;
+    }
+
+    std::vector<jfloat> values;
+    values.reserve(value_count);
+    values.push_back(static_cast<jfloat>(vertices.points.size()));
+    values.push_back(static_cast<jfloat>(polygons.size()));
+    for (const auto& vertex : vertices.points) {
+        values.push_back(vertex.x);
+        values.push_back(vertex.y);
+        values.push_back(vertex.z);
+    }
+    for (const auto& polygon : polygons) {
+        values.push_back(static_cast<jfloat>(polygon.vertices.size()));
+        for (std::uint32_t vertex : polygon.vertices) {
+            values.push_back(static_cast<jfloat>(vertex));
+        }
+    }
+    LOGI("GridProjection reconstructed mesh: input=%zu vertices=%zu polygons=%zu resolution=%.3f",
+         point_normals->points.size(), vertices.points.size(), polygons.size(), resolution);
     return values;
 }
 

@@ -1106,6 +1106,20 @@ public final class pclmobileJNILib {
             boolean normalConsistency);
 
     /**
+     * Reconstructs a mesh from the active cloud with PCL GridProjection.
+     *
+     * <p>The returned array is packed as {@code vertex_count, polygon_count},
+     * followed by {@code x, y, z} vertex triples, then variable-length polygons
+     * as {@code vertex_count, vertex_index...}.</p>
+     */
+    public static native float[] reconstructGridProjectionMesh(
+            int normalKSearch,
+            double resolution,
+            int paddingSize,
+            int nearestNeighborCount,
+            int maxBinarySearchLevel);
+
+    /**
      * Reconstructs polygons from an organized active cloud with PCL OrganizedFastMesh.
      *
      * <p>{@code triangulationType} maps to PCL values: 0 right cut, 1 left cut,
