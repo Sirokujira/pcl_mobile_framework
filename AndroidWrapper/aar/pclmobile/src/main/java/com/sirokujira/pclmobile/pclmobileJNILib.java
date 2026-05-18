@@ -37,6 +37,9 @@ package com.sirokujira.pclmobile;
  *     <li>CRH descriptors: one 90-bin histogram for the active cloud</li>
  *     <li>CVFH descriptors: 308-bin histogram per stable cluster</li>
  *     <li>OUR-CVFH descriptors: 308-bin histogram per stable cluster orientation</li>
+ *     <li>Intensity spin descriptors: 20-bin histogram per input point</li>
+ *     <li>3D shape context descriptors: 1980-bin descriptor per input point</li>
+ *     <li>Unique shape context descriptors: 1960-bin descriptor per input point</li>
  *     <li>Spin image descriptors: 153-bin histogram per input point</li>
  *     <li>GRSD descriptors: one or more 21-bin histograms for the active cloud</li>
  *     <li>SHOT descriptors: 352-bin histogram per input point</li>
@@ -351,6 +354,41 @@ public final class pclmobileJNILib {
             double refineClusters,
             double axisRatio,
             double minAxisValue);
+
+    /**
+     * Computes intensity-domain spin image descriptors for the active cloud.
+     *
+     * <p>The wrapper derives an intensity field from XYZ distance and uses a fixed
+     * 4x5 bin layout.</p>
+     *
+     * @return 20 histogram values per descriptor
+     */
+    public static native float[] computeIntensitySpinFeatures(
+            double radiusSearch,
+            double smoothingBandwidth);
+
+    /**
+     * Computes 3D shape context descriptors for the active cloud.
+     *
+     * @return 1980 descriptor values per input point
+     */
+    public static native float[] computeShapeContext3DFeatures(
+            int normalKSearch,
+            double searchRadius,
+            double minRadius,
+            double pointDensityRadius,
+            boolean random);
+
+    /**
+     * Computes Unique Shape Context descriptors for the active cloud.
+     *
+     * @return 1960 descriptor values per input point
+     */
+    public static native float[] computeUniqueShapeContextFeatures(
+            double searchRadius,
+            double minRadius,
+            double pointDensityRadius,
+            double localRadius);
 
     /**
      * Computes Spin Image descriptors for the active cloud.
