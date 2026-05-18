@@ -1120,6 +1120,20 @@ public final class pclmobileJNILib {
             int maxBinarySearchLevel);
 
     /**
+     * Reconstructs a mesh from the active cloud with PCL MarchingCubesHoppe.
+     *
+     * <p>The returned array uses the same layout as {@link #reconstructGridProjectionMesh}.</p>
+     */
+    public static native float[] reconstructMarchingCubesHoppeMesh(
+            int normalKSearch,
+            int resolutionX,
+            int resolutionY,
+            int resolutionZ,
+            double percentageExtendGrid,
+            double isoLevel,
+            double distanceIgnore);
+
+    /**
      * Reconstructs polygons from an organized active cloud with PCL OrganizedFastMesh.
      *
      * <p>{@code triangulationType} maps to PCL values: 0 right cut, 1 left cut,

@@ -37,6 +37,14 @@ std::vector<jfloat> reconstructGridProjectionMesh(
         int padding_size,
         int nearest_neighbor_count,
         int max_binary_search_level);
+std::vector<jfloat> reconstructMarchingCubesHoppeMesh(
+        int normal_k_search,
+        int resolution_x,
+        int resolution_y,
+        int resolution_z,
+        double percentage_extend_grid,
+        double iso_level,
+        double distance_ignore);
 std::vector<jfloat> reconstructOrganizedFastMeshPolygons(
         int triangulation_type,
         int triangle_pixel_size,
