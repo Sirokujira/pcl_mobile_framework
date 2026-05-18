@@ -36,6 +36,8 @@
 #include <pcl/features/spin_image.h>
 #include <pcl/features/usc.h>
 #include <pcl/features/vfh.h>
+#include <pcl/filters/normal_refinement.h>
+#include <pcl/filters/impl/normal_refinement.hpp>
 #include <pcl/common/centroid.h>
 #include <pcl/search/kdtree.h>
 
@@ -168,6 +170,41 @@ std::vector<jfloat> estimateNormalsOMP(int k_search, int number_of_threads)
     std::vector<jfloat> values = packNormals(*normals);
     LOGI("NormalEstimationOMP computed normals: input=%zu normals=%zu k=%d threads=%d",
          input->points.size(), normals->points.size(), k_search, number_of_threads);
+    return values;
+}
+
+std::vector<jfloat> refineNormals(int normal_k_search, int refinement_k_search, int max_iterations, double convergence_threshold)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || refinement_k_search <= 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    if (normals->points.size() != input->points.size()) {
+        return {};
+    }
+
+    std::vector<pcl::Indices> k_indices(input->points.size());
+    std::vector<std::vector<float>> k_sqr_distances(input->points.size());
+    pcl::search::KdTree<pcl::PointXYZ> tree;
+    tree.setInputCloud(input);
+    for (std::size_t i = 0; i < input->points.size(); ++i) {
+        tree.nearestKSearch(input->points[i], refinement_k_search, k_indices[i], k_sqr_distances[i]);
+    }
+
+    pcl::PointCloud<pcl::Normal> refined;
+    pcl::NormalRefinement<pcl::Normal> refinement(k_indices, k_sqr_distances);
+    refinement.setInputCloud(normals);
+    refinement.setMaxIterations(static_cast<unsigned int>(std::max(max_iterations, 1)));
+    if (convergence_threshold > 0.0) {
+        refinement.setConvergenceThreshold(static_cast<float>(convergence_threshold));
+    }
+    refinement.filter(refined);
+
+    std::vector<jfloat> values = packNormals(refined);
+    LOGI("NormalRefinement refined normals: input=%zu normals=%zu normal_k=%d refinement_k=%d iterations=%d",
+         input->points.size(), refined.points.size(), normal_k_search, refinement_k_search, max_iterations);
     return values;
 }
 

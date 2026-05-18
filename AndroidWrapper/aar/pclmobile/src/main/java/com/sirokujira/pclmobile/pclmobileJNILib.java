@@ -277,6 +277,17 @@ public final class pclmobileJNILib {
     public static native float[] estimateNormalsOMP(int kSearch, int numberOfThreads);
 
     /**
+     * Refines estimated normals with PCL NormalRefinement.
+     *
+     * @return {@code normal_x, normal_y, normal_z, curvature} tuples
+     */
+    public static native float[] refineNormals(
+            int normalKSearch,
+            int refinementKSearch,
+            int maxIterations,
+            double convergenceThreshold);
+
+    /**
      * Computes Point Feature Histograms for the active cloud.
      *
      * @param normalKSearch nearest neighbors used to estimate normals before descriptor computation

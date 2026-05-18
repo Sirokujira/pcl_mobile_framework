@@ -396,6 +396,24 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_esti
             pclmobile::estimateNormalsOMP(kSearch, numberOfThreads));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_refineNormals(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jint refinementKSearch,
+        jint maxIterations,
+        jdouble convergenceThreshold)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::refineNormals(
+                    normalKSearch,
+                    refinementKSearch,
+                    maxIterations,
+                    convergenceThreshold));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeFPFHFeatures(
         JNIEnv* env, jclass clazz, jint normalKSearch, jdouble featureRadius)
 {
@@ -1645,6 +1663,8 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(
     logTupleCount("feature1", "NormalEstimation", pclmobile::estimateNormals(16).size(), 4);
     logTupleCount("feature1", "NormalEstimationOMP",
                   pclmobile::estimateNormalsOMP(16, 0).size(), 4);
+    logTupleCount("feature1", "NormalRefinement",
+                  pclmobile::refineNormals(16, 16, 10, 0.00001).size(), 4);
     logTupleCount("feature1", "PFHEstimation",
                   pclmobile::computePFHFeatures(16, 0.18).size(), 125);
     logTupleCount("feature1", "FPFHEstimation",
