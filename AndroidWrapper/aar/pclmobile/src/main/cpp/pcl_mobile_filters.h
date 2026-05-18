@@ -20,6 +20,7 @@ void filterPassThroughAdvanced(
 void filterVoxelGrid(double x, double y, double z);
 void filterVoxelGridMinimumPoints(double x, double y, double z, int minimum_points_per_voxel);
 void filterVoxelGridCovariance(double x, double y, double z, int min_points_per_voxel, double min_covar_eigvalue_mult);
+std::vector<float> computeVoxelGridOccludedVoxels(double x, double y, double z, int max_voxel_count);
 void filterApproximateVoxelGrid(double x, double y, double z);
 void filterUniformSampling(double radius);
 void filterGridMinimum(double resolution);

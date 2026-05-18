@@ -1298,6 +1298,19 @@ public final class pclmobileJNILib {
     }
 
     /**
+     * Computes occluded voxels with PCL VoxelGridOcclusionEstimation.
+     *
+     * <p>Returns an empty array if the number of occluded voxels exceeds {@code maxVoxelCount}.</p>
+     *
+     * @return {@code i, j, k, centroid_x, centroid_y, centroid_z} tuples
+     */
+    public static native float[] computeVoxelGridOccludedVoxels(
+            double x,
+            double y,
+            double z,
+            int maxVoxelCount);
+
+    /**
      * Applies VoxelGrid and returns the filtered points.
      */
     public static float[] voxelGridDownsample(double leafSize) {
