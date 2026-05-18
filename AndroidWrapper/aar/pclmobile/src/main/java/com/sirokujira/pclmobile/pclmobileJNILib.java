@@ -1991,6 +1991,28 @@ public final class pclmobileJNILib {
     }
 
     /**
+     * Projects active-cloud points onto explicit SAC model coefficients with PCL ProjectInliers.
+     *
+     * <p>For a plane, pass {@code a, b, c, d}. {@code copyAllData} keeps the original point count
+     * with projected inliers copied back into their original positions.</p>
+     */
+    public static native void filterProjectInliers(
+            int modelType,
+            float[] modelCoefficients,
+            boolean copyAllData);
+
+    /**
+     * Applies ProjectInliers and returns the projected points.
+     */
+    public static float[] projectInliers(
+            int modelType,
+            float[] modelCoefficients,
+            boolean copyAllData) {
+        filterProjectInliers(modelType, modelCoefficients, copyAllData);
+        return getFilteredPoints();
+    }
+
+    /**
      * Filters active-cloud points with PCL CropHull in 2D polygon mode.
      *
      * <p>{@code packedHullXYZ} must contain at least three {@code x, y, z} point tuples. Set

@@ -24,6 +24,7 @@
 #include <pcl/filters/normal_space.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/plane_clipper3D.h>
+#include <pcl/filters/project_inliers.h>
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/random_sample.h>
 #include <pcl/filters/sampling_surface_normal.h>
@@ -89,6 +90,22 @@ bool isModelOutlierRemovalSupported(int model_type)
 bool modelOutlierRemovalRequiresNormals(int model_type)
 {
     return model_type == 5 || model_type == 6 || model_type == 11 || model_type == 12 || model_type == 16;
+}
+
+bool isProjectInliersSupported(int model_type)
+{
+    switch (model_type) {
+        case 0:  // SACMODEL_PLANE
+        case 1:  // SACMODEL_LINE
+        case 2:  // SACMODEL_CIRCLE2D
+        case 4:  // SACMODEL_SPHERE
+        case 8:  // SACMODEL_PARALLEL_LINE
+        case 9:  // SACMODEL_PERPENDICULAR_PLANE
+        case 15: // SACMODEL_PARALLEL_PLANE
+            return true;
+        default:
+            return false;
+    }
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFromPackedXYZ(const std::vector<float>& packed_xyz)
@@ -770,6 +787,30 @@ void filterMorphological(double resolution, int morphological_operator)
             *filteredCloud());
     LOGI("applyMorphologicalOperator filtered points: input=%zu output=%zu resolution=%.3f operator=%d",
          input->points.size(), filteredCloud()->points.size(), resolution, morphological_operator);
+}
+
+void filterProjectInliers(
+        int model_type,
+        const std::vector<float>& model_coefficients,
+        bool copy_all_data)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || model_coefficients.empty() || !isProjectInliersSupported(model_type)) {
+        clearFilteredCloud();
+        return;
+    }
+
+    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+    coefficients->values.assign(model_coefficients.begin(), model_coefficients.end());
+
+    pcl::ProjectInliers<pcl::PointXYZ> projection;
+    projection.setInputCloud(input);
+    projection.setModelType(model_type);
+    projection.setModelCoefficients(coefficients);
+    projection.setCopyAllData(copy_all_data);
+    projection.filter(*filteredCloud());
+    LOGI("ProjectInliers filtered points: input=%zu output=%zu model=%d copyAll=%d",
+         input->points.size(), filteredCloud()->points.size(), model_type, copy_all_data ? 1 : 0);
 }
 
 void filterCropBoxTransformed(
