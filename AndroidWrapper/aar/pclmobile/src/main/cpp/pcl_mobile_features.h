@@ -35,6 +35,10 @@ std::vector<jfloat> computeOURCVFHFeatures(
 std::vector<jfloat> computeIntensitySpinFeatures(
         double radius_search,
         double smoothing_bandwidth);
+std::vector<jfloat> computeIntensityGradientFeatures(
+        int normal_k_search,
+        double radius_search,
+        int number_of_threads);
 std::vector<jfloat> computeShapeContext3DFeatures(
         int normal_k_search,
         double search_radius,
@@ -46,6 +50,7 @@ std::vector<jfloat> computeUniqueShapeContextFeatures(
         double min_radius,
         double point_density_radius,
         double local_radius);
+std::vector<jfloat> computePPFFeatures(int normal_k_search, int max_point_count);
 std::vector<jfloat> computeNormalBasedSignatureFeatures(
         int normal_k_search,
         double search_radius,

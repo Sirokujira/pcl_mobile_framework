@@ -500,6 +500,22 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
             pclmobile::computeIntensitySpinFeatures(radiusSearch, smoothingBandwidth));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeIntensityGradientFeatures(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jdouble radiusSearch,
+        jint numberOfThreads)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeIntensityGradientFeatures(
+                    normalKSearch,
+                    radiusSearch,
+                    numberOfThreads));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeShapeContext3DFeatures(
         JNIEnv* env,
         jclass clazz,
@@ -536,6 +552,18 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
                     minRadius,
                     pointDensityRadius,
                     localRadius));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computePPFFeatures(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jint maxPointCount)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computePPFFeatures(normalKSearch, maxPointCount));
 }
 
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeNormalBasedSignatureFeatures(
@@ -1389,10 +1417,14 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(
                   pclmobile::computeOURCVFHFeatures(16, 0.0, 0.0, 0.03, 20, true, 1.0, 0.8, 0.925).size(), 308);
     logTupleCount("feature1", "IntensitySpinEstimation",
                   pclmobile::computeIntensitySpinFeatures(0.18, 1.0).size(), 20);
+    logTupleCount("feature1", "IntensityGradientEstimation",
+                  pclmobile::computeIntensityGradientFeatures(16, 0.18, 0).size(), 3);
     logTupleCount("feature1", "ShapeContext3DEstimation",
                   pclmobile::computeShapeContext3DFeatures(16, 0.18, 0.02, 0.04, false).size(), 1980);
     logTupleCount("feature1", "UniqueShapeContext",
                   pclmobile::computeUniqueShapeContextFeatures(0.18, 0.02, 0.04, 0.18).size(), 1960);
+    logTupleCount("feature1", "PPFEstimation",
+                  pclmobile::computePPFFeatures(16, 256).size(), 5);
     logTupleCount("feature1", "NormalBasedSignatureEstimation",
                   pclmobile::computeNormalBasedSignatureFeatures(16, 0.18, 0.06, 36, 8).size(), 12);
     logTupleCount("feature1", "SpinImageEstimation",

@@ -368,6 +368,18 @@ public final class pclmobileJNILib {
             double smoothingBandwidth);
 
     /**
+     * Computes IntensityGradient descriptors for the active cloud.
+     *
+     * <p>The wrapper derives an intensity field from XYZ distance before estimating gradients.</p>
+     *
+     * @return {@code gradient_x, gradient_y, gradient_z} tuples
+     */
+    public static native float[] computeIntensityGradientFeatures(
+            int normalKSearch,
+            double radiusSearch,
+            int numberOfThreads);
+
+    /**
      * Computes 3D shape context descriptors for the active cloud.
      *
      * @return 1980 descriptor values per input point
@@ -389,6 +401,16 @@ public final class pclmobileJNILib {
             double minRadius,
             double pointDensityRadius,
             double localRadius);
+
+    /**
+     * Computes Point Pair Feature descriptors for the active cloud.
+     *
+     * <p>PPF produces one descriptor per point pair. To avoid excessive memory use, returns an empty
+     * array when the active cloud has more than {@code maxPointCount} points.</p>
+     *
+     * @return {@code f1, f2, f3, f4, alpha_m} tuples
+     */
+    public static native float[] computePPFFeatures(int normalKSearch, int maxPointCount);
 
     /**
      * Computes Normal Based Signature descriptors for the active cloud.
