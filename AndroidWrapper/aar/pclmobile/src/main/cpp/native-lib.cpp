@@ -538,6 +538,26 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
                     localRadius));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeNormalBasedSignatureFeatures(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jdouble searchRadius,
+        jdouble scale,
+        jint n,
+        jint m)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeNormalBasedSignatureFeatures(
+                    normalKSearch,
+                    searchRadius,
+                    scale,
+                    n,
+                    m));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeSpinImageFeatures(
         JNIEnv* env,
         jclass clazz,
@@ -1373,6 +1393,8 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(
                   pclmobile::computeShapeContext3DFeatures(16, 0.18, 0.02, 0.04, false).size(), 1980);
     logTupleCount("feature1", "UniqueShapeContext",
                   pclmobile::computeUniqueShapeContextFeatures(0.18, 0.02, 0.04, 0.18).size(), 1960);
+    logTupleCount("feature1", "NormalBasedSignatureEstimation",
+                  pclmobile::computeNormalBasedSignatureFeatures(16, 0.18, 0.06, 36, 8).size(), 12);
     logTupleCount("feature1", "SpinImageEstimation",
                   pclmobile::computeSpinImageFeatures(16, 0.18, 8, 0.0, 0).size(), 153);
     logTupleCount("feature1", "GRSDEstimation",
