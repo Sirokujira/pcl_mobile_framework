@@ -1207,6 +1207,22 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_esti
             env, pclmobile::estimateRigidTransformSVDScale(readFloatArray(env, packedTargetXYZ)));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_estimateRigidTransform3Point(
+        JNIEnv* env, jclass clazz, jfloatArray packedTargetXYZ)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env, pclmobile::estimateRigidTransform3Point(readFloatArray(env, packedTargetXYZ)));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_estimateRigidTransformDualQuaternion(
+        JNIEnv* env, jclass clazz, jfloatArray packedTargetXYZ)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env, pclmobile::estimateRigidTransformDualQuaternion(readFloatArray(env, packedTargetXYZ)));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_transformActiveCloud(
         JNIEnv* env, jclass clazz, jfloatArray rowMajor4x4)
 {
