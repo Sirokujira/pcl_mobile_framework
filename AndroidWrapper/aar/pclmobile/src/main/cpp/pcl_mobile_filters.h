@@ -61,6 +61,7 @@ void filterModelOutlierRemoval(
         double threshold,
         bool negative);
 void filterMorphological(double resolution, int morphological_operator);
+void filterCropHull2D(const std::vector<float>& packed_hull_xyz, bool negative);
 void filterExtractIndices(const std::vector<int>& indices, bool negative);
 void extractPlaneInliers(double distance_threshold, int max_iterations);
 void extractModelInliers(int model_type, double distance_threshold, int max_iterations);

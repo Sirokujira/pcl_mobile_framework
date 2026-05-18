@@ -7,6 +7,7 @@
 #include <pcl/filters/conditional_removal.h>
 #include <pcl/filters/covariance_sampling.h>
 #include <pcl/filters/crop_box.h>
+#include <pcl/filters/crop_hull.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/farthest_point_sampling.h>
 #include <pcl/filters/fast_bilateral.h>
@@ -29,6 +30,7 @@
 #include <pcl/filters/impl/covariance_sampling.hpp>
 #include <pcl/filters/impl/fast_bilateral.hpp>
 #include <pcl/features/normal_3d.h>
+#include <pcl/Vertices.h>
 #include <pcl/search/kdtree.h>
 
 #include "pcl_mobile_context.h"
@@ -80,6 +82,19 @@ bool isModelOutlierRemovalSupported(int model_type)
 bool modelOutlierRemovalRequiresNormals(int model_type)
 {
     return model_type == 5 || model_type == 6 || model_type == 11 || model_type == 12 || model_type == 16;
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFromPackedXYZ(const std::vector<float>& packed_xyz)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr result(new pcl::PointCloud<pcl::PointXYZ>);
+    result->points.reserve(packed_xyz.size() / 3);
+    for (std::size_t i = 0; i + 2 < packed_xyz.size(); i += 3) {
+        result->points.emplace_back(packed_xyz[i], packed_xyz[i + 1], packed_xyz[i + 2]);
+    }
+    result->width = static_cast<std::uint32_t>(result->points.size());
+    result->height = 1;
+    result->is_dense = false;
+    return result;
 }
 
 } // namespace
@@ -551,6 +566,32 @@ void filterCropBoxTransformed(
     crop_box.filter(*filteredCloud());
     LOGI("CropBox transformed filtered points: input=%zu output=%zu min=(%.3f, %.3f, %.3f) max=(%.3f, %.3f, %.3f)",
          cloud()->points.size(), filteredCloud()->points.size(), min_x, min_y, min_z, max_x, max_y, max_z);
+}
+
+void filterCropHull2D(const std::vector<float>& packed_hull_xyz, bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr hull = cloudFromPackedXYZ(packed_hull_xyz);
+    if (input->empty() || hull->points.size() < 3) {
+        clearFilteredCloud();
+        return;
+    }
+
+    pcl::Vertices polygon;
+    polygon.vertices.reserve(hull->points.size());
+    for (std::size_t i = 0; i < hull->points.size(); ++i) {
+        polygon.vertices.push_back(static_cast<std::uint32_t>(i));
+    }
+
+    pcl::CropHull<pcl::PointXYZ> crop_hull;
+    crop_hull.setInputCloud(input);
+    crop_hull.setHullCloud(hull);
+    crop_hull.setHullIndices(std::vector<pcl::Vertices>{polygon});
+    crop_hull.setDim(2);
+    crop_hull.setCropOutside(!negative);
+    crop_hull.filter(*filteredCloud());
+    LOGI("CropHull2D filtered points: input=%zu hull=%zu output=%zu negative=%d",
+         input->points.size(), hull->points.size(), filteredCloud()->points.size(), negative ? 1 : 0);
 }
 
 void filterExtractIndices(const std::vector<int>& indices, bool negative)
