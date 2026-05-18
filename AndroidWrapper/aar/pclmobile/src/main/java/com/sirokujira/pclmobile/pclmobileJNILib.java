@@ -1435,6 +1435,16 @@ public final class pclmobileJNILib {
     }
 
     /**
+     * Samples the active cloud with PCL SamplingSurfaceNormal.
+     *
+     * <p>The wrapper converts active XYZ points to {@code PointNormal} and returns sampled points with
+     * normals and curvature.</p>
+     *
+     * @return {@code x, y, z, normal_x, normal_y, normal_z, curvature} tuples
+     */
+    public static native float[] sampleSurfaceNormals(int sample, int seed, double ratio);
+
+    /**
      * Samples the active cloud with PCL CovarianceSampling.
      */
     public static native void filterCovarianceSampling(int samples, int normalKSearch);

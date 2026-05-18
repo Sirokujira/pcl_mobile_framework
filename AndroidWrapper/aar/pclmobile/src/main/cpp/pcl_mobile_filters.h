@@ -29,6 +29,7 @@ void filterMedian(int window_size, double max_allowed_movement);
 void filterRandomSample(int sample, int seed);
 void filterFarthestPointSampling(int sample, int seed);
 void filterNormalSpaceSampling(int sample, int seed, int bins_x, int bins_y, int bins_z, int normal_k_search);
+std::vector<float> sampleSurfaceNormals(int sample, int seed, double ratio);
 void filterCovarianceSampling(int samples, int normal_k_search);
 std::vector<float> computeCovarianceSamplingConditionNumber(int samples, int normal_k_search);
 void filterFastBilateral(double sigma_s, double sigma_r);

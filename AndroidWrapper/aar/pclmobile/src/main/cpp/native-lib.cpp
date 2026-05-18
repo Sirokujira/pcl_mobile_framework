@@ -1639,6 +1639,19 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterNorma
     pclmobile::filterNormalSpaceSampling(sample, seed, binsX, binsY, binsZ, normalKSearch);
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_sampleSurfaceNormals(
+        JNIEnv* env,
+        jclass clazz,
+        jint sample,
+        jint seed,
+        jdouble ratio)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::sampleSurfaceNormals(sample, seed, ratio));
+}
+
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterCovarianceSampling(
         JNIEnv* env, jclass clazz, jint samples, jint normalKSearch)
 {
