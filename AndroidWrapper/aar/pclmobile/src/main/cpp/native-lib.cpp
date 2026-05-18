@@ -686,6 +686,35 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
             env, pclmobile::computeSHOTFeatures(normalKSearch, featureRadius));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeSHOTFeaturesOMP(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jdouble featureRadius,
+        jint numberOfThreads)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeSHOTFeaturesOMP(normalKSearch, featureRadius, numberOfThreads));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeSHOTLocalReferenceFrames(
+        JNIEnv* env,
+        jclass clazz,
+        jdouble radiusSearch,
+        jboolean useOmp,
+        jint numberOfThreads)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeSHOTLocalReferenceFrames(
+                    radiusSearch,
+                    useOmp == JNI_TRUE,
+                    numberOfThreads));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeBoundaryPoints(
         JNIEnv* env,
         jclass clazz,
@@ -1494,6 +1523,10 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(
                   pclmobile::computePrincipalCurvatures(16, 16).size(), 5);
     logTupleCount("feature1", "SHOTEstimation",
                   pclmobile::computeSHOTFeatures(16, 0.18).size(), 352);
+    logTupleCount("feature1", "SHOTEstimationOMP",
+                  pclmobile::computeSHOTFeaturesOMP(16, 0.18, 0).size(), 352);
+    logTupleCount("feature1", "SHOTLocalReferenceFrameEstimation",
+                  pclmobile::computeSHOTLocalReferenceFrames(0.18, true, 0).size(), 9);
     logTupleCount("feature1", "BoundaryEstimation",
                   pclmobile::computeBoundaryPoints(16, 0.18, 90.0).size(), 4);
     logTupleCount("feature1", "DifferenceOfNormalsEstimation",

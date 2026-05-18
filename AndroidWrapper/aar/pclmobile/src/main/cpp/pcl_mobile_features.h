@@ -78,6 +78,8 @@ std::vector<jfloat> computeRSDFeatures(
         int subdivisions);
 std::vector<jfloat> computePrincipalCurvatures(int normal_k_search, int curvature_k_search);
 std::vector<jfloat> computeSHOTFeatures(int normal_k_search, double feature_radius);
+std::vector<jfloat> computeSHOTFeaturesOMP(int normal_k_search, double feature_radius, int number_of_threads);
+std::vector<jfloat> computeSHOTLocalReferenceFrames(double radius_search, bool use_omp, int number_of_threads);
 std::vector<jfloat> computeBoundaryPoints(
         int normal_k_search,
         double radius_search,
