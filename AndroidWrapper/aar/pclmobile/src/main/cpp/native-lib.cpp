@@ -541,6 +541,22 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
                     numberOfThreads));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeRIFTFeatures(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jdouble gradientRadius,
+        jdouble featureRadius)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeRIFTFeatures(
+                    normalKSearch,
+                    gradientRadius,
+                    featureRadius));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeShapeContext3DFeatures(
         JNIEnv* env,
         jclass clazz,
@@ -1651,6 +1667,8 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(
                   pclmobile::computeIntensitySpinFeatures(0.18, 1.0).size(), 20);
     logTupleCount("feature1", "IntensityGradientEstimation",
                   pclmobile::computeIntensityGradientFeatures(16, 0.18, 0).size(), 3);
+    logTupleCount("feature1", "RIFTEstimation",
+                  pclmobile::computeRIFTFeatures(16, 0.18, 0.24).size(), 32);
     logTupleCount("feature1", "ShapeContext3DEstimation",
                   pclmobile::computeShapeContext3DFeatures(16, 0.18, 0.02, 0.04, false).size(), 1980);
     logTupleCount("feature1", "UniqueShapeContext",

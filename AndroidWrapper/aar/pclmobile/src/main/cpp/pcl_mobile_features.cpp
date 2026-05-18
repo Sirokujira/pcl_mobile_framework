@@ -26,6 +26,8 @@
 #include <pcl/features/pfh.h>
 #include <pcl/features/ppf.h>
 #include <pcl/features/principal_curvatures.h>
+#include <pcl/features/rift.h>
+#include <pcl/features/impl/rift.hpp>
 #include <pcl/features/rsd.h>
 #include <pcl/features/shot.h>
 #include <pcl/features/shot_lrf.h>
@@ -510,6 +512,49 @@ std::vector<jfloat> computeIntensityGradientFeatures(
     }
     LOGI("IntensityGradientEstimation computed descriptors: input=%zu gradients=%zu normal_k=%d radius=%.3f",
          input->points.size(), gradients->points.size(), normal_k_search, radius_search);
+    return values;
+}
+
+std::vector<jfloat> computeRIFTFeatures(
+        int normal_k_search,
+        double gradient_radius,
+        double feature_radius)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || gradient_radius <= 0.0 || feature_radius <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZI>::Ptr intensity_input = makeIntensityCloud(input);
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::IntensityGradient>::Ptr gradients(new pcl::PointCloud<pcl::IntensityGradient>);
+
+    pcl::IntensityGradientEstimation<pcl::PointXYZI, pcl::Normal, pcl::IntensityGradient> gradient_estimation;
+    gradient_estimation.setInputCloud(intensity_input);
+    gradient_estimation.setInputNormals(normals);
+    gradient_estimation.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZI>::Ptr(new pcl::search::KdTree<pcl::PointXYZI>));
+    gradient_estimation.setRadiusSearch(gradient_radius);
+    gradient_estimation.compute(*gradients);
+    if (gradients->points.size() != intensity_input->points.size()) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Histogram<32>>::Ptr descriptors(new pcl::PointCloud<pcl::Histogram<32>>);
+    pcl::RIFTEstimation<pcl::PointXYZI, pcl::IntensityGradient, pcl::Histogram<32>> rift;
+    rift.setInputCloud(intensity_input);
+    rift.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZI>::Ptr(new pcl::search::KdTree<pcl::PointXYZI>));
+    rift.setInputGradient(gradients);
+    rift.setSearchSurface(intensity_input);
+    rift.setRadiusSearch(feature_radius);
+    rift.setNrDistanceBins(4);
+    rift.setNrGradientBins(8);
+    rift.compute(*descriptors);
+
+    std::vector<jfloat> values = packHistogramDescriptors<pcl::Histogram<32>, 32>(*descriptors);
+    LOGI("RIFTEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d gradient_radius=%.3f feature_radius=%.3f",
+         input->points.size(), descriptors->points.size(), normal_k_search, gradient_radius, feature_radius);
     return values;
 }
 

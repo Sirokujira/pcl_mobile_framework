@@ -397,6 +397,19 @@ public final class pclmobileJNILib {
             int numberOfThreads);
 
     /**
+     * Computes RIFT descriptors for the active cloud.
+     *
+     * <p>The wrapper derives an intensity field from XYZ distance and uses the fixed
+     * PCL {@code Histogram<32>} layout: 4 distance bins by 8 gradient bins.</p>
+     *
+     * @return 32 histogram values per descriptor
+     */
+    public static native float[] computeRIFTFeatures(
+            int normalKSearch,
+            double gradientRadius,
+            double featureRadius);
+
+    /**
      * Computes 3D shape context descriptors for the active cloud.
      *
      * @return 1980 descriptor values per input point
