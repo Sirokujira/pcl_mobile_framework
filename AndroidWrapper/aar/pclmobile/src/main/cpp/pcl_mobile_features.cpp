@@ -1,8 +1,10 @@
 #include "pcl_mobile_features.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <cmath>
 
+#include <pcl/features/3dsc.h>
 #include <pcl/features/boundary.h>
 #include <pcl/features/crh.h>
 #include <pcl/features/cvfh.h>
@@ -11,6 +13,7 @@
 #include <pcl/features/fpfh.h>
 #include <pcl/features/gasd.h>
 #include <pcl/features/grsd.h>
+#include <pcl/features/intensity_spin.h>
 #include <pcl/features/moment_invariants.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/our_cvfh.h>
@@ -19,6 +22,7 @@
 #include <pcl/features/rsd.h>
 #include <pcl/features/shot.h>
 #include <pcl/features/spin_image.h>
+#include <pcl/features/usc.h>
 #include <pcl/features/vfh.h>
 #include <pcl/common/centroid.h>
 #include <pcl/search/kdtree.h>
@@ -77,6 +81,26 @@ std::vector<jfloat> packHistogramDescriptors(const pcl::PointCloud<DescriptorT>&
         }
     }
     return values;
+}
+
+pcl::PointCloud<pcl::PointXYZI>::Ptr makeIntensityCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& input)
+{
+    pcl::PointCloud<pcl::PointXYZI>::Ptr output(new pcl::PointCloud<pcl::PointXYZI>);
+    output->points.reserve(input->points.size());
+    for (const auto& point : input->points) {
+        pcl::PointXYZI converted;
+        converted.x = point.x;
+        converted.y = point.y;
+        converted.z = point.z;
+        converted.intensity = std::sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
+        output->points.push_back(converted);
+    }
+    output->width = input->width * input->height == input->points.size()
+            ? input->width
+            : static_cast<std::uint32_t>(output->points.size());
+    output->height = input->width * input->height == input->points.size() ? input->height : 1;
+    output->is_dense = input->is_dense;
+    return output;
 }
 
 } // namespace
@@ -353,6 +377,111 @@ std::vector<jfloat> computeOURCVFHFeatures(
     std::vector<jfloat> values = packHistogramDescriptors<pcl::VFHSignature308, 308>(*descriptors);
     LOGI("OURCVFHEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d tolerance=%.3f minPoints=%d",
          input->points.size(), descriptors->points.size(), normal_k_search, cluster_tolerance, min_points);
+    return values;
+}
+
+std::vector<jfloat> computeIntensitySpinFeatures(double radius_search, double smoothing_bandwidth)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || radius_search <= 0.0 || smoothing_bandwidth < 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZI>::Ptr intensity_input = makeIntensityCloud(input);
+    pcl::PointCloud<pcl::Histogram<20>>::Ptr descriptors(new pcl::PointCloud<pcl::Histogram<20>>);
+
+    pcl::IntensitySpinEstimation<pcl::PointXYZI, pcl::Histogram<20>> intensity_spin;
+    intensity_spin.setInputCloud(intensity_input);
+    intensity_spin.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZI>::Ptr(new pcl::search::KdTree<pcl::PointXYZI>));
+    intensity_spin.setRadiusSearch(radius_search);
+    intensity_spin.setNrDistanceBins(4);
+    intensity_spin.setNrIntensityBins(5);
+    intensity_spin.setSmoothingBandwith(static_cast<float>(smoothing_bandwidth));
+    intensity_spin.compute(*descriptors);
+
+    std::vector<jfloat> values = packHistogramDescriptors<pcl::Histogram<20>, 20>(*descriptors);
+    LOGI("IntensitySpinEstimation computed descriptors: input=%zu descriptors=%zu radius=%.3f sigma=%.3f",
+         input->points.size(), descriptors->points.size(), radius_search, smoothing_bandwidth);
+    return values;
+}
+
+std::vector<jfloat> computeShapeContext3DFeatures(
+        int normal_k_search,
+        double search_radius,
+        double min_radius,
+        double point_density_radius,
+        bool random)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || search_radius <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::ShapeContext1980>::Ptr descriptors(new pcl::PointCloud<pcl::ShapeContext1980>);
+
+    pcl::ShapeContext3DEstimation<pcl::PointXYZ, pcl::Normal, pcl::ShapeContext1980> shape_context(random);
+    shape_context.setInputCloud(input);
+    shape_context.setInputNormals(normals);
+    shape_context.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    shape_context.setRadiusSearch(search_radius);
+    if (min_radius > 0.0) {
+        shape_context.setMinimalRadius(min_radius);
+    }
+    if (point_density_radius > 0.0) {
+        shape_context.setPointDensityRadius(point_density_radius);
+    }
+    shape_context.compute(*descriptors);
+
+    std::vector<jfloat> values;
+    values.reserve(descriptors->points.size() * 1980);
+    for (const auto& descriptor : descriptors->points) {
+        for (float value : descriptor.descriptor) {
+            values.push_back(value);
+        }
+    }
+    LOGI("ShapeContext3DEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d radius=%.3f",
+         input->points.size(), descriptors->points.size(), normal_k_search, search_radius);
+    return values;
+}
+
+std::vector<jfloat> computeUniqueShapeContextFeatures(
+        double search_radius,
+        double min_radius,
+        double point_density_radius,
+        double local_radius)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || search_radius <= 0.0 || local_radius <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::UniqueShapeContext1960>::Ptr descriptors(new pcl::PointCloud<pcl::UniqueShapeContext1960>);
+    pcl::UniqueShapeContext<pcl::PointXYZ, pcl::UniqueShapeContext1960> usc;
+    usc.setInputCloud(input);
+    usc.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    usc.setRadiusSearch(search_radius);
+    usc.setLocalRadius(local_radius);
+    if (min_radius > 0.0) {
+        usc.setMinimalRadius(min_radius);
+    }
+    if (point_density_radius > 0.0) {
+        usc.setPointDensityRadius(point_density_radius);
+    }
+    usc.compute(*descriptors);
+
+    std::vector<jfloat> values;
+    values.reserve(descriptors->points.size() * 1960);
+    for (const auto& descriptor : descriptors->points) {
+        for (float value : descriptor.descriptor) {
+            values.push_back(value);
+        }
+    }
+    LOGI("UniqueShapeContext computed descriptors: input=%zu descriptors=%zu radius=%.3f local=%.3f",
+         input->points.size(), descriptors->points.size(), search_radius, local_radius);
     return values;
 }
 
