@@ -1352,6 +1352,14 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_smoo
     return pclmobile::makePointArray(env, pclmobile::smoothMovingLeastSquares(searchRadius));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_smoothSurfelSmoothing(
+        JNIEnv* env, jclass clazz, jint normalKSearch, jdouble scale)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env, pclmobile::smoothSurfelSmoothing(normalKSearch, scale));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_reconstructGreedyProjectionTriangles(
         JNIEnv* env,
         jclass clazz,
@@ -2128,6 +2136,7 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_surface1(
     logPointCount("surface1", "ConvexHull", pclmobile::computeConvexHull()->points.size() * 3);
     logPointCount("surface1", "ConcaveHull", pclmobile::computeConcaveHull(0.18)->points.size() * 3);
     logPointCount("surface1", "MovingLeastSquares", pclmobile::smoothMovingLeastSquares(0.12)->points.size() * 3);
+    logTupleCount("surface1", "SurfelSmoothing", pclmobile::smoothSurfelSmoothing(16, 0.03).size(), 7);
     logTupleCount("surface1", "GreedyProjectionTriangulation",
                   pclmobile::reconstructGreedyProjectionTriangles(
                           16, 0.18, 2.5, 100, 0.78539816339, 0.1745329252, 2.09439510239, false).size(), 3);

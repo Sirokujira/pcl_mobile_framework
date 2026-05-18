@@ -1081,6 +1081,13 @@ public final class pclmobileJNILib {
     public static native float[] smoothMovingLeastSquares(double searchRadius);
 
     /**
+     * Smooths the active cloud with PCL SurfelSmoothing.
+     *
+     * @return {@code x, y, z, normal_x, normal_y, normal_z, curvature} tuples
+     */
+    public static native float[] smoothSurfelSmoothing(int normalKSearch, double scale);
+
+    /**
      * Reconstructs triangle vertex indices with PCL GreedyProjectionTriangulation.
      *
      * <p>The wrapper estimates normals from the active cloud and converts points to {@code PointNormal}.
