@@ -12,6 +12,7 @@
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/farthest_point_sampling.h>
 #include <pcl/filters/fast_bilateral.h>
+#include <pcl/filters/fast_bilateral_omp.h>
 #include <pcl/filters/filter.h>
 #include <pcl/filters/frustum_culling.h>
 #include <pcl/filters/grid_minimum.h>
@@ -21,6 +22,7 @@
 #include <pcl/filters/morphological_filter.h>
 #include <pcl/filters/normal_space.h>
 #include <pcl/filters/passthrough.h>
+#include <pcl/filters/plane_clipper3D.h>
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/random_sample.h>
 #include <pcl/filters/sampling_surface_normal.h>
@@ -32,6 +34,7 @@
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <pcl/filters/impl/covariance_sampling.hpp>
 #include <pcl/filters/impl/fast_bilateral.hpp>
+#include <pcl/filters/impl/fast_bilateral_omp.hpp>
 #include <pcl/features/normal_3d.h>
 #include <pcl/Vertices.h>
 #include <pcl/search/kdtree.h>
@@ -478,6 +481,23 @@ void filterFastBilateral(double sigma_s, double sigma_r)
          input->points.size(), filteredCloud()->points.size(), input->width, input->height, sigma_s, sigma_r);
 }
 
+void filterFastBilateralOMP(double sigma_s, double sigma_r, int number_of_threads)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || input->height <= 1 || sigma_s <= 0.0 || sigma_r <= 0.0) {
+        clearFilteredCloud();
+        return;
+    }
+
+    pcl::FastBilateralFilterOMP<pcl::PointXYZ> filter(static_cast<unsigned int>(std::max(number_of_threads, 0)));
+    filter.setInputCloud(input);
+    filter.setSigmaS(static_cast<float>(sigma_s));
+    filter.setSigmaR(static_cast<float>(sigma_r));
+    filter.filter(*filteredCloud());
+    LOGI("FastBilateralFilterOMP filtered points: input=%zu output=%zu width=%u height=%u sigmaS=%.3f sigmaR=%.3f threads=%d",
+         input->points.size(), filteredCloud()->points.size(), input->width, input->height, sigma_s, sigma_r, number_of_threads);
+}
+
 void filterConvolution3DGaussian(double sigma, double radius, double sigma_coefficient, int number_of_threads)
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
@@ -506,6 +526,42 @@ void filterConvolution3DGaussian(double sigma, double radius, double sigma_coeff
     convolution.convolve(*filteredCloud());
     LOGI("Convolution3D Gaussian filtered points: input=%zu output=%zu sigma=%.3f radius=%.3f threads=%d",
          input->points.size(), filteredCloud()->points.size(), sigma, radius, number_of_threads);
+}
+
+void filterPlaneClipper(double a, double b, double c, double d, bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()) {
+        clearFilteredCloud();
+        return;
+    }
+
+    pcl::PlaneClipper3D<pcl::PointXYZ> clipper(
+            Eigen::Vector4f(
+                    static_cast<float>(a),
+                    static_cast<float>(b),
+                    static_cast<float>(c),
+                    static_cast<float>(d)));
+    pcl::Indices clipped;
+    clipper.clipPointCloud3D(*input, clipped);
+
+    clearFilteredCloud();
+    std::vector<bool> selected(input->points.size(), false);
+    for (int index : clipped) {
+        if (index >= 0 && static_cast<std::size_t>(index) < selected.size()) {
+            selected[static_cast<std::size_t>(index)] = true;
+        }
+    }
+    for (std::size_t i = 0; i < input->points.size(); ++i) {
+        if (selected[i] != negative) {
+            filteredCloud()->points.push_back(input->points[i]);
+        }
+    }
+    filteredCloud()->width = static_cast<std::uint32_t>(filteredCloud()->points.size());
+    filteredCloud()->height = 1;
+    filteredCloud()->is_dense = input->is_dense;
+    LOGI("PlaneClipper3D filtered points: input=%zu clipped=%zu output=%zu negative=%d",
+         input->points.size(), clipped.size(), filteredCloud()->points.size(), negative ? 1 : 0);
 }
 
 void removeNaNFromActiveCloud()
