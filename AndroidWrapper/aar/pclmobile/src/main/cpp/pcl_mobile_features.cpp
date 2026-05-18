@@ -26,6 +26,9 @@
 #include <pcl/features/principal_curvatures.h>
 #include <pcl/features/rsd.h>
 #include <pcl/features/shot.h>
+#include <pcl/features/shot_lrf.h>
+#include <pcl/features/shot_lrf_omp.h>
+#include <pcl/features/shot_omp.h>
 #include <pcl/features/spin_image.h>
 #include <pcl/features/usc.h>
 #include <pcl/features/vfh.h>
@@ -82,6 +85,18 @@ std::vector<jfloat> packHistogramDescriptors(const pcl::PointCloud<DescriptorT>&
     values.reserve(descriptors.points.size() * Size);
     for (const auto& descriptor : descriptors.points) {
         for (float value : descriptor.histogram) {
+            values.push_back(value);
+        }
+    }
+    return values;
+}
+
+std::vector<jfloat> packReferenceFrames(const pcl::PointCloud<pcl::ReferenceFrame>& frames)
+{
+    std::vector<jfloat> values;
+    values.reserve(frames.points.size() * 9);
+    for (const auto& frame : frames.points) {
+        for (float value : frame.rf) {
             values.push_back(value);
         }
     }
@@ -836,6 +851,71 @@ std::vector<jfloat> computeSHOTFeatures(int normal_k_search, double feature_radi
     }
     LOGI("SHOTEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d radius=%.3f",
          input->points.size(), descriptors->points.size(), normal_k_search, feature_radius);
+    return values;
+}
+
+std::vector<jfloat> computeSHOTFeaturesOMP(
+        int normal_k_search,
+        double feature_radius,
+        int number_of_threads)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || feature_radius <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::SHOT352>::Ptr descriptors(new pcl::PointCloud<pcl::SHOT352>);
+
+    pcl::SHOTEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::SHOT352, pcl::ReferenceFrame> shot(
+            static_cast<unsigned int>(std::max(number_of_threads, 0)));
+    shot.setInputCloud(input);
+    shot.setInputNormals(normals);
+    shot.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    shot.setRadiusSearch(feature_radius);
+    shot.compute(*descriptors);
+
+    std::vector<jfloat> values;
+    values.reserve(descriptors->points.size() * 352);
+    for (const auto& descriptor : descriptors->points) {
+        for (float value : descriptor.descriptor) {
+            values.push_back(value);
+        }
+    }
+    LOGI("SHOTEstimationOMP computed descriptors: input=%zu descriptors=%zu normal_k=%d radius=%.3f threads=%d",
+         input->points.size(), descriptors->points.size(), normal_k_search, feature_radius, number_of_threads);
+    return values;
+}
+
+std::vector<jfloat> computeSHOTLocalReferenceFrames(double radius_search, bool use_omp, int number_of_threads)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || radius_search <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::ReferenceFrame>::Ptr frames(new pcl::PointCloud<pcl::ReferenceFrame>);
+    if (use_omp) {
+        pcl::SHOTLocalReferenceFrameEstimationOMP<pcl::PointXYZ, pcl::ReferenceFrame> lrf;
+        lrf.setInputCloud(input);
+        lrf.setSearchMethod(
+                pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+        lrf.setRadiusSearch(radius_search);
+        lrf.setNumberOfThreads(static_cast<unsigned int>(std::max(number_of_threads, 0)));
+        lrf.compute(*frames);
+    } else {
+        pcl::SHOTLocalReferenceFrameEstimation<pcl::PointXYZ, pcl::ReferenceFrame> lrf;
+        lrf.setInputCloud(input);
+        lrf.setSearchMethod(
+                pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+        lrf.setRadiusSearch(radius_search);
+        lrf.compute(*frames);
+    }
+
+    std::vector<jfloat> values = packReferenceFrames(*frames);
+    LOGI("SHOTLocalReferenceFrameEstimation computed frames: input=%zu frames=%zu radius=%.3f omp=%d threads=%d",
+         input->points.size(), frames->points.size(), radius_search, use_omp ? 1 : 0, number_of_threads);
     return values;
 }
 

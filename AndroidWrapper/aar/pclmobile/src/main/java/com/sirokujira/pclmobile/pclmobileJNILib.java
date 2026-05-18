@@ -505,6 +505,26 @@ public final class pclmobileJNILib {
     public static native float[] computeSHOTFeatures(int normalKSearch, double featureRadius);
 
     /**
+     * Computes SHOT descriptors for the active cloud with PCL SHOTEstimationOMP.
+     *
+     * @return 352 histogram values per descriptor
+     */
+    public static native float[] computeSHOTFeaturesOMP(
+            int normalKSearch,
+            double featureRadius,
+            int numberOfThreads);
+
+    /**
+     * Computes SHOT local reference frames for the active cloud.
+     *
+     * @return 9 reference-frame matrix values per input point
+     */
+    public static native float[] computeSHOTLocalReferenceFrames(
+            double radiusSearch,
+            boolean useOmp,
+            int numberOfThreads);
+
+    /**
      * Computes PCL BoundaryEstimation flags for the active cloud.
      *
      * @return {@code x, y, z, boundary_flag} tuples
