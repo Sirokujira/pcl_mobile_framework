@@ -18,6 +18,8 @@
 #include <pcl/surface/gp3.h>
 #include <pcl/surface/marching_cubes_hoppe.h>
 #include <pcl/surface/impl/marching_cubes_hoppe.hpp>
+#include <pcl/surface/marching_cubes_rbf.h>
+#include <pcl/surface/impl/marching_cubes_rbf.hpp>
 #include <pcl/surface/mls.h>
 #include <pcl/surface/organized_fast_mesh.h>
 #include <pcl/surface/surfel_smoothing.h>
@@ -543,6 +545,70 @@ std::vector<jfloat> reconstructMarchingCubesHoppeMesh(
         }
     }
     LOGI("MarchingCubesHoppe reconstructed mesh: input=%zu vertices=%zu polygons=%zu resolution=%dx%dx%d",
+         point_normals->points.size(),
+         vertices.points.size(),
+         polygons.size(),
+         resolution_x,
+         resolution_y,
+         resolution_z);
+    return values;
+}
+
+std::vector<jfloat> reconstructMarchingCubesRBFMesh(
+        int normal_k_search,
+        int resolution_x,
+        int resolution_y,
+        int resolution_z,
+        double off_surface_displacement,
+        double percentage_extend_grid,
+        double iso_level)
+{
+    if (normal_k_search <= 0
+            || resolution_x <= 0
+            || resolution_y <= 0
+            || resolution_z <= 0
+            || off_surface_displacement <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointNormal>::Ptr point_normals = computePointNormals(normal_k_search);
+    if (point_normals->empty()) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointNormal> vertices;
+    std::vector<pcl::Vertices> polygons;
+    pcl::MarchingCubesRBF<pcl::PointNormal> marching_cubes(
+            static_cast<float>(off_surface_displacement),
+            static_cast<float>(std::max(percentage_extend_grid, 0.0)),
+            static_cast<float>(iso_level));
+    marching_cubes.setInputCloud(point_normals);
+    marching_cubes.setSearchMethod(
+            pcl::search::KdTree<pcl::PointNormal>::Ptr(new pcl::search::KdTree<pcl::PointNormal>));
+    marching_cubes.setGridResolution(resolution_x, resolution_y, resolution_z);
+    marching_cubes.reconstruct(vertices, polygons);
+
+    std::size_t value_count = 2 + vertices.points.size() * 3;
+    for (const auto& polygon : polygons) {
+        value_count += polygon.vertices.size() + 1;
+    }
+
+    std::vector<jfloat> values;
+    values.reserve(value_count);
+    values.push_back(static_cast<jfloat>(vertices.points.size()));
+    values.push_back(static_cast<jfloat>(polygons.size()));
+    for (const auto& vertex : vertices.points) {
+        values.push_back(vertex.x);
+        values.push_back(vertex.y);
+        values.push_back(vertex.z);
+    }
+    for (const auto& polygon : polygons) {
+        values.push_back(static_cast<jfloat>(polygon.vertices.size()));
+        for (std::uint32_t vertex : polygon.vertices) {
+            values.push_back(static_cast<jfloat>(vertex));
+        }
+    }
+    LOGI("MarchingCubesRBF reconstructed mesh: input=%zu vertices=%zu polygons=%zu resolution=%dx%dx%d",
          point_normals->points.size(),
          vertices.points.size(),
          polygons.size(),

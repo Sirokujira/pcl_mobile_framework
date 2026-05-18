@@ -45,6 +45,14 @@ std::vector<jfloat> reconstructMarchingCubesHoppeMesh(
         double percentage_extend_grid,
         double iso_level,
         double distance_ignore);
+std::vector<jfloat> reconstructMarchingCubesRBFMesh(
+        int normal_k_search,
+        int resolution_x,
+        int resolution_y,
+        int resolution_z,
+        double off_surface_displacement,
+        double percentage_extend_grid,
+        double iso_level);
 std::vector<jfloat> reconstructOrganizedFastMeshPolygons(
         int triangulation_type,
         int triangle_pixel_size,
