@@ -1385,6 +1385,13 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
                     maxKeypoints));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeUniformSamplingKeypoints(
+        JNIEnv* env, jclass clazz, jdouble radius)
+{
+    (void) clazz;
+    return pclmobile::makePointArray(env, pclmobile::computeUniformSamplingKeypoints(radius));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeRangeImageFromActiveCloud(
         JNIEnv* env,
         jclass clazz,
@@ -2145,6 +2152,22 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterCropB
     pclmobile::filterCropBox(minX, minY, minZ, maxX, maxY, maxZ);
 }
 
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterBoxClipper(
+        JNIEnv* env,
+        jclass clazz,
+        jdouble minX,
+        jdouble minY,
+        jdouble minZ,
+        jdouble maxX,
+        jdouble maxY,
+        jdouble maxZ,
+        jboolean negative)
+{
+    (void) env;
+    (void) clazz;
+    pclmobile::filterBoxClipper(minX, minY, minZ, maxX, maxY, maxZ, negative == JNI_TRUE);
+}
+
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterCropBoxTransformed(
         JNIEnv* env,
         jclass clazz,
@@ -2303,6 +2326,8 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_keypoint1(
                   pclmobile::computeBRISK2DKeypoints(60, 4, true).size(), 4);
     logTupleCount("keypoint1", "AgastKeypoint2D",
                   pclmobile::computeAGAST2DKeypoints(30.0, 255.0, true, 0).size(), 2);
+    logPointCount("keypoint1", "UniformSampling",
+                  pclmobile::computeUniformSamplingKeypoints(0.05)->points.size() * 3);
 }
 
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_octree1(

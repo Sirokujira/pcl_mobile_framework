@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <pcl/filters/approximate_voxel_grid.h>
+#include <pcl/filters/box_clipper3D.h>
 #include <pcl/filters/conditional_removal.h>
 #include <pcl/filters/convolution_3d.h>
 #include <pcl/filters/covariance_sampling.h>
@@ -634,6 +635,53 @@ void filterCropBox(double min_x, double min_y, double min_z, double max_x, doubl
     crop_box.filter(*filteredCloud());
     LOGI("CropBox filtered points: input=%zu output=%zu min=(%.3f, %.3f, %.3f) max=(%.3f, %.3f, %.3f)",
          cloud()->points.size(), filteredCloud()->points.size(), min_x, min_y, min_z, max_x, max_y, max_z);
+}
+
+void filterBoxClipper(
+        double min_x,
+        double min_y,
+        double min_z,
+        double max_x,
+        double max_y,
+        double max_z,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || min_x > max_x || min_y > max_y || min_z > max_z) {
+        clearFilteredCloud();
+        return;
+    }
+
+    const Eigen::Vector3f center(
+            static_cast<float>((min_x + max_x) * 0.5),
+            static_cast<float>((min_y + max_y) * 0.5),
+            static_cast<float>((min_z + max_z) * 0.5));
+    const Eigen::Vector3f size(
+            static_cast<float>(max_x - min_x),
+            static_cast<float>(max_y - min_y),
+            static_cast<float>(max_z - min_z));
+    pcl::BoxClipper3D<pcl::PointXYZ> clipper(Eigen::Vector3f::Zero(), center, size);
+
+    pcl::Indices clipped;
+    clipper.clipPointCloud3D(*input, clipped);
+
+    clearFilteredCloud();
+    std::vector<bool> selected(input->points.size(), false);
+    for (int index : clipped) {
+        if (index >= 0 && static_cast<std::size_t>(index) < selected.size()) {
+            selected[static_cast<std::size_t>(index)] = true;
+        }
+    }
+    for (std::size_t i = 0; i < input->points.size(); ++i) {
+        if (selected[i] != negative) {
+            filteredCloud()->points.push_back(input->points[i]);
+        }
+    }
+    filteredCloud()->width = static_cast<std::uint32_t>(filteredCloud()->points.size());
+    filteredCloud()->height = 1;
+    filteredCloud()->is_dense = input->is_dense;
+    LOGI("BoxClipper3D filtered points: input=%zu clipped=%zu output=%zu negative=%d",
+         input->points.size(), clipped.size(), filteredCloud()->points.size(), negative ? 1 : 0);
 }
 
 void filterFrustumCulling(

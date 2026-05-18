@@ -11,6 +11,7 @@
 #include <pcl/keypoints/susan.h>
 #include <pcl/keypoints/trajkovic_2d.h>
 #include <pcl/keypoints/trajkovic_3d.h>
+#include <pcl/filters/uniform_sampling.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/search/kdtree.h>
 
@@ -390,6 +391,24 @@ std::vector<jfloat> computeAGAST2DKeypoints(
     LOGI("AgastKeypoint2D computed keypoints: input=%zu keypoints=%zu threshold=%.3f nonMax=%d max=%d",
          input->points.size(), keypoints->points.size(), threshold, non_max_suppression ? 1 : 0, max_keypoints);
     return values;
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr computeUniformSamplingKeypoints(double radius)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints(new pcl::PointCloud<pcl::PointXYZ>);
+    if (input->empty() || radius <= 0.0) {
+        return keypoints;
+    }
+
+    pcl::UniformSampling<pcl::PointXYZ> uniform_sampling;
+    uniform_sampling.setInputCloud(input);
+    uniform_sampling.setRadiusSearch(radius);
+    uniform_sampling.filter(*keypoints);
+
+    LOGI("UniformSampling keypoints computed: input=%zu keypoints=%zu radius=%.3f",
+         input->points.size(), keypoints->points.size(), radius);
+    return keypoints;
 }
 
 } // namespace pclmobile

@@ -41,6 +41,14 @@ void filterStatisticalOutlierRemoval(int mean_k, double stddev_mul_thresh);
 void filterRadiusOutlierRemoval(double radius, int min_neighbors);
 void filterShadowPoints(int normal_k_search, double threshold);
 void filterCropBox(double min_x, double min_y, double min_z, double max_x, double max_y, double max_z);
+void filterBoxClipper(
+        double min_x,
+        double min_y,
+        double min_z,
+        double max_x,
+        double max_y,
+        double max_z,
+        bool negative);
 void filterCropBoxTransformed(
         double min_x,
         double min_y,
