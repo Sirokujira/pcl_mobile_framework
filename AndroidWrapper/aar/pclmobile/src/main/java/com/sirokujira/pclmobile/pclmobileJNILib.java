@@ -537,6 +537,19 @@ public final class pclmobileJNILib {
             double marginThreshold);
 
     /**
+     * Computes FLARE local reference frames for the active cloud.
+     *
+     * @return 9 reference-frame matrix values per input point
+     */
+    public static native float[] computeFLARELocalReferenceFrames(
+            int normalKSearch,
+            double radiusSearch,
+            double tangentRadius,
+            double marginThreshold,
+            int minNeighborsForNormalAxis,
+            int minNeighborsForTangentAxis);
+
+    /**
      * Computes PCL BoundaryEstimation flags for the active cloud.
      *
      * @return {@code x, y, z, boundary_flag} tuples

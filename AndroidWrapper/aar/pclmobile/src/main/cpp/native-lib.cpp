@@ -735,6 +735,28 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
                     marginThreshold));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeFLARELocalReferenceFrames(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jdouble radiusSearch,
+        jdouble tangentRadius,
+        jdouble marginThreshold,
+        jint minNeighborsForNormalAxis,
+        jint minNeighborsForTangentAxis)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeFLARELocalReferenceFrames(
+                    normalKSearch,
+                    radiusSearch,
+                    tangentRadius,
+                    marginThreshold,
+                    minNeighborsForNormalAxis,
+                    minNeighborsForTangentAxis));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeBoundaryPoints(
         JNIEnv* env,
         jclass clazz,
@@ -1579,6 +1601,8 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(
                   pclmobile::computeSHOTLocalReferenceFrames(0.18, true, 0).size(), 9);
     logTupleCount("feature1", "BOARDLocalReferenceFrameEstimation",
                   pclmobile::computeBOARDLocalReferenceFrames(16, 0.18, 0.0, true, 0.85).size(), 9);
+    logTupleCount("feature1", "FLARELocalReferenceFrameEstimation",
+                  pclmobile::computeFLARELocalReferenceFrames(16, 0.18, 0.0, 0.85, 5, 5).size(), 9);
     logTupleCount("feature1", "BoundaryEstimation",
                   pclmobile::computeBoundaryPoints(16, 0.18, 90.0).size(), 4);
     logTupleCount("feature1", "DifferenceOfNormalsEstimation",

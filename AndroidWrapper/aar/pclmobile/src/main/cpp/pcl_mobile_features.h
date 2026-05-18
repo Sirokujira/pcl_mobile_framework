@@ -86,6 +86,13 @@ std::vector<jfloat> computeBOARDLocalReferenceFrames(
         double tangent_radius,
         bool find_holes,
         double margin_threshold);
+std::vector<jfloat> computeFLARELocalReferenceFrames(
+        int normal_k_search,
+        double radius_search,
+        double tangent_radius,
+        double margin_threshold,
+        int min_neighbors_for_normal_axis,
+        int min_neighbors_for_tangent_axis);
 std::vector<jfloat> computeBoundaryPoints(
         int normal_k_search,
         double radius_search,
