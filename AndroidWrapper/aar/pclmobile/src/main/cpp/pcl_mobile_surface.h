@@ -21,6 +21,15 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr computeConvexHull();
 pcl::PointCloud<pcl::PointXYZ>::Ptr computeConcaveHull(double alpha);
 pcl::PointCloud<pcl::PointXYZ>::Ptr projectInliersToPlane(double distance_threshold, int max_iterations);
 pcl::PointCloud<pcl::PointXYZ>::Ptr smoothMovingLeastSquares(double search_radius);
+std::vector<jfloat> reconstructGreedyProjectionTriangles(
+        int normal_k_search,
+        double search_radius,
+        double mu,
+        int maximum_nearest_neighbors,
+        double maximum_surface_angle,
+        double minimum_angle,
+        double maximum_angle,
+        bool normal_consistency);
 
 } // namespace pclmobile
 
