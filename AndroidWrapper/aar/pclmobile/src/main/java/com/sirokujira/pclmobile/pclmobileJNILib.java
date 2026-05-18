@@ -391,6 +391,21 @@ public final class pclmobileJNILib {
             double localRadius);
 
     /**
+     * Computes Normal Based Signature descriptors for the active cloud.
+     *
+     * <p>The wrapper returns {@code pcl::NormalBasedSignature12} values, so N' and M' are fixed to
+     * {@code 4} and {@code 3} while {@code n} and {@code m} control the source transform grid.</p>
+     *
+     * @return 12 descriptor values per input point
+     */
+    public static native float[] computeNormalBasedSignatureFeatures(
+            int normalKSearch,
+            double searchRadius,
+            double scale,
+            int n,
+            int m);
+
+    /**
      * Computes Spin Image descriptors for the active cloud.
      *
      * <p>The wrapper uses {@code pcl::Histogram<153>}; image widths larger than PCL can pack into

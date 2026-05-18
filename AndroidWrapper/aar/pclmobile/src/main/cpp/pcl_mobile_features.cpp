@@ -16,6 +16,7 @@
 #include <pcl/features/intensity_spin.h>
 #include <pcl/features/moment_invariants.h>
 #include <pcl/features/normal_3d.h>
+#include <pcl/features/normal_based_signature.h>
 #include <pcl/features/our_cvfh.h>
 #include <pcl/features/pfh.h>
 #include <pcl/features/principal_curvatures.h>
@@ -482,6 +483,46 @@ std::vector<jfloat> computeUniqueShapeContextFeatures(
     }
     LOGI("UniqueShapeContext computed descriptors: input=%zu descriptors=%zu radius=%.3f local=%.3f",
          input->points.size(), descriptors->points.size(), search_radius, local_radius);
+    return values;
+}
+
+std::vector<jfloat> computeNormalBasedSignatureFeatures(
+        int normal_k_search,
+        double search_radius,
+        double scale,
+        int n,
+        int m)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || search_radius <= 0.0 || scale <= 0.0 || n <= 0 || m <= 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::NormalBasedSignature12>::Ptr descriptors(new pcl::PointCloud<pcl::NormalBasedSignature12>);
+
+    pcl::NormalBasedSignatureEstimation<pcl::PointXYZ, pcl::Normal, pcl::NormalBasedSignature12> estimation;
+    estimation.setInputCloud(input);
+    estimation.setInputNormals(normals);
+    estimation.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    estimation.setRadiusSearch(search_radius);
+    estimation.setScale(static_cast<float>(scale));
+    estimation.setN(static_cast<std::size_t>(n));
+    estimation.setM(static_cast<std::size_t>(m));
+    estimation.setNPrime(4);
+    estimation.setMPrime(3);
+    estimation.compute(*descriptors);
+
+    std::vector<jfloat> values;
+    values.reserve(descriptors->points.size() * 12);
+    for (const auto& descriptor : descriptors->points) {
+        for (float value : descriptor.values) {
+            values.push_back(value);
+        }
+    }
+    LOGI("NormalBasedSignatureEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d radius=%.3f scale=%.3f",
+         input->points.size(), descriptors->points.size(), normal_k_search, search_radius, scale);
     return values;
 }
 

@@ -46,6 +46,12 @@ std::vector<jfloat> computeUniqueShapeContextFeatures(
         double min_radius,
         double point_density_radius,
         double local_radius);
+std::vector<jfloat> computeNormalBasedSignatureFeatures(
+        int normal_k_search,
+        double search_radius,
+        double scale,
+        int n,
+        int m);
 std::vector<jfloat> computeSpinImageFeatures(
         int normal_k_search,
         double feature_radius,
