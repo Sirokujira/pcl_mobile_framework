@@ -16,6 +16,8 @@
 #include <pcl/surface/gp3.h>
 #include <pcl/surface/mls.h>
 #include <pcl/surface/organized_fast_mesh.h>
+#include <pcl/surface/surfel_smoothing.h>
+#include <pcl/surface/impl/surfel_smoothing.hpp>
 
 #include "pcl_mobile_arrays.h"
 #include "pcl_mobile_context.h"
@@ -42,21 +44,29 @@ void appendVector3(std::vector<jfloat>& values, const Eigen::Vector3f& vector)
     values.push_back(vector.z());
 }
 
-pcl::PointCloud<pcl::PointNormal>::Ptr computePointNormals(int k_search)
+pcl::PointCloud<pcl::Normal>::Ptr computeSurfaceNormals(
+        const pcl::PointCloud<pcl::PointXYZ>::Ptr& input,
+        int k_search)
 {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
-    pcl::PointCloud<pcl::PointNormal>::Ptr point_normals(new pcl::PointCloud<pcl::PointNormal>);
+    pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
     if (input->empty() || k_search <= 0) {
-        return point_normals;
+        return normals;
     }
 
-    pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
     pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normal_estimation;
     normal_estimation.setInputCloud(input);
     normal_estimation.setSearchMethod(
             pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
     normal_estimation.setKSearch(k_search);
     normal_estimation.compute(*normals);
+    return normals;
+}
+
+pcl::PointCloud<pcl::PointNormal>::Ptr computePointNormals(int k_search)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointNormal>::Ptr point_normals(new pcl::PointCloud<pcl::PointNormal>);
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeSurfaceNormals(input, k_search);
     if (normals->points.size() != input->points.size()) {
         return point_normals;
     }
@@ -332,6 +342,47 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr smoothMovingLeastSquares(double search_radiu
     LOGI("MovingLeastSquares smoothed points: input=%zu output=%zu radius=%.3f",
          input->points.size(), smoothed->points.size(), search_radius);
     return smoothed;
+}
+
+std::vector<jfloat> smoothSurfelSmoothing(int normal_k_search, double scale)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || scale <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeSurfaceNormals(input, normal_k_search);
+    if (normals->points.size() != input->points.size()) {
+        return {};
+    }
+
+    pcl::SurfelSmoothing<pcl::PointXYZ, pcl::Normal> smoothing(static_cast<float>(scale));
+    smoothing.setInputCloud(input);
+    smoothing.setInputNormals(normals);
+    smoothing.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr smoothed_points(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::Normal>::Ptr smoothed_normals(new pcl::PointCloud<pcl::Normal>);
+    smoothing.computeSmoothedCloud(smoothed_points, smoothed_normals);
+    if (smoothed_points->points.size() != smoothed_normals->points.size()) {
+        return {};
+    }
+
+    std::vector<jfloat> values;
+    values.reserve(smoothed_points->points.size() * 7);
+    for (std::size_t i = 0; i < smoothed_points->points.size(); ++i) {
+        values.push_back(smoothed_points->points[i].x);
+        values.push_back(smoothed_points->points[i].y);
+        values.push_back(smoothed_points->points[i].z);
+        values.push_back(smoothed_normals->points[i].normal_x);
+        values.push_back(smoothed_normals->points[i].normal_y);
+        values.push_back(smoothed_normals->points[i].normal_z);
+        values.push_back(smoothed_normals->points[i].curvature);
+    }
+    LOGI("SurfelSmoothing smoothed points: input=%zu output=%zu normal_k=%d scale=%.3f",
+         input->points.size(), smoothed_points->points.size(), normal_k_search, scale);
+    return values;
 }
 
 std::vector<jfloat> reconstructGreedyProjectionTriangles(
