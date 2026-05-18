@@ -7,6 +7,7 @@
 #include <pcl/features/3dsc.h>
 #include <pcl/features/board.h>
 #include <pcl/features/boundary.h>
+#include <pcl/features/cppf.h>
 #include <pcl/features/crh.h>
 #include <pcl/features/cvfh.h>
 #include <pcl/features/don.h>
@@ -790,6 +791,68 @@ std::vector<jfloat> computePPFFeatures(int normal_k_search, int max_point_count)
     LOGI("PPFEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d maxPoints=%d",
          input->points.size(), descriptors->points.size(), normal_k_search, max_point_count);
     return values;
+}
+
+std::vector<jfloat> computeCPPFPairFeatureValues(int first_index, int second_index, int normal_k_search)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()
+            || normal_k_search <= 0
+            || first_index < 0
+            || second_index < 0
+            || static_cast<std::size_t>(first_index) >= input->points.size()
+            || static_cast<std::size_t>(second_index) >= input->points.size()) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    if (normals->points.size() != input->points.size()) {
+        return {};
+    }
+
+    const auto& p1 = input->points[static_cast<std::size_t>(first_index)];
+    const auto& p2 = input->points[static_cast<std::size_t>(second_index)];
+    const auto& n1 = normals->points[static_cast<std::size_t>(first_index)];
+    const auto& n2 = normals->points[static_cast<std::size_t>(second_index)];
+    Eigen::Vector4f p1_vector(p1.x, p1.y, p1.z, 0.0f);
+    Eigen::Vector4f p2_vector(p2.x, p2.y, p2.z, 0.0f);
+    Eigen::Vector4f n1_vector(n1.normal_x, n1.normal_y, n1.normal_z, 0.0f);
+    Eigen::Vector4f n2_vector(n2.normal_x, n2.normal_y, n2.normal_z, 0.0f);
+    Eigen::Vector4i c1_vector(0, 0, 0, 0);
+    Eigen::Vector4i c2_vector(0, 0, 0, 0);
+    float f1 = 0.0f;
+    float f2 = 0.0f;
+    float f3 = 0.0f;
+    float f4 = 0.0f;
+    float f5 = 0.0f;
+    float f6 = 0.0f;
+    float f7 = 0.0f;
+    float f8 = 0.0f;
+    float f9 = 0.0f;
+    float f10 = 0.0f;
+    if (!pcl::computeCPPFPairFeature(
+                p1_vector,
+                n1_vector,
+                c1_vector,
+                p2_vector,
+                n2_vector,
+                c2_vector,
+                f1,
+                f2,
+                f3,
+                f4,
+                f5,
+                f6,
+                f7,
+                f8,
+                f9,
+                f10)) {
+        return {};
+    }
+
+    LOGI("computeCPPFPairFeature computed pair: first=%d second=%d normal_k=%d",
+         first_index, second_index, normal_k_search);
+    return {f1, f2, f3, f4, f5, f6, f7, f8, f9, f10};
 }
 
 std::vector<jfloat> computeNormalBasedSignatureFeatures(

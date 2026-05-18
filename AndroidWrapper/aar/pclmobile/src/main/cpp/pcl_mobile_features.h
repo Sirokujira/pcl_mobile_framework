@@ -68,6 +68,7 @@ std::vector<jfloat> computeUniqueShapeContextFeatures(
         double point_density_radius,
         double local_radius);
 std::vector<jfloat> computePPFFeatures(int normal_k_search, int max_point_count);
+std::vector<jfloat> computeCPPFPairFeatureValues(int first_index, int second_index, int normal_k_search);
 std::vector<jfloat> computeNormalBasedSignatureFeatures(
         int normal_k_search,
         double search_radius,

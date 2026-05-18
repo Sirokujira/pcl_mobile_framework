@@ -21,9 +21,20 @@ bool segmentModel(int model_type,
                   int max_iterations,
                   pcl::ModelCoefficients::Ptr coefficients,
                   pcl::PointIndices::Ptr inliers);
+bool segmentModelWithMethod(int model_type,
+                            int method_type,
+                            double distance_threshold,
+                            int max_iterations,
+                            pcl::ModelCoefficients::Ptr coefficients,
+                            pcl::PointIndices::Ptr inliers);
 std::vector<jfloat> segmentPlaneModel(double distance_threshold, int max_iterations);
 std::vector<jfloat> segmentSphereModel(double distance_threshold, int max_iterations);
 std::vector<jfloat> segmentSACModel(int model_type, double distance_threshold, int max_iterations);
+std::vector<jfloat> segmentSACModelWithMethod(
+        int model_type,
+        int method_type,
+        double distance_threshold,
+        int max_iterations);
 std::vector<jfloat> extractEuclideanClusters(double tolerance, int min_cluster_size, int max_cluster_size);
 std::vector<jfloat> extractRegionGrowingClusters(int normal_k_search,
                                                  int number_of_neighbours,
