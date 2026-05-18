@@ -50,6 +50,12 @@ std::vector<jfloat> computeRIFTFeatures(
         int normal_k_search,
         double gradient_radius,
         double feature_radius);
+std::vector<jfloat> computeROPSFeatures(
+        int normal_k_search,
+        double support_radius,
+        double mesh_search_radius,
+        double mu,
+        int maximum_nearest_neighbors);
 std::vector<jfloat> computeShapeContext3DFeatures(
         int normal_k_search,
         double search_radius,

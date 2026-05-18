@@ -575,6 +575,26 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
                     featureRadius));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeROPSFeatures(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jdouble supportRadius,
+        jdouble meshSearchRadius,
+        jdouble mu,
+        jint maximumNearestNeighbors)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeROPSFeatures(
+                    normalKSearch,
+                    supportRadius,
+                    meshSearchRadius,
+                    mu,
+                    maximumNearestNeighbors));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeShapeContext3DFeatures(
         JNIEnv* env,
         jclass clazz,
@@ -1689,6 +1709,8 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(
                   pclmobile::computeIntensityGradientFeatures(16, 0.18, 0).size(), 3);
     logTupleCount("feature1", "RIFTEstimation",
                   pclmobile::computeRIFTFeatures(16, 0.18, 0.24).size(), 32);
+    logTupleCount("feature1", "ROPSEstimation",
+                  pclmobile::computeROPSFeatures(16, 0.18, 0.18, 2.5, 100).size(), 135);
     logTupleCount("feature1", "ShapeContext3DEstimation",
                   pclmobile::computeShapeContext3DFeatures(16, 0.18, 0.02, 0.04, false).size(), 1980);
     logTupleCount("feature1", "UniqueShapeContext",
