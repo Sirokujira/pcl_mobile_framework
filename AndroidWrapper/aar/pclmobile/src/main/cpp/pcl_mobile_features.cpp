@@ -13,12 +13,14 @@
 #include <pcl/features/fpfh.h>
 #include <pcl/features/gasd.h>
 #include <pcl/features/grsd.h>
+#include <pcl/features/intensity_gradient.h>
 #include <pcl/features/intensity_spin.h>
 #include <pcl/features/moment_invariants.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/normal_based_signature.h>
 #include <pcl/features/our_cvfh.h>
 #include <pcl/features/pfh.h>
+#include <pcl/features/ppf.h>
 #include <pcl/features/principal_curvatures.h>
 #include <pcl/features/rsd.h>
 #include <pcl/features/shot.h>
@@ -407,6 +409,41 @@ std::vector<jfloat> computeIntensitySpinFeatures(double radius_search, double sm
     return values;
 }
 
+std::vector<jfloat> computeIntensityGradientFeatures(
+        int normal_k_search,
+        double radius_search,
+        int number_of_threads)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || radius_search <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZI>::Ptr intensity_input = makeIntensityCloud(input);
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::IntensityGradient>::Ptr gradients(new pcl::PointCloud<pcl::IntensityGradient>);
+
+    pcl::IntensityGradientEstimation<pcl::PointXYZI, pcl::Normal, pcl::IntensityGradient> estimation;
+    estimation.setInputCloud(intensity_input);
+    estimation.setInputNormals(normals);
+    estimation.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZI>::Ptr(new pcl::search::KdTree<pcl::PointXYZI>));
+    estimation.setRadiusSearch(radius_search);
+    estimation.setNumberOfThreads(static_cast<unsigned int>(std::max(number_of_threads, 0)));
+    estimation.compute(*gradients);
+
+    std::vector<jfloat> values;
+    values.reserve(gradients->points.size() * 3);
+    for (const auto& gradient : gradients->points) {
+        values.push_back(gradient.gradient_x);
+        values.push_back(gradient.gradient_y);
+        values.push_back(gradient.gradient_z);
+    }
+    LOGI("IntensityGradientEstimation computed descriptors: input=%zu gradients=%zu normal_k=%d radius=%.3f",
+         input->points.size(), gradients->points.size(), normal_k_search, radius_search);
+    return values;
+}
+
 std::vector<jfloat> computeShapeContext3DFeatures(
         int normal_k_search,
         double search_radius,
@@ -483,6 +520,36 @@ std::vector<jfloat> computeUniqueShapeContextFeatures(
     }
     LOGI("UniqueShapeContext computed descriptors: input=%zu descriptors=%zu radius=%.3f local=%.3f",
          input->points.size(), descriptors->points.size(), search_radius, local_radius);
+    return values;
+}
+
+std::vector<jfloat> computePPFFeatures(int normal_k_search, int max_point_count)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || max_point_count <= 0
+            || input->points.size() > static_cast<std::size_t>(max_point_count)) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::PPFSignature>::Ptr descriptors(new pcl::PointCloud<pcl::PPFSignature>);
+
+    pcl::PPFEstimation<pcl::PointXYZ, pcl::Normal, pcl::PPFSignature> ppf;
+    ppf.setInputCloud(input);
+    ppf.setInputNormals(normals);
+    ppf.compute(*descriptors);
+
+    std::vector<jfloat> values;
+    values.reserve(descriptors->points.size() * 5);
+    for (const auto& descriptor : descriptors->points) {
+        values.push_back(descriptor.f1);
+        values.push_back(descriptor.f2);
+        values.push_back(descriptor.f3);
+        values.push_back(descriptor.f4);
+        values.push_back(descriptor.alpha_m);
+    }
+    LOGI("PPFEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d maxPoints=%d",
+         input->points.size(), descriptors->points.size(), normal_k_search, max_point_count);
     return values;
 }
 
