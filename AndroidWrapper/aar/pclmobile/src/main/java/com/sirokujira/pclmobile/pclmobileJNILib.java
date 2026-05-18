@@ -1353,6 +1353,27 @@ public final class pclmobileJNILib {
     public static native float[] rejectCorrespondencesOneToOne(float[] packedCorrespondences);
 
     /**
+     * Rejects correspondences whose distance is greater than the median distance times {@code medianFactor}.
+     *
+     * <p>{@code packedCorrespondences} is packed as repeated {@code source_index, target_index, distance}
+     * triples and the result uses the same format. Pass {@code 0.0} to keep PCL's default factor.</p>
+     */
+    public static native float[] rejectCorrespondencesMedianDistance(
+            float[] packedCorrespondences,
+            double medianFactor);
+
+    /**
+     * Keeps the best-distance correspondences according to PCL CorrespondenceRejectorTrimmed.
+     *
+     * <p>{@code overlapRatio} is clamped by PCL to {@code 0.0..1.0}. Pass {@code 0} for
+     * {@code minCorrespondences} to keep PCL's default.</p>
+     */
+    public static native float[] rejectCorrespondencesTrimmed(
+            float[] packedCorrespondences,
+            double overlapRatio,
+            int minCorrespondences);
+
+    /**
      * Scores {@code rowMajor4x4} with PCL TransformationValidationEuclidean.
      *
      * <p>The active cloud is used as the source cloud and {@code packedTargetXYZ} as the target cloud.

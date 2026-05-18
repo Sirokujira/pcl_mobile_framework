@@ -6,7 +6,9 @@
 #include <pcl/common/transforms.h>
 #include <pcl/registration/correspondence_estimation.h>
 #include <pcl/registration/correspondence_rejection_distance.h>
+#include <pcl/registration/correspondence_rejection_median_distance.h>
 #include <pcl/registration/correspondence_rejection_one_to_one.h>
+#include <pcl/registration/correspondence_rejection_trimmed.h>
 #include <pcl/registration/gicp.h>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/icp_nl.h>
@@ -296,6 +298,54 @@ std::vector<jfloat> rejectCorrespondencesOneToOne(const std::vector<jfloat>& pac
     rejector.getRemainingCorrespondences(correspondences, remaining);
     LOGI("CorrespondenceRejectorOneToOne: input=%zu output=%zu",
          correspondences.size(), remaining.size());
+    return packCorrespondences(remaining);
+}
+
+std::vector<jfloat> rejectCorrespondencesMedianDistance(
+        const std::vector<jfloat>& packed_correspondences,
+        double median_factor)
+{
+    pcl::Correspondences correspondences = unpackCorrespondences(packed_correspondences);
+    if (correspondences.empty()) {
+        return {};
+    }
+
+    pcl::registration::CorrespondenceRejectorMedianDistance rejector;
+    if (median_factor > 0.0) {
+        rejector.setMedianFactor(median_factor);
+    }
+
+    pcl::Correspondences remaining;
+    rejector.getRemainingCorrespondences(correspondences, remaining);
+    LOGI("CorrespondenceRejectorMedianDistance: input=%zu output=%zu factor=%.3f median=%.6f",
+         correspondences.size(), remaining.size(), rejector.getMedianFactor(),
+         rejector.getMedianDistance());
+    return packCorrespondences(remaining);
+}
+
+std::vector<jfloat> rejectCorrespondencesTrimmed(
+        const std::vector<jfloat>& packed_correspondences,
+        double overlap_ratio,
+        int min_correspondences)
+{
+    pcl::Correspondences correspondences = unpackCorrespondences(packed_correspondences);
+    if (correspondences.empty()) {
+        return {};
+    }
+
+    pcl::registration::CorrespondenceRejectorTrimmed rejector;
+    if (overlap_ratio >= 0.0) {
+        rejector.setOverlapRatio(static_cast<float>(overlap_ratio));
+    }
+    if (min_correspondences > 0) {
+        rejector.setMinCorrespondences(static_cast<unsigned int>(min_correspondences));
+    }
+
+    pcl::Correspondences remaining;
+    rejector.getRemainingCorrespondences(correspondences, remaining);
+    LOGI("CorrespondenceRejectorTrimmed: input=%zu output=%zu overlap=%.3f min=%u",
+         correspondences.size(), remaining.size(), rejector.getOverlapRatio(),
+         rejector.getMinCorrespondences());
     return packCorrespondences(remaining);
 }
 

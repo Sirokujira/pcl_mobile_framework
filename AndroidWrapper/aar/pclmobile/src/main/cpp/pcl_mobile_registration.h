@@ -25,6 +25,13 @@ std::vector<jfloat> rejectCorrespondencesDistance(
         const std::vector<jfloat>& packed_target_xyz,
         double max_distance);
 std::vector<jfloat> rejectCorrespondencesOneToOne(const std::vector<jfloat>& packed_correspondences);
+std::vector<jfloat> rejectCorrespondencesMedianDistance(
+        const std::vector<jfloat>& packed_correspondences,
+        double median_factor);
+std::vector<jfloat> rejectCorrespondencesTrimmed(
+        const std::vector<jfloat>& packed_correspondences,
+        double overlap_ratio,
+        int min_correspondences);
 std::vector<jfloat> validateTransformEuclidean(
         const std::vector<jfloat>& packed_target_xyz,
         const std::vector<jfloat>& row_major_matrix,

@@ -1680,6 +1680,33 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_reje
             pclmobile::rejectCorrespondencesOneToOne(readFloatArray(env, packedCorrespondences)));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_rejectCorrespondencesMedianDistance(
+        JNIEnv* env, jclass clazz, jfloatArray packedCorrespondences, jdouble medianFactor)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::rejectCorrespondencesMedianDistance(
+                    readFloatArray(env, packedCorrespondences),
+                    medianFactor));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_rejectCorrespondencesTrimmed(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray packedCorrespondences,
+        jdouble overlapRatio,
+        jint minCorrespondences)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::rejectCorrespondencesTrimmed(
+                    readFloatArray(env, packedCorrespondences),
+                    overlapRatio,
+                    minCorrespondences));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_validateTransformEuclidean(
         JNIEnv* env,
         jclass clazz,
