@@ -27,6 +27,7 @@
 #include <pcl/filters/uniform_sampling.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/voxel_grid_covariance.h>
+#include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <pcl/filters/impl/covariance_sampling.hpp>
 #include <pcl/filters/impl/fast_bilateral.hpp>
 #include <pcl/features/normal_3d.h>
@@ -208,6 +209,46 @@ void filterVoxelGridCovariance(
     voxel_grid.filter(*filteredCloud());
     LOGI("VoxelGridCovariance filtered points: input=%zu output=%zu leaf=(%.3f, %.3f, %.3f) minPoints=%d",
          cloud()->points.size(), filteredCloud()->points.size(), x, y, z, min_points_per_voxel);
+}
+
+std::vector<float> computeVoxelGridOccludedVoxels(
+        double x,
+        double y,
+        double z,
+        int max_voxel_count)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || x <= 0.0 || y <= 0.0 || z <= 0.0 || max_voxel_count <= 0) {
+        return {};
+    }
+
+    pcl::VoxelGridOcclusionEstimation<pcl::PointXYZ> occlusion;
+    occlusion.setInputCloud(input);
+    occlusion.setLeafSize(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z));
+    occlusion.initializeVoxelGrid();
+
+    std::vector<Eigen::Vector3i, Eigen::aligned_allocator<Eigen::Vector3i>> occluded_voxels;
+    if (occlusion.occlusionEstimationAll(occluded_voxels) != 0
+            || occluded_voxels.size() > static_cast<std::size_t>(max_voxel_count)) {
+        LOGE("VoxelGridOcclusionEstimation refused output: input=%zu occluded=%zu max=%d",
+             input->points.size(), occluded_voxels.size(), max_voxel_count);
+        return {};
+    }
+
+    std::vector<float> values;
+    values.reserve(occluded_voxels.size() * 6);
+    for (const auto& voxel : occluded_voxels) {
+        Eigen::Vector4f centroid = occlusion.getCentroidCoordinate(voxel);
+        values.push_back(static_cast<float>(voxel.x()));
+        values.push_back(static_cast<float>(voxel.y()));
+        values.push_back(static_cast<float>(voxel.z()));
+        values.push_back(centroid.x());
+        values.push_back(centroid.y());
+        values.push_back(centroid.z());
+    }
+    LOGI("VoxelGridOcclusionEstimation computed occluded voxels: input=%zu occluded=%zu leaf=(%.3f, %.3f, %.3f)",
+         input->points.size(), occluded_voxels.size(), x, y, z);
+    return values;
 }
 
 void filterApproximateVoxelGrid(double x, double y, double z)

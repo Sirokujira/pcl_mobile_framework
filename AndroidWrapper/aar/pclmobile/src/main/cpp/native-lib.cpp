@@ -1554,6 +1554,20 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterVoxel
     pclmobile::filterVoxelGridCovariance(x, y, z, minPointsPerVoxel, minCovarEigvalueMult);
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeVoxelGridOccludedVoxels(
+        JNIEnv* env,
+        jclass clazz,
+        jdouble x,
+        jdouble y,
+        jdouble z,
+        jint maxVoxelCount)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeVoxelGridOccludedVoxels(x, y, z, maxVoxelCount));
+}
+
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterApproximateVoxelGrid(
         JNIEnv* env, jclass clazz, jdouble x, jdouble y, jdouble z)
 {
