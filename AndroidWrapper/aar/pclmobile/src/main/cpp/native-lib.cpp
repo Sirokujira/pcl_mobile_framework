@@ -1336,6 +1336,36 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_reco
                     normalConsistency == JNI_TRUE));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_reconstructOrganizedFastMeshPolygons(
+        JNIEnv* env,
+        jclass clazz,
+        jint triangulationType,
+        jint trianglePixelSize,
+        jdouble maxEdgeLengthA,
+        jdouble maxEdgeLengthB,
+        jdouble maxEdgeLengthC,
+        jdouble angleTolerance,
+        jdouble distanceTolerance,
+        jboolean distanceDependent,
+        jboolean useDepthAsDistance,
+        jboolean storeShadowedFaces)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::reconstructOrganizedFastMeshPolygons(
+                    triangulationType,
+                    trianglePixelSize,
+                    maxEdgeLengthA,
+                    maxEdgeLengthB,
+                    maxEdgeLengthC,
+                    angleTolerance,
+                    distanceTolerance,
+                    distanceDependent == JNI_TRUE,
+                    useDepthAsDistance == JNI_TRUE,
+                    storeShadowedFaces == JNI_TRUE));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_alignToTranslatedCopyICP(
         JNIEnv* env, jclass clazz, jfloat tx, jfloat ty, jfloat tz, jint maxIterations)
 {
@@ -2055,6 +2085,9 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_surface1(
     logTupleCount("surface1", "GreedyProjectionTriangulation",
                   pclmobile::reconstructGreedyProjectionTriangles(
                           16, 0.18, 2.5, 100, 0.78539816339, 0.1745329252, 2.09439510239, false).size(), 3);
+    LOGI("surface1 compatibility sample: OrganizedFastMesh values=%zu",
+         pclmobile::reconstructOrganizedFastMeshPolygons(
+                 2, 1, 0.0, 0.0, 0.0, -1.0, -1.0, false, false, false).size());
 }
 
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_tracking1(
