@@ -1074,6 +1074,26 @@ public final class pclmobileJNILib {
             boolean normalConsistency);
 
     /**
+     * Reconstructs polygons from an organized active cloud with PCL OrganizedFastMesh.
+     *
+     * <p>{@code triangulationType} maps to PCL values: 0 right cut, 1 left cut,
+     * 2 adaptive cut, 3 quad mesh. The returned array is a sequence of variable-length
+     * polygons packed as {@code vertex_count, vertex_index...}. Returns an empty array
+     * when the active cloud is not organized.</p>
+     */
+    public static native float[] reconstructOrganizedFastMeshPolygons(
+            int triangulationType,
+            int trianglePixelSize,
+            double maxEdgeLengthA,
+            double maxEdgeLengthB,
+            double maxEdgeLengthC,
+            double angleTolerance,
+            double distanceTolerance,
+            boolean distanceDependent,
+            boolean useDepthAsDistance,
+            boolean storeShadowedFaces);
+
+    /**
      * Aligns the active cloud to a translated copy with ICP.
      *
      * <p>The aligned points are stored as the filtered cloud.</p>

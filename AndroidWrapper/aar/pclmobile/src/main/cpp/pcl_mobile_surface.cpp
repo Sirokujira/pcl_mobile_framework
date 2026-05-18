@@ -15,6 +15,7 @@
 #include <pcl/surface/convex_hull.h>
 #include <pcl/surface/gp3.h>
 #include <pcl/surface/mls.h>
+#include <pcl/surface/organized_fast_mesh.h>
 
 #include "pcl_mobile_arrays.h"
 #include "pcl_mobile_context.h"
@@ -381,6 +382,61 @@ std::vector<jfloat> reconstructGreedyProjectionTriangles(
     }
     LOGI("GreedyProjectionTriangulation reconstructed triangles: input=%zu polygons=%zu triangles=%zu radius=%.3f",
          point_normals->points.size(), polygons.size(), values.size() / 3, search_radius);
+    return values;
+}
+
+std::vector<jfloat> reconstructOrganizedFastMeshPolygons(
+        int triangulation_type,
+        int triangle_pixel_size,
+        double max_edge_length_a,
+        double max_edge_length_b,
+        double max_edge_length_c,
+        double angle_tolerance,
+        double distance_tolerance,
+        bool distance_dependent,
+        bool use_depth_as_distance,
+        bool store_shadowed_faces)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || input->height <= 1 || input->width * input->height != input->points.size()) {
+        return {};
+    }
+
+    pcl::OrganizedFastMesh<pcl::PointXYZ> mesh;
+    mesh.setInputCloud(input);
+    const int bounded_type = std::max(0, std::min(triangulation_type, 3));
+    mesh.setTriangulationType(
+            static_cast<pcl::OrganizedFastMesh<pcl::PointXYZ>::TriangulationType>(bounded_type));
+    mesh.setTrianglePixelSize(std::max(triangle_pixel_size, 1));
+    if (max_edge_length_a > 0.0 || max_edge_length_b > 0.0 || max_edge_length_c > 0.0) {
+        mesh.setMaxEdgeLength(
+                static_cast<float>(std::max(max_edge_length_a, 0.0)),
+                static_cast<float>(std::max(max_edge_length_b, 0.0)),
+                static_cast<float>(std::max(max_edge_length_c, 0.0)));
+    }
+    mesh.setAngleTolerance(static_cast<float>(angle_tolerance));
+    mesh.setDistanceTolerance(static_cast<float>(distance_tolerance), distance_dependent);
+    mesh.useDepthAsDistance(use_depth_as_distance);
+    mesh.storeShadowedFaces(store_shadowed_faces);
+
+    std::vector<pcl::Vertices> polygons;
+    mesh.reconstruct(polygons);
+
+    std::size_t value_count = 0;
+    for (const auto& polygon : polygons) {
+        value_count += polygon.vertices.size() + 1;
+    }
+
+    std::vector<jfloat> values;
+    values.reserve(value_count);
+    for (const auto& polygon : polygons) {
+        values.push_back(static_cast<jfloat>(polygon.vertices.size()));
+        for (std::uint32_t vertex : polygon.vertices) {
+            values.push_back(static_cast<jfloat>(vertex));
+        }
+    }
+    LOGI("OrganizedFastMesh reconstructed polygons: input=%zu width=%u height=%u polygons=%zu",
+         input->points.size(), input->width, input->height, polygons.size());
     return values;
 }
 

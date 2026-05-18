@@ -30,6 +30,17 @@ std::vector<jfloat> reconstructGreedyProjectionTriangles(
         double minimum_angle,
         double maximum_angle,
         bool normal_consistency);
+std::vector<jfloat> reconstructOrganizedFastMeshPolygons(
+        int triangulation_type,
+        int triangle_pixel_size,
+        double max_edge_length_a,
+        double max_edge_length_b,
+        double max_edge_length_c,
+        double angle_tolerance,
+        double distance_tolerance,
+        bool distance_dependent,
+        bool use_depth_as_distance,
+        bool store_shadowed_faces);
 
 } // namespace pclmobile
 
