@@ -5,6 +5,7 @@
 
 #include <pcl/filters/approximate_voxel_grid.h>
 #include <pcl/filters/conditional_removal.h>
+#include <pcl/filters/convolution_3d.h>
 #include <pcl/filters/covariance_sampling.h>
 #include <pcl/filters/crop_box.h>
 #include <pcl/filters/crop_hull.h>
@@ -475,6 +476,36 @@ void filterFastBilateral(double sigma_s, double sigma_r)
     filter.filter(*filteredCloud());
     LOGI("FastBilateralFilter filtered points: input=%zu output=%zu width=%u height=%u sigmaS=%.3f sigmaR=%.3f",
          input->points.size(), filteredCloud()->points.size(), input->width, input->height, sigma_s, sigma_r);
+}
+
+void filterConvolution3DGaussian(double sigma, double radius, double sigma_coefficient, int number_of_threads)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || sigma <= 0.0 || radius <= 0.0) {
+        clearFilteredCloud();
+        return;
+    }
+
+    pcl::filters::GaussianKernel<pcl::PointXYZ, pcl::PointXYZ> kernel;
+    kernel.setSigma(static_cast<float>(sigma));
+    if (sigma_coefficient > 0.0) {
+        kernel.setThresholdRelativeToSigma(static_cast<float>(sigma_coefficient));
+    }
+
+    pcl::filters::Convolution3D<
+            pcl::PointXYZ,
+            pcl::PointXYZ,
+            pcl::filters::GaussianKernel<pcl::PointXYZ, pcl::PointXYZ>> convolution;
+    convolution.setInputCloud(input);
+    convolution.setSearchSurface(input);
+    convolution.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    convolution.setRadiusSearch(radius);
+    convolution.setKernel(kernel);
+    convolution.setNumberOfThreads(static_cast<unsigned int>(std::max(number_of_threads, 0)));
+    convolution.convolve(*filteredCloud());
+    LOGI("Convolution3D Gaussian filtered points: input=%zu output=%zu sigma=%.3f radius=%.3f threads=%d",
+         input->points.size(), filteredCloud()->points.size(), sigma, radius, number_of_threads);
 }
 
 void removeNaNFromActiveCloud()
