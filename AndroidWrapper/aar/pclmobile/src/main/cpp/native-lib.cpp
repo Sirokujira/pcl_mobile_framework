@@ -387,12 +387,37 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_esti
     return pclmobile::makeFloatArray(env, pclmobile::estimateNormalsRadius(radiusSearch));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_estimateNormalsOMP(
+        JNIEnv* env, jclass clazz, jint kSearch, jint numberOfThreads)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::estimateNormalsOMP(kSearch, numberOfThreads));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeFPFHFeatures(
         JNIEnv* env, jclass clazz, jint normalKSearch, jdouble featureRadius)
 {
     (void) clazz;
     return pclmobile::makeFloatArray(
             env, pclmobile::computeFPFHFeatures(normalKSearch, featureRadius));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeFPFHFeaturesOMP(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jdouble featureRadius,
+        jint numberOfThreads)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeFPFHFeaturesOMP(
+                    normalKSearch,
+                    featureRadius,
+                    numberOfThreads));
 }
 
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computePFHFeatures(
@@ -1399,10 +1424,14 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(
     (void) obj;
     loadIfProvided(env, filename);
     logTupleCount("feature1", "NormalEstimation", pclmobile::estimateNormals(16).size(), 4);
+    logTupleCount("feature1", "NormalEstimationOMP",
+                  pclmobile::estimateNormalsOMP(16, 0).size(), 4);
     logTupleCount("feature1", "PFHEstimation",
                   pclmobile::computePFHFeatures(16, 0.18).size(), 125);
     logTupleCount("feature1", "FPFHEstimation",
                   pclmobile::computeFPFHFeatures(16, 0.18).size(), 33);
+    logTupleCount("feature1", "FPFHEstimationOMP",
+                  pclmobile::computeFPFHFeaturesOMP(16, 0.18, 0).size(), 33);
     logTupleCount("feature1", "VFHEstimation",
                   pclmobile::computeVFHFeatures(16).size(), 308);
     logTupleCount("feature1", "ESFEstimation",
