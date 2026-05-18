@@ -421,6 +421,21 @@ public final class pclmobileJNILib {
             double featureRadius);
 
     /**
+     * Computes RoPS descriptors for the active cloud.
+     *
+     * <p>The wrapper estimates normals, builds a GP3 triangle mesh, and uses the fixed
+     * PCL {@code Histogram<135>} layout.</p>
+     *
+     * @return 135 histogram values per descriptor
+     */
+    public static native float[] computeROPSFeatures(
+            int normalKSearch,
+            double supportRadius,
+            double meshSearchRadius,
+            double mu,
+            int maximumNearestNeighbors);
+
+    /**
      * Computes 3D shape context descriptors for the active cloud.
      *
      * @return 1980 descriptor values per input point

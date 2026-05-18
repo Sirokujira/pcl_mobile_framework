@@ -28,6 +28,8 @@
 #include <pcl/features/principal_curvatures.h>
 #include <pcl/features/rift.h>
 #include <pcl/features/impl/rift.hpp>
+#include <pcl/features/rops_estimation.h>
+#include <pcl/features/impl/rops_estimation.hpp>
 #include <pcl/features/rsd.h>
 #include <pcl/features/shot.h>
 #include <pcl/features/shot_lrf.h>
@@ -40,6 +42,7 @@
 #include <pcl/filters/impl/normal_refinement.hpp>
 #include <pcl/common/centroid.h>
 #include <pcl/search/kdtree.h>
+#include <pcl/surface/gp3.h>
 
 #include "pcl_mobile_context.h"
 #include "pcl_mobile_log.h"
@@ -127,6 +130,35 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr makeIntensityCloud(const pcl::PointCloud<pc
     output->height = input->width * input->height == input->points.size() ? input->height : 1;
     output->is_dense = input->is_dense;
     return output;
+}
+
+pcl::PointCloud<pcl::PointNormal>::Ptr makePointNormalCloud(
+        const pcl::PointCloud<pcl::PointXYZ>::Ptr& input,
+        const pcl::PointCloud<pcl::Normal>::Ptr& normals)
+{
+    pcl::PointCloud<pcl::PointNormal>::Ptr point_normals(new pcl::PointCloud<pcl::PointNormal>);
+    if (input->points.size() != normals->points.size()) {
+        return point_normals;
+    }
+
+    point_normals->points.reserve(input->points.size());
+    for (std::size_t i = 0; i < input->points.size(); ++i) {
+        pcl::PointNormal point_normal;
+        point_normal.x = input->points[i].x;
+        point_normal.y = input->points[i].y;
+        point_normal.z = input->points[i].z;
+        point_normal.normal_x = normals->points[i].normal_x;
+        point_normal.normal_y = normals->points[i].normal_y;
+        point_normal.normal_z = normals->points[i].normal_z;
+        point_normal.curvature = normals->points[i].curvature;
+        point_normals->points.push_back(point_normal);
+    }
+    point_normals->width = input->width * input->height == input->points.size()
+            ? input->width
+            : static_cast<std::uint32_t>(point_normals->points.size());
+    point_normals->height = input->width * input->height == input->points.size() ? input->height : 1;
+    point_normals->is_dense = input->is_dense;
+    return point_normals;
 }
 
 } // namespace
@@ -592,6 +624,62 @@ std::vector<jfloat> computeRIFTFeatures(
     std::vector<jfloat> values = packHistogramDescriptors<pcl::Histogram<32>, 32>(*descriptors);
     LOGI("RIFTEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d gradient_radius=%.3f feature_radius=%.3f",
          input->points.size(), descriptors->points.size(), normal_k_search, gradient_radius, feature_radius);
+    return values;
+}
+
+std::vector<jfloat> computeROPSFeatures(
+        int normal_k_search,
+        double support_radius,
+        double mesh_search_radius,
+        double mu,
+        int maximum_nearest_neighbors)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()
+            || normal_k_search <= 0
+            || support_radius <= 0.0
+            || mesh_search_radius <= 0.0
+            || mu <= 0.0
+            || maximum_nearest_neighbors <= 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::PointNormal>::Ptr point_normals = makePointNormalCloud(input, normals);
+    if (point_normals->empty()) {
+        return {};
+    }
+
+    std::vector<pcl::Vertices> polygons;
+    pcl::GreedyProjectionTriangulation<pcl::PointNormal> gp3;
+    gp3.setInputCloud(point_normals);
+    gp3.setSearchRadius(mesh_search_radius);
+    gp3.setMu(mu);
+    gp3.setMaximumNearestNeighbors(maximum_nearest_neighbors);
+    gp3.setMaximumSurfaceAngle(0.78539816339);
+    gp3.setMinimumAngle(0.1745329252);
+    gp3.setMaximumAngle(2.09439510239);
+    gp3.setNormalConsistency(false);
+    gp3.reconstruct(polygons);
+    if (polygons.empty()) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Histogram<135>>::Ptr descriptors(new pcl::PointCloud<pcl::Histogram<135>>);
+    pcl::ROPSEstimation<pcl::PointXYZ, pcl::Histogram<135>> rops;
+    rops.setInputCloud(input);
+    rops.setSearchSurface(input);
+    rops.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    rops.setTriangles(polygons);
+    rops.setSupportRadius(static_cast<float>(support_radius));
+    rops.setNumberOfPartitionBins(5);
+    rops.setNumberOfRotations(3);
+    rops.compute(*descriptors);
+
+    std::vector<jfloat> values = packHistogramDescriptors<pcl::Histogram<135>, 135>(*descriptors);
+    LOGI("ROPSEstimation computed descriptors: input=%zu descriptors=%zu triangles=%zu normal_k=%d support_radius=%.3f",
+         input->points.size(), descriptors->points.size(), polygons.size(), normal_k_search, support_radius);
     return values;
 }
 
