@@ -1406,6 +1406,30 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_reco
                     maxBinarySearchLevel));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_reconstructMarchingCubesHoppeMesh(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jint resolutionX,
+        jint resolutionY,
+        jint resolutionZ,
+        jdouble percentageExtendGrid,
+        jdouble isoLevel,
+        jdouble distanceIgnore)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::reconstructMarchingCubesHoppeMesh(
+                    normalKSearch,
+                    resolutionX,
+                    resolutionY,
+                    resolutionZ,
+                    percentageExtendGrid,
+                    isoLevel,
+                    distanceIgnore));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_reconstructOrganizedFastMeshPolygons(
         JNIEnv* env,
         jclass clazz,
@@ -2162,6 +2186,8 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_surface1(
                           16, 0.18, 2.5, 100, 0.78539816339, 0.1745329252, 2.09439510239, false).size(), 3);
     LOGI("surface1 compatibility sample: GridProjection values=%zu",
          pclmobile::reconstructGridProjectionMesh(16, 0.05, 2, 30, 8).size());
+    LOGI("surface1 compatibility sample: MarchingCubesHoppe values=%zu",
+         pclmobile::reconstructMarchingCubesHoppeMesh(16, 16, 16, 16, 0.0, 0.0, -1.0).size());
     LOGI("surface1 compatibility sample: OrganizedFastMesh values=%zu",
          pclmobile::reconstructOrganizedFastMeshPolygons(
                  2, 1, 0.0, 0.0, 0.0, -1.0, -1.0, false, false, false).size());
