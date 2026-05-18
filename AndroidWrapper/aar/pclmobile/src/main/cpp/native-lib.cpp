@@ -1386,6 +1386,26 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_reco
                     normalConsistency == JNI_TRUE));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_reconstructGridProjectionMesh(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jdouble resolution,
+        jint paddingSize,
+        jint nearestNeighborCount,
+        jint maxBinarySearchLevel)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::reconstructGridProjectionMesh(
+                    normalKSearch,
+                    resolution,
+                    paddingSize,
+                    nearestNeighborCount,
+                    maxBinarySearchLevel));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_reconstructOrganizedFastMeshPolygons(
         JNIEnv* env,
         jclass clazz,
@@ -2140,6 +2160,8 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_surface1(
     logTupleCount("surface1", "GreedyProjectionTriangulation",
                   pclmobile::reconstructGreedyProjectionTriangles(
                           16, 0.18, 2.5, 100, 0.78539816339, 0.1745329252, 2.09439510239, false).size(), 3);
+    LOGI("surface1 compatibility sample: GridProjection values=%zu",
+         pclmobile::reconstructGridProjectionMesh(16, 0.05, 2, 30, 8).size());
     LOGI("surface1 compatibility sample: OrganizedFastMesh values=%zu",
          pclmobile::reconstructOrganizedFastMeshPolygons(
                  2, 1, 0.0, 0.0, 0.0, -1.0, -1.0, false, false, false).size());

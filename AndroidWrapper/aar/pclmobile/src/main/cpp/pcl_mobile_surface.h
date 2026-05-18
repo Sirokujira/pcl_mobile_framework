@@ -31,6 +31,12 @@ std::vector<jfloat> reconstructGreedyProjectionTriangles(
         double minimum_angle,
         double maximum_angle,
         bool normal_consistency);
+std::vector<jfloat> reconstructGridProjectionMesh(
+        int normal_k_search,
+        double resolution,
+        int padding_size,
+        int nearest_neighbor_count,
+        int max_binary_search_level);
 std::vector<jfloat> reconstructOrganizedFastMeshPolygons(
         int triangulation_type,
         int triangle_pixel_size,
