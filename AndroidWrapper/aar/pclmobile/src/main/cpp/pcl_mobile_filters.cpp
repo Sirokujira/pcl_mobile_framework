@@ -22,6 +22,7 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/random_sample.h>
+#include <pcl/filters/sampling_surface_normal.h>
 #include <pcl/filters/shadowpoints.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/uniform_sampling.h>
@@ -96,6 +97,25 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFromPackedXYZ(const std::vector<float>&
     result->height = 1;
     result->is_dense = false;
     return result;
+}
+
+pcl::PointCloud<pcl::PointNormal>::Ptr pointNormalCloudFromXYZ(const pcl::PointCloud<pcl::PointXYZ>::Ptr& input)
+{
+    pcl::PointCloud<pcl::PointNormal>::Ptr output(new pcl::PointCloud<pcl::PointNormal>);
+    output->points.reserve(input->points.size());
+    for (const auto& point : input->points) {
+        pcl::PointNormal converted;
+        converted.x = point.x;
+        converted.y = point.y;
+        converted.z = point.z;
+        output->points.push_back(converted);
+    }
+    output->width = input->width * input->height == input->points.size()
+            ? input->width
+            : static_cast<std::uint32_t>(output->points.size());
+    output->height = input->width * input->height == input->points.size() ? input->height : 1;
+    output->is_dense = input->is_dense;
+    return output;
 }
 
 } // namespace
@@ -353,6 +373,39 @@ void filterNormalSpaceSampling(int sample, int seed, int bins_x, int bins_y, int
     sampling.filter(*filteredCloud());
     LOGI("NormalSpaceSampling filtered points: input=%zu output=%zu sample=%d bins=(%d,%d,%d) normal_k=%d",
          input->points.size(), filteredCloud()->points.size(), sample, bins_x, bins_y, bins_z, normal_k_search);
+}
+
+std::vector<float> sampleSurfaceNormals(int sample, int seed, double ratio)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || sample <= 0 || ratio <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointNormal>::Ptr point_normals = pointNormalCloudFromXYZ(input);
+    pcl::PointCloud<pcl::PointNormal>::Ptr sampled(new pcl::PointCloud<pcl::PointNormal>);
+
+    pcl::SamplingSurfaceNormal<pcl::PointNormal> sampling;
+    sampling.setInputCloud(point_normals);
+    sampling.setSample(static_cast<unsigned int>(sample));
+    sampling.setSeed(static_cast<unsigned int>(seed));
+    sampling.setRatio(static_cast<float>(ratio));
+    sampling.filter(*sampled);
+
+    std::vector<float> values;
+    values.reserve(sampled->points.size() * 7);
+    for (const auto& point : sampled->points) {
+        values.push_back(point.x);
+        values.push_back(point.y);
+        values.push_back(point.z);
+        values.push_back(point.normal_x);
+        values.push_back(point.normal_y);
+        values.push_back(point.normal_z);
+        values.push_back(point.curvature);
+    }
+    LOGI("SamplingSurfaceNormal sampled points: input=%zu output=%zu sample=%d seed=%d ratio=%.3f",
+         input->points.size(), sampled->points.size(), sample, seed, ratio);
+    return values;
 }
 
 void filterCovarianceSampling(int samples, int normal_k_search)
