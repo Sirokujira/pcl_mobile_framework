@@ -1036,6 +1036,24 @@ public final class pclmobileJNILib {
     public static native float[] smoothMovingLeastSquares(double searchRadius);
 
     /**
+     * Reconstructs triangle vertex indices with PCL GreedyProjectionTriangulation.
+     *
+     * <p>The wrapper estimates normals from the active cloud and converts points to {@code PointNormal}.
+     * Angle values are radians.</p>
+     *
+     * @return triangle vertex index triples
+     */
+    public static native float[] reconstructGreedyProjectionTriangles(
+            int normalKSearch,
+            double searchRadius,
+            double mu,
+            int maximumNearestNeighbors,
+            double maximumSurfaceAngle,
+            double minimumAngle,
+            double maximumAngle,
+            boolean normalConsistency);
+
+    /**
      * Aligns the active cloud to a translated copy with ICP.
      *
      * <p>The aligned points are stored as the filtered cloud.</p>

@@ -6,12 +6,14 @@
 #include <pcl/common/common.h>
 #include <pcl/common/distances.h>
 #include <pcl/common/pca.h>
+#include <pcl/features/normal_3d.h>
 #include <pcl/features/moment_of_inertia_estimation.h>
 #include <pcl/filters/project_inliers.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/surface/concave_hull.h>
 #include <pcl/surface/convex_hull.h>
+#include <pcl/surface/gp3.h>
 #include <pcl/surface/mls.h>
 
 #include "pcl_mobile_arrays.h"
@@ -37,6 +39,45 @@ void appendVector3(std::vector<jfloat>& values, const Eigen::Vector3f& vector)
     values.push_back(vector.x());
     values.push_back(vector.y());
     values.push_back(vector.z());
+}
+
+pcl::PointCloud<pcl::PointNormal>::Ptr computePointNormals(int k_search)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointNormal>::Ptr point_normals(new pcl::PointCloud<pcl::PointNormal>);
+    if (input->empty() || k_search <= 0) {
+        return point_normals;
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+    pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normal_estimation;
+    normal_estimation.setInputCloud(input);
+    normal_estimation.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    normal_estimation.setKSearch(k_search);
+    normal_estimation.compute(*normals);
+    if (normals->points.size() != input->points.size()) {
+        return point_normals;
+    }
+
+    point_normals->points.reserve(input->points.size());
+    for (std::size_t i = 0; i < input->points.size(); ++i) {
+        pcl::PointNormal point_normal;
+        point_normal.x = input->points[i].x;
+        point_normal.y = input->points[i].y;
+        point_normal.z = input->points[i].z;
+        point_normal.normal_x = normals->points[i].normal_x;
+        point_normal.normal_y = normals->points[i].normal_y;
+        point_normal.normal_z = normals->points[i].normal_z;
+        point_normal.curvature = normals->points[i].curvature;
+        point_normals->points.push_back(point_normal);
+    }
+    point_normals->width = input->width * input->height == input->points.size()
+            ? input->width
+            : static_cast<std::uint32_t>(point_normals->points.size());
+    point_normals->height = input->width * input->height == input->points.size() ? input->height : 1;
+    point_normals->is_dense = input->is_dense;
+    return point_normals;
 }
 
 } // namespace
@@ -290,6 +331,57 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr smoothMovingLeastSquares(double search_radiu
     LOGI("MovingLeastSquares smoothed points: input=%zu output=%zu radius=%.3f",
          input->points.size(), smoothed->points.size(), search_radius);
     return smoothed;
+}
+
+std::vector<jfloat> reconstructGreedyProjectionTriangles(
+        int normal_k_search,
+        double search_radius,
+        double mu,
+        int maximum_nearest_neighbors,
+        double maximum_surface_angle,
+        double minimum_angle,
+        double maximum_angle,
+        bool normal_consistency)
+{
+    if (normal_k_search <= 0
+            || search_radius <= 0.0
+            || mu <= 0.0
+            || maximum_nearest_neighbors <= 0
+            || maximum_surface_angle <= 0.0
+            || minimum_angle <= 0.0
+            || maximum_angle <= minimum_angle) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointNormal>::Ptr point_normals = computePointNormals(normal_k_search);
+    if (point_normals->empty()) {
+        return {};
+    }
+
+    std::vector<pcl::Vertices> polygons;
+    pcl::GreedyProjectionTriangulation<pcl::PointNormal> gp3;
+    gp3.setInputCloud(point_normals);
+    gp3.setSearchRadius(search_radius);
+    gp3.setMu(mu);
+    gp3.setMaximumNearestNeighbors(maximum_nearest_neighbors);
+    gp3.setMaximumSurfaceAngle(maximum_surface_angle);
+    gp3.setMinimumAngle(minimum_angle);
+    gp3.setMaximumAngle(maximum_angle);
+    gp3.setNormalConsistency(normal_consistency);
+    gp3.reconstruct(polygons);
+
+    std::vector<jfloat> values;
+    values.reserve(polygons.size() * 3);
+    for (const auto& polygon : polygons) {
+        if (polygon.vertices.size() == 3) {
+            values.push_back(static_cast<jfloat>(polygon.vertices[0]));
+            values.push_back(static_cast<jfloat>(polygon.vertices[1]));
+            values.push_back(static_cast<jfloat>(polygon.vertices[2]));
+        }
+    }
+    LOGI("GreedyProjectionTriangulation reconstructed triangles: input=%zu polygons=%zu triangles=%zu radius=%.3f",
+         point_normals->points.size(), polygons.size(), values.size() / 3, search_radius);
+    return values;
 }
 
 } // namespace pclmobile
