@@ -35,6 +35,14 @@ std::vector<jfloat> extractConditionalEuclideanClusters(double tolerance,
                                                         int min_cluster_size,
                                                         int max_cluster_size,
                                                         double max_z_delta);
+pcl::PointCloud<pcl::PointXYZ>::Ptr extractPolygonalPrismData(
+        const std::vector<jfloat>& packed_planar_hull_xyz,
+        double height_min,
+        double height_max,
+        float view_point_x,
+        float view_point_y,
+        float view_point_z,
+        bool negative);
 pcl::PointCloud<pcl::PointXYZ>::Ptr extractProgressiveMorphologicalGround(
         int max_window_size,
         double slope,

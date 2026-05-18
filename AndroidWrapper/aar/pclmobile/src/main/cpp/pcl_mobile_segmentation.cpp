@@ -8,6 +8,7 @@
 #include <pcl/segmentation/approximate_progressive_morphological_filter.h>
 #include <pcl/segmentation/conditional_euclidean_clustering.h>
 #include <pcl/segmentation/extract_clusters.h>
+#include <pcl/segmentation/extract_polygonal_prism_data.h>
 #include <pcl/segmentation/min_cut_segmentation.h>
 #include <pcl/segmentation/progressive_morphological_filter.h>
 #include <pcl/segmentation/region_growing.h>
@@ -283,6 +284,37 @@ std::vector<jfloat> extractConditionalEuclideanClusters(
     LOGI("ConditionalEuclideanClustering: input=%zu clusters=%zu tolerance=%.3f maxZDelta=%.3f",
          input->points.size(), clusters.size(), tolerance, max_z_delta);
     return values;
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr extractPolygonalPrismData(
+        const std::vector<jfloat>& packed_planar_hull_xyz,
+        double height_min,
+        double height_max,
+        float view_point_x,
+        float view_point_y,
+        float view_point_z,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr planar_hull = cloudFromPackedXYZ(packed_planar_hull_xyz);
+    if (input->empty() || planar_hull->points.size() < 3 || height_min > height_max) {
+        clearFilteredCloud();
+        return filteredCloud();
+    }
+
+    pcl::ExtractPolygonalPrismData<pcl::PointXYZ> prism;
+    prism.setInputCloud(input);
+    prism.setInputPlanarHull(planar_hull);
+    prism.setHeightLimits(height_min, height_max);
+    prism.setViewPoint(view_point_x, view_point_y, view_point_z);
+
+    pcl::PointIndices prism_indices;
+    prism.segment(prism_indices);
+    setFilteredCloudFromIndices(input, prism_indices.indices, negative);
+    LOGI("ExtractPolygonalPrismData: input=%zu hull=%zu indices=%zu output=%zu height=[%.3f, %.3f] negative=%d",
+         input->points.size(), planar_hull->points.size(), prism_indices.indices.size(),
+         filteredCloud()->points.size(), height_min, height_max, negative ? 1 : 0);
+    return filteredCloud();
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr extractProgressiveMorphologicalGround(

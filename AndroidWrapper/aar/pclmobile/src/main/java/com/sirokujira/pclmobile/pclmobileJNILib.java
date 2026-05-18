@@ -663,6 +663,23 @@ public final class pclmobileJNILib {
             double maxZDelta);
 
     /**
+     * Runs PCL ExtractPolygonalPrismData using a packed planar hull and stores the selected points.
+     *
+     * <p>The planar hull must contain at least three {@code x, y, z} point tuples. Set {@code negative}
+     * to keep points outside the prism instead of inside it.</p>
+     *
+     * @return selected points packed as {@code x, y, z} triples
+     */
+    public static native float[] extractPolygonalPrismData(
+            float[] packedPlanarHullXYZ,
+            double heightMin,
+            double heightMax,
+            float viewPointX,
+            float viewPointY,
+            float viewPointZ,
+            boolean negative);
+
+    /**
      * Runs PCL ProgressiveMorphologicalFilter and stores ground or non-ground points.
      *
      * <p>Set {@code negative} to keep non-ground points instead of ground points.</p>
