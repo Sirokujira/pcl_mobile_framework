@@ -1707,6 +1707,62 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_reje
                     minCorrespondences));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_rejectCorrespondencesVarTrimmed(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray packedCorrespondences,
+        jdouble minRatio,
+        jdouble maxRatio)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::rejectCorrespondencesVarTrimmed(
+                    readFloatArray(env, packedCorrespondences),
+                    minRatio,
+                    maxRatio));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_rejectCorrespondencesSampleConsensus(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray packedCorrespondences,
+        jfloatArray packedTargetXYZ,
+        jdouble inlierThreshold,
+        jint maxIterations,
+        jboolean refineModel)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::rejectCorrespondencesSampleConsensus(
+                    readFloatArray(env, packedCorrespondences),
+                    readFloatArray(env, packedTargetXYZ),
+                    inlierThreshold,
+                    maxIterations,
+                    refineModel == JNI_TRUE));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_rejectCorrespondencesPoly(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray packedCorrespondences,
+        jfloatArray packedTargetXYZ,
+        jint cardinality,
+        jdouble similarityThreshold,
+        jint iterations)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::rejectCorrespondencesPoly(
+                    readFloatArray(env, packedCorrespondences),
+                    readFloatArray(env, packedTargetXYZ),
+                    cardinality,
+                    similarityThreshold,
+                    iterations));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_validateTransformEuclidean(
         JNIEnv* env,
         jclass clazz,

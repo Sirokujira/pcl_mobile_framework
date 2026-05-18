@@ -32,6 +32,22 @@ std::vector<jfloat> rejectCorrespondencesTrimmed(
         const std::vector<jfloat>& packed_correspondences,
         double overlap_ratio,
         int min_correspondences);
+std::vector<jfloat> rejectCorrespondencesVarTrimmed(
+        const std::vector<jfloat>& packed_correspondences,
+        double min_ratio,
+        double max_ratio);
+std::vector<jfloat> rejectCorrespondencesSampleConsensus(
+        const std::vector<jfloat>& packed_correspondences,
+        const std::vector<jfloat>& packed_target_xyz,
+        double inlier_threshold,
+        int max_iterations,
+        bool refine_model);
+std::vector<jfloat> rejectCorrespondencesPoly(
+        const std::vector<jfloat>& packed_correspondences,
+        const std::vector<jfloat>& packed_target_xyz,
+        int cardinality,
+        double similarity_threshold,
+        int iterations);
 std::vector<jfloat> validateTransformEuclidean(
         const std::vector<jfloat>& packed_target_xyz,
         const std::vector<jfloat>& row_major_matrix,
