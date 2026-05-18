@@ -33,6 +33,7 @@ std::vector<float> sampleSurfaceNormals(int sample, int seed, double ratio);
 void filterCovarianceSampling(int samples, int normal_k_search);
 std::vector<float> computeCovarianceSamplingConditionNumber(int samples, int normal_k_search);
 void filterFastBilateral(double sigma_s, double sigma_r);
+void filterConvolution3DGaussian(double sigma, double radius, double sigma_coefficient, int number_of_threads);
 void removeNaNFromActiveCloud();
 void filterStatisticalOutlierRemoval(int mean_k, double stddev_mul_thresh);
 void filterRadiusOutlierRemoval(double radius, int min_neighbors);

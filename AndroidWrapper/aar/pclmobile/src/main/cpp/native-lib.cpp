@@ -1735,6 +1735,19 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterFastB
     pclmobile::filterFastBilateral(sigmaS, sigmaR);
 }
 
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterConvolution3DGaussian(
+        JNIEnv* env,
+        jclass clazz,
+        jdouble sigma,
+        jdouble radius,
+        jdouble sigmaCoefficient,
+        jint numberOfThreads)
+{
+    (void) env;
+    (void) clazz;
+    pclmobile::filterConvolution3DGaussian(sigma, radius, sigmaCoefficient, numberOfThreads);
+}
+
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_removeNaNFromActiveCloud(
         JNIEnv* env, jclass clazz)
 {

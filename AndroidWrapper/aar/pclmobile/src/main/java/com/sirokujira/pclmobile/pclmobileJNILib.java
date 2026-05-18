@@ -1518,6 +1518,27 @@ public final class pclmobileJNILib {
     }
 
     /**
+     * Smooths the active cloud with PCL Convolution3D and a Gaussian kernel.
+     */
+    public static native void filterConvolution3DGaussian(
+            double sigma,
+            double radius,
+            double sigmaCoefficient,
+            int numberOfThreads);
+
+    /**
+     * Applies Convolution3D Gaussian smoothing and returns the filtered points.
+     */
+    public static float[] convolution3DGaussian(
+            double sigma,
+            double radius,
+            double sigmaCoefficient,
+            int numberOfThreads) {
+        filterConvolution3DGaussian(sigma, radius, sigmaCoefficient, numberOfThreads);
+        return getFilteredPoints();
+    }
+
+    /**
      * Removes NaN points from the active cloud into the filtered cloud.
      */
     public static native void removeNaNFromActiveCloud();
