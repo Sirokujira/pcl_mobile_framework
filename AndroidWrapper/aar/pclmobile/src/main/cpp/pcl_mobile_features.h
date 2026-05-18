@@ -41,6 +41,10 @@ std::vector<jfloat> computeIntensityGradientFeatures(
         int normal_k_search,
         double radius_search,
         int number_of_threads);
+std::vector<jfloat> computeRIFTFeatures(
+        int normal_k_search,
+        double gradient_radius,
+        double feature_radius);
 std::vector<jfloat> computeShapeContext3DFeatures(
         int normal_k_search,
         double search_radius,
