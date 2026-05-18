@@ -11,6 +11,7 @@
 #include <pcl/features/cvfh.h>
 #include <pcl/features/don.h>
 #include <pcl/features/esf.h>
+#include <pcl/features/flare.h>
 #include <pcl/features/fpfh.h>
 #include <pcl/features/fpfh_omp.h>
 #include <pcl/features/gasd.h>
@@ -952,6 +953,46 @@ std::vector<jfloat> computeBOARDLocalReferenceFrames(
 
     std::vector<jfloat> values = packReferenceFrames(*frames);
     LOGI("BOARDLocalReferenceFrameEstimation computed frames: input=%zu frames=%zu normal_k=%d radius=%.3f",
+         input->points.size(), frames->points.size(), normal_k_search, radius_search);
+    return values;
+}
+
+std::vector<jfloat> computeFLARELocalReferenceFrames(
+        int normal_k_search,
+        double radius_search,
+        double tangent_radius,
+        double margin_threshold,
+        int min_neighbors_for_normal_axis,
+        int min_neighbors_for_tangent_axis)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || radius_search <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::ReferenceFrame>::Ptr frames(new pcl::PointCloud<pcl::ReferenceFrame>);
+
+    pcl::FLARELocalReferenceFrameEstimation<pcl::PointXYZ, pcl::Normal, pcl::ReferenceFrame, float> flare;
+    flare.setInputCloud(input);
+    flare.setInputNormals(normals);
+    flare.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    flare.setRadiusSearch(radius_search);
+    flare.setTangentRadius(static_cast<float>(tangent_radius > 0.0 ? tangent_radius : radius_search));
+    if (margin_threshold > 0.0) {
+        flare.setMarginThresh(static_cast<float>(margin_threshold));
+    }
+    if (min_neighbors_for_normal_axis > 0) {
+        flare.setMinNeighboursForNormalAxis(min_neighbors_for_normal_axis);
+    }
+    if (min_neighbors_for_tangent_axis > 0) {
+        flare.setMinNeighboursForTangentAxis(min_neighbors_for_tangent_axis);
+    }
+    flare.compute(*frames);
+
+    std::vector<jfloat> values = packReferenceFrames(*frames);
+    LOGI("FLARELocalReferenceFrameEstimation computed frames: input=%zu frames=%zu normal_k=%d radius=%.3f",
          input->points.size(), frames->points.size(), normal_k_search, radius_search);
     return values;
 }
