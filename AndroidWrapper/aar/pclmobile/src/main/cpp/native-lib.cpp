@@ -1980,6 +1980,14 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterFastB
     pclmobile::filterFastBilateral(sigmaS, sigmaR);
 }
 
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterFastBilateralOMP(
+        JNIEnv* env, jclass clazz, jdouble sigmaS, jdouble sigmaR, jint numberOfThreads)
+{
+    (void) env;
+    (void) clazz;
+    pclmobile::filterFastBilateralOMP(sigmaS, sigmaR, numberOfThreads);
+}
+
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterConvolution3DGaussian(
         JNIEnv* env,
         jclass clazz,
@@ -1991,6 +1999,20 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterConvo
     (void) env;
     (void) clazz;
     pclmobile::filterConvolution3DGaussian(sigma, radius, sigmaCoefficient, numberOfThreads);
+}
+
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterPlaneClipper(
+        JNIEnv* env,
+        jclass clazz,
+        jdouble a,
+        jdouble b,
+        jdouble c,
+        jdouble d,
+        jboolean negative)
+{
+    (void) env;
+    (void) clazz;
+    pclmobile::filterPlaneClipper(a, b, c, d, negative == JNI_TRUE);
 }
 
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_removeNaNFromActiveCloud(

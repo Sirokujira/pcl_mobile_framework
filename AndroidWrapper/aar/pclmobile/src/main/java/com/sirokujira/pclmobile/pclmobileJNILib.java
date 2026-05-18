@@ -1683,6 +1683,19 @@ public final class pclmobileJNILib {
     }
 
     /**
+     * Smooths an organized active cloud with PCL FastBilateralFilterOMP.
+     */
+    public static native void filterFastBilateralOMP(double sigmaS, double sigmaR, int numberOfThreads);
+
+    /**
+     * Applies FastBilateralFilterOMP and returns the filtered points.
+     */
+    public static float[] fastBilateralOMP(double sigmaS, double sigmaR, int numberOfThreads) {
+        filterFastBilateralOMP(sigmaS, sigmaR, numberOfThreads);
+        return getFilteredPoints();
+    }
+
+    /**
      * Smooths the active cloud with PCL Convolution3D and a Gaussian kernel.
      */
     public static native void filterConvolution3DGaussian(
@@ -1700,6 +1713,26 @@ public final class pclmobileJNILib {
             double sigmaCoefficient,
             int numberOfThreads) {
         filterConvolution3DGaussian(sigma, radius, sigmaCoefficient, numberOfThreads);
+        return getFilteredPoints();
+    }
+
+    /**
+     * Keeps active-cloud points on the positive side of a PCL PlaneClipper3D plane.
+     *
+     * <p>The plane is {@code a*x + b*y + c*z + d >= 0}; set {@code negative} to keep the opposite side.</p>
+     */
+    public static native void filterPlaneClipper(
+            double a,
+            double b,
+            double c,
+            double d,
+            boolean negative);
+
+    /**
+     * Applies PlaneClipper3D and returns the filtered points.
+     */
+    public static float[] planeClipper(double a, double b, double c, double d, boolean negative) {
+        filterPlaneClipper(a, b, c, d, negative);
         return getFilteredPoints();
     }
 
