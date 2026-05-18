@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include <pcl/features/3dsc.h>
+#include <pcl/features/board.h>
 #include <pcl/features/boundary.h>
 #include <pcl/features/crh.h>
 #include <pcl/features/cvfh.h>
@@ -916,6 +917,42 @@ std::vector<jfloat> computeSHOTLocalReferenceFrames(double radius_search, bool u
     std::vector<jfloat> values = packReferenceFrames(*frames);
     LOGI("SHOTLocalReferenceFrameEstimation computed frames: input=%zu frames=%zu radius=%.3f omp=%d threads=%d",
          input->points.size(), frames->points.size(), radius_search, use_omp ? 1 : 0, number_of_threads);
+    return values;
+}
+
+std::vector<jfloat> computeBOARDLocalReferenceFrames(
+        int normal_k_search,
+        double radius_search,
+        double tangent_radius,
+        bool find_holes,
+        double margin_threshold)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || radius_search <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::ReferenceFrame>::Ptr frames(new pcl::PointCloud<pcl::ReferenceFrame>);
+
+    pcl::BOARDLocalReferenceFrameEstimation<pcl::PointXYZ, pcl::Normal, pcl::ReferenceFrame> board;
+    board.setInputCloud(input);
+    board.setInputNormals(normals);
+    board.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZ>::Ptr(new pcl::search::KdTree<pcl::PointXYZ>));
+    board.setRadiusSearch(radius_search);
+    if (tangent_radius > 0.0) {
+        board.setTangentRadius(static_cast<float>(tangent_radius));
+    }
+    board.setFindHoles(find_holes);
+    if (margin_threshold > 0.0) {
+        board.setMarginThresh(static_cast<float>(margin_threshold));
+    }
+    board.compute(*frames);
+
+    std::vector<jfloat> values = packReferenceFrames(*frames);
+    LOGI("BOARDLocalReferenceFrameEstimation computed frames: input=%zu frames=%zu normal_k=%d radius=%.3f",
+         input->points.size(), frames->points.size(), normal_k_search, radius_search);
     return values;
 }
 

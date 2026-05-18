@@ -80,6 +80,12 @@ std::vector<jfloat> computePrincipalCurvatures(int normal_k_search, int curvatur
 std::vector<jfloat> computeSHOTFeatures(int normal_k_search, double feature_radius);
 std::vector<jfloat> computeSHOTFeaturesOMP(int normal_k_search, double feature_radius, int number_of_threads);
 std::vector<jfloat> computeSHOTLocalReferenceFrames(double radius_search, bool use_omp, int number_of_threads);
+std::vector<jfloat> computeBOARDLocalReferenceFrames(
+        int normal_k_search,
+        double radius_search,
+        double tangent_radius,
+        bool find_holes,
+        double margin_threshold);
 std::vector<jfloat> computeBoundaryPoints(
         int normal_k_search,
         double radius_search,
