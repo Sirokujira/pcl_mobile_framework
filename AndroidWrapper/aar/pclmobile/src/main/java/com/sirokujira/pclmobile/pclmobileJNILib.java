@@ -525,6 +525,18 @@ public final class pclmobileJNILib {
             int numberOfThreads);
 
     /**
+     * Computes BOARD local reference frames for the active cloud.
+     *
+     * @return 9 reference-frame matrix values per input point
+     */
+    public static native float[] computeBOARDLocalReferenceFrames(
+            int normalKSearch,
+            double radiusSearch,
+            double tangentRadius,
+            boolean findHoles,
+            double marginThreshold);
+
+    /**
      * Computes PCL BoundaryEstimation flags for the active cloud.
      *
      * @return {@code x, y, z, boundary_flag} tuples
