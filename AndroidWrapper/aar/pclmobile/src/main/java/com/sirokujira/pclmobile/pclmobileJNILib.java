@@ -1308,6 +1308,56 @@ public final class pclmobileJNILib {
     public static native float[] estimateRigidTransform2D(float[] packedTargetXYZ);
 
     /**
+     * Finds nearest-neighbor correspondences from the active cloud to {@code packedTargetXYZ}.
+     *
+     * <p>Pass {@code 0.0} for {@code maxDistance} to keep PCL's unbounded default.
+     * The returned array is packed as repeated {@code source_index, target_index, distance} triples.</p>
+     */
+    public static native float[] findCorrespondences(float[] packedTargetXYZ, double maxDistance);
+
+    /**
+     * Finds reciprocal nearest-neighbor correspondences between the active cloud and {@code packedTargetXYZ}.
+     *
+     * <p>Pass {@code 0.0} for {@code maxDistance} to keep PCL's unbounded default.
+     * The returned array is packed as repeated {@code source_index, target_index, distance} triples.</p>
+     */
+    public static native float[] findReciprocalCorrespondences(float[] packedTargetXYZ, double maxDistance);
+
+    /**
+     * Rejects correspondences whose source-target distance is above {@code maxDistance}.
+     *
+     * <p>{@code packedCorrespondences} is packed as repeated {@code source_index, target_index, distance}
+     * triples. The active cloud is used as the source cloud and {@code packedTargetXYZ} as the target cloud.</p>
+     */
+    public static native float[] rejectCorrespondencesDistance(
+            float[] packedCorrespondences,
+            float[] packedTargetXYZ,
+            double maxDistance);
+
+    /**
+     * Keeps one correspondence per target index with PCL CorrespondenceRejectorOneToOne.
+     *
+     * <p>{@code packedCorrespondences} is packed as repeated {@code source_index, target_index, distance}
+     * triples and the result uses the same format.</p>
+     */
+    public static native float[] rejectCorrespondencesOneToOne(float[] packedCorrespondences);
+
+    /**
+     * Scores {@code rowMajor4x4} with PCL TransformationValidationEuclidean.
+     *
+     * <p>The active cloud is used as the source cloud and {@code packedTargetXYZ} as the target cloud.
+     * Pass {@code 0.0} for {@code maxRange} to keep PCL's default. When {@code threshold} is positive,
+     * the second returned value is {@code 1.0} only if PCL considers the transform valid.</p>
+     *
+     * @return {@code score, valid}
+     */
+    public static native float[] validateTransformEuclidean(
+            float[] packedTargetXYZ,
+            float[] rowMajor4x4,
+            double maxRange,
+            double threshold);
+
+    /**
      * Applies a row-major 4x4 transform to the active cloud with PCL {@code transformPointCloud}.
      *
      * <p>The transformed points are stored as the filtered cloud and returned as {@code x, y, z} triples.
