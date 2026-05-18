@@ -847,6 +847,30 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extr
                     tolerance, minClusterSize, maxClusterSize, maxZDelta));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractPolygonalPrismData(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray packedPlanarHullXYZ,
+        jdouble heightMin,
+        jdouble heightMax,
+        jfloat viewPointX,
+        jfloat viewPointY,
+        jfloat viewPointZ,
+        jboolean negative)
+{
+    (void) clazz;
+    return pclmobile::makePointArray(
+            env,
+            pclmobile::extractPolygonalPrismData(
+                    readFloatArray(env, packedPlanarHullXYZ),
+                    heightMin,
+                    heightMax,
+                    viewPointX,
+                    viewPointY,
+                    viewPointZ,
+                    negative == JNI_TRUE));
+}
+
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractProgressiveMorphologicalGround(
         JNIEnv* env,
         jclass clazz,
