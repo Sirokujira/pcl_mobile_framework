@@ -322,6 +322,14 @@ public final class pclmobileJNILib {
     public static native float normalizeAngleRadians(float radians);
 
     /**
+     * Computes the smallest angle between two 3D vectors using PCL {@code getAngle3D}.
+     *
+     * @param vectorA {@code x, y, z}
+     * @param vectorB {@code x, y, z}
+     */
+    public static native float angleBetweenVectors(float[] vectorA, float[] vectorB, boolean inDegrees);
+
+    /**
      * Computes PCL {@code calculatePolygonArea} using active-cloud points as ordered polygon vertices.
      *
      * @return {@code area, vertex_count}
