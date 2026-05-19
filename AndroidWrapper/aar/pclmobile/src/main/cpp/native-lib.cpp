@@ -1430,6 +1430,20 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
     return pclmobile::makePointArray(env, pclmobile::computeConcaveHull(alpha));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeConvexHullMesh(
+        JNIEnv* env, jclass clazz)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::computeConvexHullMesh());
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeConcaveHullMesh(
+        JNIEnv* env, jclass clazz, jdouble alpha)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::computeConcaveHullMesh(alpha));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_projectInliersToPlane(
         JNIEnv* env, jclass clazz, jdouble distanceThreshold, jint maxIterations)
 {
@@ -2536,6 +2550,10 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_surface1(
          pclmobile::reconstructMarchingCubesHoppeMesh(16, 16, 16, 16, 0.0, 0.0, -1.0).size());
     LOGI("surface1 compatibility sample: MarchingCubesRBF values=%zu",
          pclmobile::reconstructMarchingCubesRBFMesh(16, 16, 16, 16, 0.01, 0.0, 0.0).size());
+    LOGI("surface1 compatibility sample: ConvexHull mesh values=%zu",
+         pclmobile::computeConvexHullMesh().size());
+    LOGI("surface1 compatibility sample: ConcaveHull mesh values=%zu",
+         pclmobile::computeConcaveHullMesh(0.18).size());
     LOGI("surface1 compatibility sample: OrganizedFastMesh values=%zu",
          pclmobile::reconstructOrganizedFastMeshPolygons(
                  2, 1, 0.0, 0.0, 0.0, -1.0, -1.0, false, false, false).size());

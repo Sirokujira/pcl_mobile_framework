@@ -19,6 +19,8 @@ std::vector<jfloat> computeMaxDistanceFromCentroid();
 pcl::PointCloud<pcl::PointXYZ>::Ptr demeanActiveCloud();
 pcl::PointCloud<pcl::PointXYZ>::Ptr computeConvexHull();
 pcl::PointCloud<pcl::PointXYZ>::Ptr computeConcaveHull(double alpha);
+std::vector<jfloat> computeConvexHullMesh();
+std::vector<jfloat> computeConcaveHullMesh(double alpha);
 pcl::PointCloud<pcl::PointXYZ>::Ptr projectInliersToPlane(double distance_threshold, int max_iterations);
 pcl::PointCloud<pcl::PointXYZ>::Ptr smoothMovingLeastSquares(double search_radius);
 std::vector<jfloat> smoothSurfelSmoothing(int normal_k_search, double scale);

@@ -1147,6 +1147,20 @@ public final class pclmobileJNILib {
     public static native float[] computeConcaveHull(double alpha);
 
     /**
+     * Reconstructs a convex hull mesh from the active cloud.
+     *
+     * <p>The returned array uses the same layout as {@link #reconstructGridProjectionMesh}.</p>
+     */
+    public static native float[] computeConvexHullMesh();
+
+    /**
+     * Reconstructs a concave hull mesh from the active cloud.
+     *
+     * <p>The returned array uses the same layout as {@link #reconstructGridProjectionMesh}.</p>
+     */
+    public static native float[] computeConcaveHullMesh(double alpha);
+
+    /**
      * Projects plane inliers from the active cloud onto the fitted plane.
      *
      * @return projected points packed as {@code x, y, z} triples
