@@ -17,6 +17,16 @@ jfloat angleBetweenVectors(
         const std::vector<jfloat>& vector_a_values,
         const std::vector<jfloat>& vector_b_values,
         bool in_degrees);
+jfloat squaredPointToLineDistance(
+        float point_x,
+        float point_y,
+        float point_z,
+        float line_x,
+        float line_y,
+        float line_z,
+        float direction_x,
+        float direction_y,
+        float direction_z);
 std::vector<jfloat> computeCentroidAndBounds();
 std::vector<jfloat> computeCovarianceMatrix();
 std::vector<jfloat> computeMeanAndCovarianceMatrix();
@@ -24,6 +34,7 @@ std::vector<jfloat> computePrincipalAxes();
 std::vector<jfloat> computeCentroidAndOBB();
 std::vector<jfloat> computeMomentOfInertiaAndOBB();
 std::vector<jfloat> computeSquaredDistancesToPoint(float x, float y, float z);
+std::vector<jfloat> computeMaxSegment();
 std::vector<jfloat> computeMaxDistanceFromCentroid();
 std::vector<jfloat> calculateActivePolygonArea();
 std::vector<jfloat> intersectLines(

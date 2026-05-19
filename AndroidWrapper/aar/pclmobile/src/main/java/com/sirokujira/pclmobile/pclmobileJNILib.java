@@ -330,6 +330,20 @@ public final class pclmobileJNILib {
     public static native float angleBetweenVectors(float[] vectorA, float[] vectorB, boolean inDegrees);
 
     /**
+     * Computes PCL {@code sqrPointToLineDistance}.
+     */
+    public static native float squaredPointToLineDistance(
+            float pointX,
+            float pointY,
+            float pointZ,
+            float lineX,
+            float lineY,
+            float lineZ,
+            float directionX,
+            float directionY,
+            float directionZ);
+
+    /**
      * Computes PCL {@code calculatePolygonArea} using active-cloud points as ordered polygon vertices.
      *
      * @return {@code area, vertex_count}
@@ -364,6 +378,13 @@ public final class pclmobileJNILib {
             float[] planeB,
             float[] planeC,
             double determinantTolerance);
+
+    /**
+     * Computes PCL {@code getMaxSegment} for the active cloud.
+     *
+     * @return {@code point_a_xyz, point_b_xyz, distance, point_count}
+     */
+    public static native float[] computeMaxSegment();
 
     /**
      * Finds the active-cloud point farthest from the computed centroid.

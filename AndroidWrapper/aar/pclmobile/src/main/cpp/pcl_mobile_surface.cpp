@@ -188,6 +188,26 @@ jfloat angleBetweenVectors(
     return static_cast<jfloat>(pcl::getAngle3D(vector_a, vector_b, in_degrees));
 }
 
+jfloat squaredPointToLineDistance(
+        float point_x,
+        float point_y,
+        float point_z,
+        float line_x,
+        float line_y,
+        float line_z,
+        float direction_x,
+        float direction_y,
+        float direction_z)
+{
+    Eigen::Vector4f point(point_x, point_y, point_z, 0.0f);
+    Eigen::Vector4f line_point(line_x, line_y, line_z, 0.0f);
+    Eigen::Vector4f line_direction(direction_x, direction_y, direction_z, 0.0f);
+    if (line_direction.squaredNorm() <= 0.0f) {
+        return std::numeric_limits<jfloat>::quiet_NaN();
+    }
+    return static_cast<jfloat>(pcl::sqrPointToLineDistance(point, line_point, line_direction));
+}
+
 std::vector<jfloat> computeCentroidAndBounds()
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
@@ -377,6 +397,27 @@ std::vector<jfloat> computeSquaredDistancesToPoint(float x, float y, float z)
     }
     LOGI("computeSquaredDistancesToPoint: input=%zu query=(%.3f, %.3f, %.3f)",
          input->points.size(), x, y, z);
+    return values;
+}
+
+std::vector<jfloat> computeMaxSegment()
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()) {
+        return {};
+    }
+
+    pcl::PointXYZ min_point;
+    pcl::PointXYZ max_point;
+    const double distance = pcl::getMaxSegment(*input, min_point, max_point);
+
+    std::vector<jfloat> values;
+    values.reserve(8);
+    appendPoint(values, min_point);
+    appendPoint(values, max_point);
+    values.push_back(static_cast<jfloat>(distance));
+    values.push_back(static_cast<jfloat>(input->points.size()));
+    LOGI("getMaxSegment: input=%zu distance=%.6f", input->points.size(), distance);
     return values;
 }
 
