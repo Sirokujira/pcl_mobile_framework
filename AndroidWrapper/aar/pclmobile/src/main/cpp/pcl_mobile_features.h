@@ -120,6 +120,11 @@ std::vector<jfloat> computeBoundaryPoints(
         double radius_search,
         double angle_threshold_degrees);
 std::vector<jfloat> computeDifferenceOfNormals(double small_radius, double large_radius);
+std::vector<int> extractStatisticalMultiscaleInterestRegionIndices(
+        double first_scale,
+        double second_scale,
+        double third_scale,
+        int max_point_count);
 
 } // namespace pclmobile
 

@@ -677,6 +677,21 @@ public final class pclmobileJNILib {
     public static native float[] computeDifferenceOfNormals(double smallRadius, double largeRadius);
 
     /**
+     * Extracts PCL {@code StatisticalMultiscaleInterestRegionExtraction} ROI memberships.
+     *
+     * <p>This algorithm builds an all-pairs geodesic graph, so {@code maxPointCount} limits how many
+     * active-cloud points are considered. When {@code maxPointCount <= 0}, the wrapper uses at most
+     * 256 points.</p>
+     *
+     * @return {@code roi_count, roi_size, point_index, ...} packed as {@code int[]}
+     */
+    public static native int[] extractStatisticalMultiscaleInterestRegionIndices(
+            double firstScale,
+            double secondScale,
+            double thirdScale,
+            int maxPointCount);
+
+    /**
      * Fits a plane model to the active cloud using RANSAC sample consensus.
      *
      * @param distanceThreshold maximum point-to-model distance for inliers
