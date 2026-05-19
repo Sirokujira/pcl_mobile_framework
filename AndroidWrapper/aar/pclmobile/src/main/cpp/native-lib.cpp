@@ -396,6 +396,22 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_esti
             pclmobile::estimateNormalsOMP(kSearch, numberOfThreads));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_estimateLinearLeastSquaresNormals(
+        JNIEnv* env,
+        jclass clazz,
+        jdouble normalSmoothingSize,
+        jboolean depthDependentSmoothing,
+        jdouble maxDepthChangeFactor)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::estimateLinearLeastSquaresNormals(
+                    normalSmoothingSize,
+                    depthDependentSmoothing == JNI_TRUE,
+                    maxDepthChangeFactor));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_refineNormals(
         JNIEnv* env,
         jclass clazz,

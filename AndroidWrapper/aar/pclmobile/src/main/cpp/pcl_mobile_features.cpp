@@ -19,6 +19,8 @@
 #include <pcl/features/grsd.h>
 #include <pcl/features/intensity_gradient.h>
 #include <pcl/features/intensity_spin.h>
+#include <pcl/features/linear_least_squares_normal.h>
+#include <pcl/features/impl/linear_least_squares_normal.hpp>
 #include <pcl/features/moment_invariants.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/normal_3d_omp.h>
@@ -239,6 +241,32 @@ std::vector<jfloat> estimateNormalsOMP(int k_search, int number_of_threads)
     std::vector<jfloat> values = packNormals(*normals);
     LOGI("NormalEstimationOMP computed normals: input=%zu normals=%zu k=%d threads=%d",
          input->points.size(), normals->points.size(), k_search, number_of_threads);
+    return values;
+}
+
+std::vector<jfloat> estimateLinearLeastSquaresNormals(
+        double normal_smoothing_size,
+        bool depth_dependent_smoothing,
+        double max_depth_change_factor)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || input->height <= 1 || normal_smoothing_size <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+    pcl::LinearLeastSquaresNormalEstimation<pcl::PointXYZ, pcl::Normal> estimation;
+    estimation.setInputCloud(input);
+    estimation.setNormalSmoothingSize(static_cast<float>(normal_smoothing_size));
+    estimation.setDepthDependentSmoothing(depth_dependent_smoothing);
+    if (max_depth_change_factor > 0.0) {
+        estimation.setMaxDepthChangeFactor(static_cast<float>(max_depth_change_factor));
+    }
+    estimation.compute(*normals);
+
+    std::vector<jfloat> values = packNormals(*normals);
+    LOGI("LinearLeastSquaresNormalEstimation computed normals: input=%zu normals=%zu smoothing=%.3f depthDependent=%d",
+         input->points.size(), normals->points.size(), normal_smoothing_size, depth_dependent_smoothing ? 1 : 0);
     return values;
 }
 

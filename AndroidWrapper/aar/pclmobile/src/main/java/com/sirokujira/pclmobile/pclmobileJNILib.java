@@ -284,6 +284,16 @@ public final class pclmobileJNILib {
     public static native float[] estimateNormalsOMP(int kSearch, int numberOfThreads);
 
     /**
+     * Estimates normals for an organized active cloud with PCL {@code LinearLeastSquaresNormalEstimation}.
+     *
+     * @return {@code normal_x, normal_y, normal_z, curvature} tuples
+     */
+    public static native float[] estimateLinearLeastSquaresNormals(
+            double normalSmoothingSize,
+            boolean depthDependentSmoothing,
+            double maxDepthChangeFactor);
+
+    /**
      * Refines estimated normals with PCL NormalRefinement.
      *
      * @return {@code normal_x, normal_y, normal_z, curvature} tuples
