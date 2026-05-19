@@ -1,6 +1,7 @@
 #include "pcl_mobile_io.h"
 
 #include <pcl/io/pcd_io.h>
+#include <pcl/io/obj_io.h>
 #include <pcl/io/ply_io.h>
 
 #include "pcl_mobile_context.h"
@@ -51,6 +52,18 @@ void loadPLYFile(const std::string& filename)
     }
 
     LOGI("Loaded PLY file: %s points=%zu", filename.c_str(), cloud()->points.size());
+}
+
+void loadOBJFile(const std::string& filename)
+{
+    clearFilteredCloud();
+    if (pcl::io::loadOBJFile<pcl::PointXYZ>(filename, *cloud()) < 0) {
+        cloud()->clear();
+        LOGE("Failed to load OBJ file: %s", filename.c_str());
+        return;
+    }
+
+    LOGI("Loaded OBJ file: %s points=%zu", filename.c_str(), cloud()->points.size());
 }
 
 void setCloudFromPackedXYZ(const std::vector<jfloat>& packed_xyz)

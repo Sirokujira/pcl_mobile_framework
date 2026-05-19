@@ -136,6 +136,11 @@ public final class pclmobileJNILib {
     public static native void loadPLY(String filename);
 
     /**
+     * Loads an OBJ file into the native source cloud and clears the filtered cloud.
+     */
+    public static native void loadOBJ(String filename);
+
+    /**
      * Replaces the native source cloud from packed {@code x, y, z} triples.
      *
      * <p>Trailing values are ignored when {@code packedXYZ.length} is not divisible by 3.</p>
