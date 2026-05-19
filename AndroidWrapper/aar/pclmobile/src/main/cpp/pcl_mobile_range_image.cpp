@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include <Eigen/Geometry>
+#include <pcl/features/narf_descriptor.h>
 #include <pcl/features/range_image_border_extractor.h>
 #include <pcl/range_image/range_image.h>
 #include <pcl/range_image/range_image_planar.h>
@@ -49,6 +50,24 @@ std::vector<jfloat> packBorderDescriptions(const pcl::PointCloud<pcl::BorderDesc
         values.push_back(static_cast<jfloat>(border.x));
         values.push_back(static_cast<jfloat>(border.y));
         values.push_back(static_cast<jfloat>(border.traits.to_ulong()));
+    }
+    return values;
+}
+
+std::vector<jfloat> packNarfDescriptors(const pcl::PointCloud<pcl::Narf36>& descriptors)
+{
+    std::vector<jfloat> values;
+    values.reserve(descriptors.points.size() * 42);
+    for (const auto& descriptor : descriptors.points) {
+        values.push_back(descriptor.x);
+        values.push_back(descriptor.y);
+        values.push_back(descriptor.z);
+        values.push_back(descriptor.roll);
+        values.push_back(descriptor.pitch);
+        values.push_back(descriptor.yaw);
+        for (float value : descriptor.descriptor) {
+            values.push_back(value);
+        }
     }
     return values;
 }
@@ -216,6 +235,69 @@ std::vector<jfloat> computeRangeImageBorderDescriptionsFromActiveCloud(
     std::vector<jfloat> values = packBorderDescriptions(borders);
     LOGI("RangeImageBorderExtractor computed borders: input=%zu width=%u height=%u borders=%zu",
          input->points.size(), range_image.width, range_image.height, values.size() / 3);
+    return values;
+}
+
+std::vector<jfloat> computeNARFDescriptorsFromActiveCloud(
+        float angular_resolution_degrees,
+        float max_angle_width_degrees,
+        float max_angle_height_degrees,
+        float sensor_x,
+        float sensor_y,
+        float sensor_z,
+        float min_range,
+        float support_size,
+        bool rotation_invariant,
+        int max_descriptor_count)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()
+            || angular_resolution_degrees <= 0.0f
+            || max_angle_width_degrees <= 0.0f
+            || max_angle_height_degrees <= 0.0f
+            || support_size <= 0.0f
+            || max_descriptor_count <= 0) {
+        return {};
+    }
+
+    Eigen::Affine3f sensor_pose = Eigen::Affine3f::Identity();
+    sensor_pose.translation() = Eigen::Vector3f(sensor_x, sensor_y, sensor_z);
+
+    pcl::RangeImage range_image;
+    range_image.createFromPointCloud(
+            *input,
+            degreesToRadians(angular_resolution_degrees),
+            degreesToRadians(max_angle_width_degrees),
+            degreesToRadians(max_angle_height_degrees),
+            sensor_pose,
+            pcl::RangeImage::CAMERA_FRAME,
+            0.0f,
+            min_range);
+
+    pcl::Indices indices;
+    indices.reserve(std::min<std::size_t>(
+            range_image.points.size(),
+            static_cast<std::size_t>(max_descriptor_count)));
+    for (std::size_t i = 0; i < range_image.points.size()
+            && indices.size() < static_cast<std::size_t>(max_descriptor_count); ++i) {
+        if (std::isfinite(range_image.points[i].range)) {
+            indices.push_back(static_cast<int>(i));
+        }
+    }
+
+    if (indices.empty()) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Narf36> descriptors;
+    pcl::NarfDescriptor narf(&range_image, &indices);
+    narf.getParameters().support_size = support_size;
+    narf.getParameters().rotation_invariant = rotation_invariant;
+    narf.compute(descriptors);
+
+    std::vector<jfloat> values = packNarfDescriptors(descriptors);
+    LOGI("NarfDescriptor computed descriptors: input=%zu range=%zu indices=%zu descriptors=%zu support=%.3f",
+         input->points.size(), range_image.points.size(), indices.size(), descriptors.points.size(), support_size);
     return values;
 }
 
