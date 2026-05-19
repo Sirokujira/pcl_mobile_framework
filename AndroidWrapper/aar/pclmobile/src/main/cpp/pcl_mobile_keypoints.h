@@ -28,6 +28,12 @@ std::vector<jfloat> computeHarrisKeypoints(
         double threshold,
         bool non_max_suppression,
         bool refine);
+std::vector<jfloat> computeHarris6DKeypoints(
+        double radius,
+        double threshold,
+        bool non_max_suppression,
+        bool refine,
+        int number_of_threads);
 std::vector<jfloat> computeHarris2DKeypoints(
         int response_method,
         int window_width,
