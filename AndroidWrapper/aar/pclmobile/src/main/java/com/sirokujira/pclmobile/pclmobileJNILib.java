@@ -1279,6 +1279,24 @@ public final class pclmobileJNILib {
             int maxDescriptorCount);
 
     /**
+     * Computes PCL {@code NarfKeypoint} indices on a range image built from the active cloud.
+     *
+     * @return {@code range_index, x, y, z, range} tuples
+     */
+    public static native float[] computeNARFKeypointsFromActiveCloud(
+            float angularResolutionDegrees,
+            float maxAngleWidthDegrees,
+            float maxAngleHeightDegrees,
+            float sensorX,
+            float sensorY,
+            float sensorZ,
+            float minRange,
+            float supportSize,
+            int maxKeypointCount,
+            float minInterestValue,
+            boolean nonMaximumSuppression);
+
+    /**
      * Reconstructs a convex hull from the active cloud.
      *
      * @return hull points packed as {@code x, y, z} triples
