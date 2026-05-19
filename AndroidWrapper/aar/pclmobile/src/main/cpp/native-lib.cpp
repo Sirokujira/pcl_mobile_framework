@@ -1514,6 +1514,26 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
     return pclmobile::makePointArray(env, pclmobile::computeUniformSamplingKeypoints(radius));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeSmoothedSurfacesKeypoints(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jdouble inputScale,
+        jdouble firstSmoothedScale,
+        jdouble secondSmoothedScale,
+        jdouble neighborhoodConstant)
+{
+    (void) clazz;
+    return pclmobile::makePointArray(
+            env,
+            pclmobile::computeSmoothedSurfacesKeypoints(
+                    normalKSearch,
+                    inputScale,
+                    firstSmoothedScale,
+                    secondSmoothedScale,
+                    neighborhoodConstant));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeRangeImageFromActiveCloud(
         JNIEnv* env,
         jclass clazz,
@@ -2711,6 +2731,8 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_keypoint1(
                   pclmobile::computeAGAST2DKeypoints(30.0, 255.0, true, 0).size(), 2);
     logPointCount("keypoint1", "UniformSampling",
                   pclmobile::computeUniformSamplingKeypoints(0.05)->points.size() * 3);
+    logPointCount("keypoint1", "SmoothedSurfacesKeypoint",
+                  pclmobile::computeSmoothedSurfacesKeypoints(16, 0.09, 0.03, 0.06, 0.5)->points.size() * 3);
 }
 
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_octree1(

@@ -70,6 +70,12 @@ std::vector<jfloat> computeAGAST2DKeypoints(
         bool non_max_suppression,
         int max_keypoints);
 pcl::PointCloud<pcl::PointXYZ>::Ptr computeUniformSamplingKeypoints(double radius);
+pcl::PointCloud<pcl::PointXYZ>::Ptr computeSmoothedSurfacesKeypoints(
+        int normal_k_search,
+        double input_scale,
+        double first_smoothed_scale,
+        double second_smoothed_scale,
+        double neighborhood_constant);
 
 } // namespace pclmobile
 
