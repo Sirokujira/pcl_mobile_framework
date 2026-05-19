@@ -91,6 +91,22 @@ void setFilteredCloudFromIndices(
     filteredCloud()->is_dense = input->is_dense;
 }
 
+std::vector<int> packClusterIndices(const std::vector<pcl::PointIndices>& clusters)
+{
+    std::vector<int> values;
+    std::size_t value_count = 1 + clusters.size();
+    for (const auto& cluster : clusters) {
+        value_count += cluster.indices.size();
+    }
+    values.reserve(value_count);
+    values.push_back(static_cast<int>(clusters.size()));
+    for (const auto& cluster : clusters) {
+        values.push_back(static_cast<int>(cluster.indices.size()));
+        values.insert(values.end(), cluster.indices.begin(), cluster.indices.end());
+    }
+    return values;
+}
+
 } // namespace
 
 bool segmentPlane(double distance_threshold,
@@ -243,6 +259,30 @@ std::vector<jfloat> extractEuclideanClusters(double tolerance, int min_cluster_s
     return values;
 }
 
+std::vector<int> extractEuclideanClusterIndices(double tolerance, int min_cluster_size, int max_cluster_size)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()) {
+        return {};
+    }
+
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+    tree->setInputCloud(input);
+
+    std::vector<pcl::PointIndices> cluster_indices;
+    pcl::EuclideanClusterExtraction<pcl::PointXYZ> extraction;
+    extraction.setClusterTolerance(tolerance);
+    extraction.setMinClusterSize(min_cluster_size);
+    extraction.setMaxClusterSize(max_cluster_size);
+    extraction.setSearchMethod(tree);
+    extraction.setInputCloud(input);
+    extraction.extract(cluster_indices);
+
+    LOGI("EuclideanClusterExtraction indices: input=%zu clusters=%zu tolerance=%.3f min=%d max=%d",
+         input->points.size(), cluster_indices.size(), tolerance, min_cluster_size, max_cluster_size);
+    return packClusterIndices(cluster_indices);
+}
+
 std::vector<jfloat> extractRegionGrowingClusters(
         int normal_k_search,
         int number_of_neighbours,
@@ -282,6 +322,40 @@ std::vector<jfloat> extractRegionGrowingClusters(
     return values;
 }
 
+std::vector<int> extractRegionGrowingClusterIndices(
+        int normal_k_search,
+        int number_of_neighbours,
+        int min_cluster_size,
+        int max_cluster_size,
+        double smoothness_threshold_degrees,
+        double curvature_threshold)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || number_of_neighbours <= 0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search);
+    pcl::search::Search<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+
+    pcl::RegionGrowing<pcl::PointXYZ, pcl::Normal> region_growing;
+    region_growing.setInputCloud(input);
+    region_growing.setInputNormals(normals);
+    region_growing.setSearchMethod(tree);
+    region_growing.setNumberOfNeighbours(static_cast<unsigned int>(number_of_neighbours));
+    region_growing.setMinClusterSize(static_cast<pcl::uindex_t>(std::max(min_cluster_size, 1)));
+    region_growing.setMaxClusterSize(static_cast<pcl::uindex_t>(std::max(max_cluster_size, min_cluster_size)));
+    region_growing.setSmoothnessThreshold(degreesToRadians(smoothness_threshold_degrees));
+    region_growing.setCurvatureThreshold(static_cast<float>(curvature_threshold));
+
+    std::vector<pcl::PointIndices> clusters;
+    region_growing.extract(clusters);
+
+    LOGI("RegionGrowing indices: input=%zu clusters=%zu normal_k=%d neighbours=%d",
+         input->points.size(), clusters.size(), normal_k_search, number_of_neighbours);
+    return packClusterIndices(clusters);
+}
+
 std::vector<jfloat> extractConditionalEuclideanClusters(
         double tolerance,
         int min_cluster_size,
@@ -315,6 +389,36 @@ std::vector<jfloat> extractConditionalEuclideanClusters(
     LOGI("ConditionalEuclideanClustering: input=%zu clusters=%zu tolerance=%.3f maxZDelta=%.3f",
          input->points.size(), clusters.size(), tolerance, max_z_delta);
     return values;
+}
+
+std::vector<int> extractConditionalEuclideanClusterIndices(
+        double tolerance,
+        int min_cluster_size,
+        int max_cluster_size,
+        double max_z_delta)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || tolerance <= 0.0 || max_z_delta < 0.0) {
+        return {};
+    }
+
+    pcl::ConditionalEuclideanClustering<pcl::PointXYZ> clustering;
+    clustering.setInputCloud(input);
+    clustering.setClusterTolerance(static_cast<float>(tolerance));
+    clustering.setMinClusterSize(static_cast<pcl::uindex_t>(std::max(min_cluster_size, 1)));
+    clustering.setMaxClusterSize(static_cast<pcl::uindex_t>(std::max(max_cluster_size, min_cluster_size)));
+    clustering.setConditionFunction(
+            [max_z_delta](const pcl::PointXYZ& a, const pcl::PointXYZ& b, float squared_distance) {
+                (void) squared_distance;
+                return std::fabs(a.z - b.z) <= max_z_delta;
+            });
+
+    std::vector<pcl::PointIndices> clusters;
+    clustering.segment(clusters);
+
+    LOGI("ConditionalEuclideanClustering indices: input=%zu clusters=%zu tolerance=%.3f maxZDelta=%.3f",
+         input->points.size(), clusters.size(), tolerance, max_z_delta);
+    return packClusterIndices(clusters);
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr extractPolygonalPrismData(

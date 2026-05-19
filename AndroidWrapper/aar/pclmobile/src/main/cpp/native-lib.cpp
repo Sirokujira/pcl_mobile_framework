@@ -1039,6 +1039,14 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extr
             env, pclmobile::extractEuclideanClusters(tolerance, minClusterSize, maxClusterSize));
 }
 
+JNIEXPORT jintArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractEuclideanClusterIndices(
+        JNIEnv* env, jclass clazz, jdouble tolerance, jint minClusterSize, jint maxClusterSize)
+{
+    (void) clazz;
+    return makeIntArray(
+            env, pclmobile::extractEuclideanClusterIndices(tolerance, minClusterSize, maxClusterSize));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractRegionGrowingClusters(
         JNIEnv* env,
         jclass clazz,
@@ -1061,6 +1069,28 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extr
                     curvatureThreshold));
 }
 
+JNIEXPORT jintArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractRegionGrowingClusterIndices(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jint numberOfNeighbours,
+        jint minClusterSize,
+        jint maxClusterSize,
+        jdouble smoothnessThresholdDegrees,
+        jdouble curvatureThreshold)
+{
+    (void) clazz;
+    return makeIntArray(
+            env,
+            pclmobile::extractRegionGrowingClusterIndices(
+                    normalKSearch,
+                    numberOfNeighbours,
+                    minClusterSize,
+                    maxClusterSize,
+                    smoothnessThresholdDegrees,
+                    curvatureThreshold));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractConditionalEuclideanClusters(
         JNIEnv* env,
         jclass clazz,
@@ -1073,6 +1103,21 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extr
     return pclmobile::makeFloatArray(
             env,
             pclmobile::extractConditionalEuclideanClusters(
+                    tolerance, minClusterSize, maxClusterSize, maxZDelta));
+}
+
+JNIEXPORT jintArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractConditionalEuclideanClusterIndices(
+        JNIEnv* env,
+        jclass clazz,
+        jdouble tolerance,
+        jint minClusterSize,
+        jint maxClusterSize,
+        jdouble maxZDelta)
+{
+    (void) clazz;
+    return makeIntArray(
+            env,
+            pclmobile::extractConditionalEuclideanClusterIndices(
                     tolerance, minClusterSize, maxClusterSize, maxZDelta));
 }
 
