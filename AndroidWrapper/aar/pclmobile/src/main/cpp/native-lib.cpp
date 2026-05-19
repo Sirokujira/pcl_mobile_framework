@@ -486,6 +486,33 @@ JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_angleBetw
             inDegrees == JNI_TRUE);
 }
 
+JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_squaredPointToLineDistance(
+        JNIEnv* env,
+        jclass clazz,
+        jfloat pointX,
+        jfloat pointY,
+        jfloat pointZ,
+        jfloat lineX,
+        jfloat lineY,
+        jfloat lineZ,
+        jfloat directionX,
+        jfloat directionY,
+        jfloat directionZ)
+{
+    (void) env;
+    (void) clazz;
+    return pclmobile::squaredPointToLineDistance(
+            pointX,
+            pointY,
+            pointZ,
+            lineX,
+            lineY,
+            lineZ,
+            directionX,
+            directionY,
+            directionZ);
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_calculateActivePolygonArea(
         JNIEnv* env, jclass clazz)
 {
@@ -541,6 +568,13 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_inte
                     readFloatArray(env, planeB),
                     readFloatArray(env, planeC),
                     determinantTolerance));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeMaxSegment(
+        JNIEnv* env, jclass clazz)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::computeMaxSegment());
 }
 
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeMaxDistanceFromCentroid(
