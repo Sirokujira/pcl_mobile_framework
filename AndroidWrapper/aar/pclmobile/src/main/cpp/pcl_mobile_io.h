@@ -16,10 +16,12 @@ void loadPCDFile(const std::string& filename);
 void loadPLYFile(const std::string& filename);
 void loadOBJFile(const std::string& filename);
 void loadIFSFile(const std::string& filename);
+void loadAutoFile(const std::string& filename);
 void setCloudFromPackedXYZ(const std::vector<jfloat>& packed_xyz);
 bool writePCDFileASCII(const std::string& filename, const pcl::PointCloud<pcl::PointXYZ>::Ptr& source);
 bool writePLYFileASCII(const std::string& filename, const pcl::PointCloud<pcl::PointXYZ>::Ptr& source);
 bool writeIFSFile(const std::string& filename, const pcl::PointCloud<pcl::PointXYZ>::Ptr& source);
+bool writeAutoFile(const std::string& filename, const pcl::PointCloud<pcl::PointXYZ>::Ptr& source);
 
 } // namespace pclmobile
 

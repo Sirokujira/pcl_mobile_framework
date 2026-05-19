@@ -146,6 +146,11 @@ public final class pclmobileJNILib {
     public static native void loadIFS(String filename);
 
     /**
+     * Loads a point cloud using PCL {@code io::load} extension dispatch and clears the filtered cloud.
+     */
+    public static native void loadAuto(String filename);
+
+    /**
      * Replaces the native source cloud from packed {@code x, y, z} triples.
      *
      * <p>Trailing values are ignored when {@code packedXYZ.length} is not divisible by 3.</p>
@@ -236,6 +241,21 @@ public final class pclmobileJNILib {
      * Writes the filtered cloud to an IFS file.
      */
     public static native boolean writeFilteredIFSFile(String filename);
+
+    /**
+     * Writes the active cloud using PCL {@code io::save} extension dispatch.
+     */
+    public static native boolean writeActiveAutoFile(String filename);
+
+    /**
+     * Writes the source cloud using PCL {@code io::save} extension dispatch.
+     */
+    public static native boolean writeSourceAutoFile(String filename);
+
+    /**
+     * Writes the filtered cloud using PCL {@code io::save} extension dispatch.
+     */
+    public static native boolean writeFilteredAutoFile(String filename);
 
     /**
      * Computes centroid, min bounds, max bounds, and point count for the active cloud.
