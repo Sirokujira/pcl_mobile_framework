@@ -338,11 +338,25 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
     return pclmobile::makeFloatArray(env, pclmobile::computeCovarianceMatrix());
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeMeanAndCovarianceMatrix(
+        JNIEnv* env, jclass clazz)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::computeMeanAndCovarianceMatrix());
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computePrincipalAxes(
         JNIEnv* env, jclass clazz)
 {
     (void) clazz;
     return pclmobile::makeFloatArray(env, pclmobile::computePrincipalAxes());
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeCentroidAndOBB(
+        JNIEnv* env, jclass clazz)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::computeCentroidAndOBB());
 }
 
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeMomentOfInertiaAndOBB(
@@ -357,6 +371,13 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
 {
     (void) clazz;
     return pclmobile::makeFloatArray(env, pclmobile::computeSquaredDistancesToPoint(x, y, z));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_calculateActivePolygonArea(
+        JNIEnv* env, jclass clazz)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::calculateActivePolygonArea());
 }
 
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeMaxDistanceFromCentroid(
@@ -2638,12 +2659,18 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_geometry1(
          pclmobile::computeCentroidAndBounds().size());
     LOGI("geometry1 compatibility sample: computeCovarianceMatrix values=%zu",
          pclmobile::computeCovarianceMatrix().size());
+    LOGI("geometry1 compatibility sample: computeMeanAndCovarianceMatrix values=%zu",
+         pclmobile::computeMeanAndCovarianceMatrix().size());
     LOGI("geometry1 compatibility sample: computePrincipalAxes values=%zu",
          pclmobile::computePrincipalAxes().size());
+    LOGI("geometry1 compatibility sample: computeCentroidAndOBB values=%zu",
+         pclmobile::computeCentroidAndOBB().size());
     LOGI("geometry1 compatibility sample: computeMomentOfInertiaAndOBB values=%zu",
          pclmobile::computeMomentOfInertiaAndOBB().size());
     LOGI("geometry1 compatibility sample: computeSquaredDistancesToPoint values=%zu",
          pclmobile::computeSquaredDistancesToPoint(0.0f, 0.0f, 0.0f).size());
+    LOGI("geometry1 compatibility sample: calculatePolygonArea values=%zu",
+         pclmobile::calculateActivePolygonArea().size());
 }
 
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_kdtree1(
