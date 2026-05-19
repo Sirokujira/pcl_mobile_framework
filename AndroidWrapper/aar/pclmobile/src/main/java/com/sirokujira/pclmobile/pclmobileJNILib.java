@@ -1213,6 +1213,22 @@ public final class pclmobileJNILib {
             float minRange);
 
     /**
+     * Runs PCL {@code RangeImageBorderExtractor} on a range image built from the active cloud.
+     *
+     * @return {@code image_x, image_y, border_traits_mask} tuples for pixels with at least one border trait
+     */
+    public static native float[] computeRangeImageBorderDescriptionsFromActiveCloud(
+            float angularResolutionDegrees,
+            float maxAngleWidthDegrees,
+            float maxAngleHeightDegrees,
+            float sensorX,
+            float sensorY,
+            float sensorZ,
+            float minRange,
+            int maxNoOfThreads,
+            int pixelRadiusBorders);
+
+    /**
      * Reconstructs a convex hull from the active cloud.
      *
      * @return hull points packed as {@code x, y, z} triples

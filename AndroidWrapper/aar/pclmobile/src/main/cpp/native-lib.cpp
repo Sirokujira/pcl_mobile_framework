@@ -1535,6 +1535,34 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
                     minRange));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeRangeImageBorderDescriptionsFromActiveCloud(
+        JNIEnv* env,
+        jclass clazz,
+        jfloat angularResolutionDegrees,
+        jfloat maxAngleWidthDegrees,
+        jfloat maxAngleHeightDegrees,
+        jfloat sensorX,
+        jfloat sensorY,
+        jfloat sensorZ,
+        jfloat minRange,
+        jint maxNoOfThreads,
+        jint pixelRadiusBorders)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeRangeImageBorderDescriptionsFromActiveCloud(
+                    angularResolutionDegrees,
+                    maxAngleWidthDegrees,
+                    maxAngleHeightDegrees,
+                    sensorX,
+                    sensorY,
+                    sensorZ,
+                    minRange,
+                    maxNoOfThreads,
+                    pixelRadiusBorders));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeConvexHull(
         JNIEnv* env, jclass clazz)
 {

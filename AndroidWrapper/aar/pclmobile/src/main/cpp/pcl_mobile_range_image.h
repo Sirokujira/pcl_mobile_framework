@@ -34,6 +34,16 @@ std::vector<jfloat> computePlanarRangeImageFromActiveCloud(
         float sensor_y,
         float sensor_z,
         float min_range);
+std::vector<jfloat> computeRangeImageBorderDescriptionsFromActiveCloud(
+        float angular_resolution_degrees,
+        float max_angle_width_degrees,
+        float max_angle_height_degrees,
+        float sensor_x,
+        float sensor_y,
+        float sensor_z,
+        float min_range,
+        int max_no_of_threads,
+        int pixel_radius_borders);
 
 } // namespace pclmobile
 

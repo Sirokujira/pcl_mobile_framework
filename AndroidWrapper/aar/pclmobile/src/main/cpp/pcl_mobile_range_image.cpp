@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include <Eigen/Geometry>
+#include <pcl/features/range_image_border_extractor.h>
 #include <pcl/range_image/range_image.h>
 #include <pcl/range_image/range_image_planar.h>
 #include <pcl/range_image/range_image_spherical.h>
@@ -33,6 +34,21 @@ std::vector<jfloat> packFiniteRangePoints(const pcl::RangeImage& range_image)
         values.push_back(point.y);
         values.push_back(point.z);
         values.push_back(point.range);
+    }
+    return values;
+}
+
+std::vector<jfloat> packBorderDescriptions(const pcl::PointCloud<pcl::BorderDescription>& borders)
+{
+    std::vector<jfloat> values;
+    values.reserve(borders.points.size() * 3);
+    for (const auto& border : borders.points) {
+        if (!border.traits.any()) {
+            continue;
+        }
+        values.push_back(static_cast<jfloat>(border.x));
+        values.push_back(static_cast<jfloat>(border.y));
+        values.push_back(static_cast<jfloat>(border.traits.to_ulong()));
     }
     return values;
 }
@@ -155,6 +171,51 @@ std::vector<jfloat> computePlanarRangeImageFromActiveCloud(
     std::vector<jfloat> values = packFiniteRangePoints(range_image);
     LOGI("RangeImagePlanar createFromPointCloudWithFixedSize: input=%zu width=%u height=%u finite=%zu",
          input->points.size(), range_image.width, range_image.height, values.size() / 4);
+    return values;
+}
+
+std::vector<jfloat> computeRangeImageBorderDescriptionsFromActiveCloud(
+        float angular_resolution_degrees,
+        float max_angle_width_degrees,
+        float max_angle_height_degrees,
+        float sensor_x,
+        float sensor_y,
+        float sensor_z,
+        float min_range,
+        int max_no_of_threads,
+        int pixel_radius_borders)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()
+            || angular_resolution_degrees <= 0.0f
+            || max_angle_width_degrees <= 0.0f
+            || max_angle_height_degrees <= 0.0f) {
+        return {};
+    }
+
+    Eigen::Affine3f sensor_pose = Eigen::Affine3f::Identity();
+    sensor_pose.translation() = Eigen::Vector3f(sensor_x, sensor_y, sensor_z);
+
+    pcl::RangeImage range_image;
+    range_image.createFromPointCloud(
+            *input,
+            degreesToRadians(angular_resolution_degrees),
+            degreesToRadians(max_angle_width_degrees),
+            degreesToRadians(max_angle_height_degrees),
+            sensor_pose,
+            pcl::RangeImage::CAMERA_FRAME,
+            0.0f,
+            min_range);
+
+    pcl::RangeImageBorderExtractor border_extractor(&range_image);
+    border_extractor.getParameters().max_no_of_threads = std::max(max_no_of_threads, 1);
+    border_extractor.getParameters().pixel_radius_borders = std::max(pixel_radius_borders, 1);
+    pcl::PointCloud<pcl::BorderDescription> borders;
+    border_extractor.compute(borders);
+
+    std::vector<jfloat> values = packBorderDescriptions(borders);
+    LOGI("RangeImageBorderExtractor computed borders: input=%zu width=%u height=%u borders=%zu",
+         input->points.size(), range_image.width, range_image.height, values.size() / 3);
     return values;
 }
 
