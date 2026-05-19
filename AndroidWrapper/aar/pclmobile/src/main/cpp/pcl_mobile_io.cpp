@@ -1,5 +1,6 @@
 #include "pcl_mobile_io.h"
 
+#include <pcl/io/auto_io.h>
 #include <pcl/io/ifs_io.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/io/obj_io.h>
@@ -79,6 +80,18 @@ void loadIFSFile(const std::string& filename)
     LOGI("Loaded IFS file: %s points=%zu", filename.c_str(), cloud()->points.size());
 }
 
+void loadAutoFile(const std::string& filename)
+{
+    clearFilteredCloud();
+    if (pcl::io::load<pcl::PointXYZ>(filename, *cloud()) < 0) {
+        cloud()->clear();
+        LOGE("Failed to auto-load point cloud file: %s", filename.c_str());
+        return;
+    }
+
+    LOGI("Auto-loaded point cloud file: %s points=%zu", filename.c_str(), cloud()->points.size());
+}
+
 void setCloudFromPackedXYZ(const std::vector<jfloat>& packed_xyz)
 {
     clearFilteredCloud();
@@ -128,6 +141,18 @@ bool writeIFSFile(const std::string& filename, const pcl::PointCloud<pcl::PointX
     }
     const bool ok = pcl::IFSWriter().write<pcl::PointXYZ>(filename, *source, "pclmobile_cloud") == 0;
     LOGI("Saved IFS file: %s ok=%d points=%zu", filename.c_str(), ok ? 1 : 0, source->points.size());
+    return ok;
+}
+
+bool writeAutoFile(const std::string& filename, const pcl::PointCloud<pcl::PointXYZ>::Ptr& source)
+{
+    if (filename.empty() || source == nullptr || source->empty()) {
+        LOGE("Refused to auto-write empty point cloud file target=%s points=%zu",
+             filename.c_str(), source == nullptr ? 0 : source->points.size());
+        return false;
+    }
+    const bool ok = pcl::io::save<pcl::PointXYZ>(filename, *source) == 0;
+    LOGI("Auto-saved point cloud file: %s ok=%d points=%zu", filename.c_str(), ok ? 1 : 0, source->points.size());
     return ok;
 }
 
