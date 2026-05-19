@@ -1312,6 +1312,26 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
                     refine == JNI_TRUE));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeHarris6DKeypoints(
+        JNIEnv* env,
+        jclass clazz,
+        jdouble radius,
+        jdouble threshold,
+        jboolean nonMaxSuppression,
+        jboolean refine,
+        jint numberOfThreads)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeHarris6DKeypoints(
+                    radius,
+                    threshold,
+                    nonMaxSuppression == JNI_TRUE,
+                    refine == JNI_TRUE,
+                    numberOfThreads));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeHarris2DKeypoints(
         JNIEnv* env,
         jclass clazz,

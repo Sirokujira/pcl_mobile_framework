@@ -1053,6 +1053,21 @@ public final class pclmobileJNILib {
             boolean refine);
 
     /**
+     * Computes Harris 6D keypoints for the active cloud.
+     *
+     * <p>The wrapper derives a grayscale RGB field from XYZ distance before invoking
+     * PCL {@code HarrisKeypoint6D}.</p>
+     *
+     * @return {@code x, y, z, response} tuples
+     */
+    public static native float[] computeHarris6DKeypoints(
+            double radius,
+            double threshold,
+            boolean nonMaxSuppression,
+            boolean refine,
+            int numberOfThreads);
+
+    /**
      * Computes Harris 2D keypoints for the active organized cloud.
      *
      * <p>The wrapper derives an intensity field from XYZ distance before invoking

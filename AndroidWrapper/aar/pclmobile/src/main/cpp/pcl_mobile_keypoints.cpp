@@ -1,11 +1,13 @@
 #include "pcl_mobile_keypoints.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include <pcl/keypoints/agast_2d.h>
 #include <pcl/keypoints/brisk_2d.h>
 #include <pcl/keypoints/harris_2d.h>
 #include <pcl/keypoints/harris_3d.h>
+#include <pcl/keypoints/harris_6d.h>
 #include <pcl/keypoints/iss_3d.h>
 #include <pcl/keypoints/sift_keypoint.h>
 #include <pcl/keypoints/susan.h>
@@ -34,6 +36,41 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr makeIntensityCloud(const pcl::PointCloud<pc
         converted.intensity = std::sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
         output->points.push_back(converted);
     }
+    if (input->width * input->height == input->points.size()) {
+        output->width = input->width;
+        output->height = input->height;
+    } else {
+        output->width = static_cast<std::uint32_t>(output->points.size());
+        output->height = 1;
+    }
+    output->is_dense = input->is_dense;
+    return output;
+}
+
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr makeRGBCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& input)
+{
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr output(new pcl::PointCloud<pcl::PointXYZRGB>);
+    output->points.reserve(input->points.size());
+
+    float max_distance = 0.0f;
+    for (const auto& point : input->points) {
+        max_distance = std::max(max_distance, std::sqrt(point.x * point.x + point.y * point.y + point.z * point.z));
+    }
+
+    for (const auto& point : input->points) {
+        pcl::PointXYZRGB converted;
+        converted.x = point.x;
+        converted.y = point.y;
+        converted.z = point.z;
+        const float distance = std::sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
+        const auto gray = static_cast<std::uint8_t>(
+                max_distance > 0.0f ? std::round(255.0f * distance / max_distance) : 0.0f);
+        converted.r = gray;
+        converted.g = gray;
+        converted.b = gray;
+        output->points.push_back(converted);
+    }
+
     if (input->width * input->height == input->points.size()) {
         output->width = input->width;
         output->height = input->height;
@@ -195,6 +232,35 @@ std::vector<jfloat> computeHarrisKeypoints(
     }
     LOGI("HarrisKeypoint3D computed keypoints: input=%zu keypoints=%zu method=%d radius=%.3f",
          input->points.size(), keypoints->points.size(), response_method, radius);
+    return values;
+}
+
+std::vector<jfloat> computeHarris6DKeypoints(
+        double radius,
+        double threshold,
+        bool non_max_suppression,
+        bool refine,
+        int number_of_threads)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || radius <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_input = makeRGBCloud(input);
+    pcl::PointCloud<pcl::PointXYZI> keypoints;
+    pcl::HarrisKeypoint6D<pcl::PointXYZRGB, pcl::PointXYZI, pcl::Normal> harris(
+            static_cast<float>(radius),
+            static_cast<float>(threshold));
+    harris.setInputCloud(rgb_input);
+    harris.setNonMaxSupression(non_max_suppression);
+    harris.setRefine(refine);
+    harris.setNumberOfThreads(static_cast<unsigned int>(std::max(number_of_threads, 0)));
+    harris.compute(keypoints);
+
+    std::vector<jfloat> values = packPointXYZIKeypoints(keypoints);
+    LOGI("HarrisKeypoint6D computed keypoints: input=%zu keypoints=%zu radius=%.3f threads=%d",
+         input->points.size(), keypoints.points.size(), radius, number_of_threads);
     return values;
 }
 
