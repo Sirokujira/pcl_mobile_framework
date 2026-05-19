@@ -10,6 +10,8 @@
 #include <pcl/keypoints/harris_6d.h>
 #include <pcl/keypoints/iss_3d.h>
 #include <pcl/keypoints/sift_keypoint.h>
+#include <pcl/keypoints/smoothed_surfaces_keypoint.h>
+#include <pcl/keypoints/impl/smoothed_surfaces_keypoint.hpp>
 #include <pcl/keypoints/susan.h>
 #include <pcl/keypoints/trajkovic_2d.h>
 #include <pcl/keypoints/trajkovic_3d.h>
@@ -98,6 +100,37 @@ pcl::PointCloud<pcl::Normal>::Ptr computeNormals(
     normal_estimation.setKSearch(k_search);
     normal_estimation.compute(*normals);
     return normals;
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr makeNormalOffsetCloud(
+        const pcl::PointCloud<pcl::PointXYZ>::Ptr& input,
+        const pcl::PointCloud<pcl::Normal>::Ptr& normals,
+        float scale)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr output(new pcl::PointCloud<pcl::PointXYZ>);
+    if (input->points.size() != normals->points.size()) {
+        return output;
+    }
+
+    output->points.reserve(input->points.size());
+    for (std::size_t i = 0; i < input->points.size(); ++i) {
+        const auto& point = input->points[i];
+        const auto& normal = normals->points[i];
+        pcl::PointXYZ shifted;
+        shifted.x = point.x + normal.normal_x * scale;
+        shifted.y = point.y + normal.normal_y * scale;
+        shifted.z = point.z + normal.normal_z * scale;
+        output->points.push_back(shifted);
+    }
+    if (input->width * input->height == input->points.size()) {
+        output->width = input->width;
+        output->height = input->height;
+    } else {
+        output->width = static_cast<std::uint32_t>(output->points.size());
+        output->height = 1;
+    }
+    output->is_dense = input->is_dense;
+    return output;
 }
 
 std::vector<jfloat> packPointXYZIKeypoints(const pcl::PointCloud<pcl::PointXYZI>& keypoints)
@@ -474,6 +507,68 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr computeUniformSamplingKeypoints(double radiu
 
     LOGI("UniformSampling keypoints computed: input=%zu keypoints=%zu radius=%.3f",
          input->points.size(), keypoints->points.size(), radius);
+    return keypoints;
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr computeSmoothedSurfacesKeypoints(
+        int normal_k_search,
+        double input_scale,
+        double first_smoothed_scale,
+        double second_smoothed_scale,
+        double neighborhood_constant)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints(new pcl::PointCloud<pcl::PointXYZ>);
+    if (input->empty()
+            || normal_k_search <= 0
+            || input_scale <= 0.0
+            || first_smoothed_scale <= 0.0
+            || second_smoothed_scale <= first_smoothed_scale
+            || neighborhood_constant <= 0.0) {
+        return keypoints;
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search);
+    if (normals->points.size() != input->points.size()) {
+        return keypoints;
+    }
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr first_cloud = makeNormalOffsetCloud(
+            input,
+            normals,
+            static_cast<float>(first_smoothed_scale));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr second_cloud = makeNormalOffsetCloud(
+            input,
+            normals,
+            static_cast<float>(second_smoothed_scale));
+    if (first_cloud->points.size() != input->points.size()
+            || second_cloud->points.size() != input->points.size()) {
+        return keypoints;
+    }
+
+    pcl::SmoothedSurfacesKeypoint<pcl::PointXYZ, pcl::Normal> detector;
+    pcl::search::Search<pcl::PointXYZ>::Ptr input_tree(new pcl::search::KdTree<pcl::PointXYZ>);
+    pcl::search::Search<pcl::PointXYZ>::Ptr first_tree(new pcl::search::KdTree<pcl::PointXYZ>);
+    pcl::search::Search<pcl::PointXYZ>::Ptr second_tree(new pcl::search::KdTree<pcl::PointXYZ>);
+    float first_scale = static_cast<float>(first_smoothed_scale);
+    float second_scale = static_cast<float>(second_smoothed_scale);
+
+    detector.setInputCloud(input);
+    detector.setSearchMethod(input_tree);
+    detector.setInputNormals(normals);
+    detector.setInputScale(static_cast<float>(input_scale));
+    detector.setNeighborhoodConstant(static_cast<float>(neighborhood_constant));
+    detector.addSmoothedPointCloud(first_cloud, normals, first_tree, first_scale);
+    detector.addSmoothedPointCloud(second_cloud, normals, second_tree, second_scale);
+    detector.compute(*keypoints);
+
+    LOGI("SmoothedSurfacesKeypoint computed keypoints: input=%zu keypoints=%zu normalK=%d scales=(%.3f, %.3f, %.3f)",
+         input->points.size(),
+         keypoints->points.size(),
+         normal_k_search,
+         input_scale,
+         first_smoothed_scale,
+         second_smoothed_scale);
     return keypoints;
 }
 

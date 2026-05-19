@@ -1220,6 +1220,21 @@ public final class pclmobileJNILib {
     public static native float[] computeUniformSamplingKeypoints(double radius);
 
     /**
+     * Computes PCL {@code SmoothedSurfacesKeypoint} for the active cloud.
+     *
+     * <p>The wrapper estimates normals from the active XYZ cloud and synthesizes two
+     * normal-offset scale clouds before invoking PCL's detector.</p>
+     *
+     * @return keypoint positions packed as {@code x, y, z} triples
+     */
+    public static native float[] computeSmoothedSurfacesKeypoints(
+            int normalKSearch,
+            double inputScale,
+            double firstSmoothedScale,
+            double secondSmoothedScale,
+            double neighborhoodConstant);
+
+    /**
      * Builds a PCL {@code RangeImage} from the active cloud and returns finite range pixels.
      *
      * @return {@code x, y, z, range} tuples for finite range-image points
