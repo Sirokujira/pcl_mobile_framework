@@ -227,11 +227,25 @@ public final class pclmobileJNILib {
     public static native float[] computeCovarianceMatrix();
 
     /**
+     * Computes PCL {@code computeMeanAndCovarianceMatrix} for the active cloud.
+     *
+     * @return {@code centroid_x, centroid_y, centroid_z, row-major 3x3 covariance, point_count}
+     */
+    public static native float[] computeMeanAndCovarianceMatrix();
+
+    /**
      * Computes PCA mean, eigenvalues, and eigenvectors for the active cloud.
      *
      * @return {@code mean_xyz, eigenvalues_xyz, row-major 3x3 eigenvectors, point_count}
      */
     public static native float[] computePrincipalAxes();
+
+    /**
+     * Computes PCL {@code computeCentroidAndOBB} for the active cloud.
+     *
+     * @return {@code centroid_xyz, obb_center_xyz, obb_dimensions_xyz, row-major 3x3 obb_rotation, point_count}
+     */
+    public static native float[] computeCentroidAndOBB();
 
     /**
      * Computes moment-of-inertia descriptors plus AABB/OBB for the active cloud.
@@ -246,6 +260,13 @@ public final class pclmobileJNILib {
      * @return one squared distance per active-cloud point
      */
     public static native float[] computeSquaredDistancesToPoint(float x, float y, float z);
+
+    /**
+     * Computes PCL {@code calculatePolygonArea} using active-cloud points as ordered polygon vertices.
+     *
+     * @return {@code area, vertex_count}
+     */
+    public static native float[] calculateActivePolygonArea();
 
     /**
      * Finds the active-cloud point farthest from the computed centroid.

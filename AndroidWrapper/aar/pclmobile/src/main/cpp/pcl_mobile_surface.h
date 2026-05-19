@@ -12,10 +12,13 @@ namespace pclmobile {
 
 std::vector<jfloat> computeCentroidAndBounds();
 std::vector<jfloat> computeCovarianceMatrix();
+std::vector<jfloat> computeMeanAndCovarianceMatrix();
 std::vector<jfloat> computePrincipalAxes();
+std::vector<jfloat> computeCentroidAndOBB();
 std::vector<jfloat> computeMomentOfInertiaAndOBB();
 std::vector<jfloat> computeSquaredDistancesToPoint(float x, float y, float z);
 std::vector<jfloat> computeMaxDistanceFromCentroid();
+std::vector<jfloat> calculateActivePolygonArea();
 pcl::PointCloud<pcl::PointXYZ>::Ptr demeanActiveCloud();
 pcl::PointCloud<pcl::PointXYZ>::Ptr computeConvexHull();
 pcl::PointCloud<pcl::PointXYZ>::Ptr computeConcaveHull(double alpha);

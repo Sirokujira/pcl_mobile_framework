@@ -176,6 +176,31 @@ std::vector<jfloat> computeCovarianceMatrix()
     return values;
 }
 
+std::vector<jfloat> computeMeanAndCovarianceMatrix()
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()) {
+        return {};
+    }
+
+    Eigen::Vector4f centroid;
+    Eigen::Matrix3f covariance;
+    const unsigned int point_count = pcl::computeMeanAndCovarianceMatrix(*input, covariance, centroid);
+    if (point_count == 0) {
+        return {};
+    }
+
+    std::vector<jfloat> values;
+    values.reserve(13);
+    values.push_back(centroid.x());
+    values.push_back(centroid.y());
+    values.push_back(centroid.z());
+    appendMatrix3(values, covariance);
+    values.push_back(static_cast<jfloat>(point_count));
+    LOGI("computeMeanAndCovarianceMatrix: input=%zu used=%u", input->points.size(), point_count);
+    return values;
+}
+
 std::vector<jfloat> computePrincipalAxes()
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
@@ -196,6 +221,38 @@ std::vector<jfloat> computePrincipalAxes()
     appendMatrix3(values, pca.getEigenVectors());
     values.push_back(static_cast<jfloat>(input->points.size()));
     LOGI("PCA computed principal axes: input=%zu", input->points.size());
+    return values;
+}
+
+std::vector<jfloat> computeCentroidAndOBB()
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()) {
+        return {};
+    }
+
+    Eigen::Vector3f centroid;
+    Eigen::Vector3f obb_center;
+    Eigen::Vector3f obb_dimensions;
+    Eigen::Matrix3f obb_rotation;
+    const unsigned int point_count = pcl::computeCentroidAndOBB(
+            *input,
+            centroid,
+            obb_center,
+            obb_dimensions,
+            obb_rotation);
+    if (point_count == 0) {
+        return {};
+    }
+
+    std::vector<jfloat> values;
+    values.reserve(19);
+    appendVector3(values, centroid);
+    appendVector3(values, obb_center);
+    appendVector3(values, obb_dimensions);
+    appendMatrix3(values, obb_rotation);
+    values.push_back(static_cast<jfloat>(point_count));
+    LOGI("computeCentroidAndOBB: input=%zu used=%u", input->points.size(), point_count);
     return values;
 }
 
@@ -259,6 +316,22 @@ std::vector<jfloat> computeSquaredDistancesToPoint(float x, float y, float z)
     }
     LOGI("computeSquaredDistancesToPoint: input=%zu query=(%.3f, %.3f, %.3f)",
          input->points.size(), x, y, z);
+    return values;
+}
+
+std::vector<jfloat> calculateActivePolygonArea()
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->points.size() < 3) {
+        return {};
+    }
+
+    const float area = pcl::calculatePolygonArea(*input);
+    std::vector<jfloat> values;
+    values.reserve(2);
+    values.push_back(area);
+    values.push_back(static_cast<jfloat>(input->points.size()));
+    LOGI("calculatePolygonArea: vertices=%zu area=%.6f", input->points.size(), area);
     return values;
 }
 
