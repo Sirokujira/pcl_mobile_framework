@@ -211,6 +211,13 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_loadOBJ(
     pclmobile::loadOBJFile(pclmobile::jstringToString(env, filename));
 }
 
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_loadIFS(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    pclmobile::loadIFSFile(pclmobile::jstringToString(env, filename));
+}
+
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_setCloudPoints(
         JNIEnv* env, jclass clazz, jfloatArray packedXYZ)
 {
@@ -327,6 +334,33 @@ JNIEXPORT jboolean JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_writeFi
 {
     (void) clazz;
     return pclmobile::writePLYFileASCII(pclmobile::jstringToString(env, filename), pclmobile::filteredCloud())
+            ? JNI_TRUE
+            : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_writeActiveIFSFile(
+        JNIEnv* env, jclass clazz, jstring filename)
+{
+    (void) clazz;
+    return pclmobile::writeIFSFile(pclmobile::jstringToString(env, filename), pclmobile::activeCloud())
+            ? JNI_TRUE
+            : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_writeSourceIFSFile(
+        JNIEnv* env, jclass clazz, jstring filename)
+{
+    (void) clazz;
+    return pclmobile::writeIFSFile(pclmobile::jstringToString(env, filename), pclmobile::cloud())
+            ? JNI_TRUE
+            : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_writeFilteredIFSFile(
+        JNIEnv* env, jclass clazz, jstring filename)
+{
+    (void) clazz;
+    return pclmobile::writeIFSFile(pclmobile::jstringToString(env, filename), pclmobile::filteredCloud())
             ? JNI_TRUE
             : JNI_FALSE;
 }
