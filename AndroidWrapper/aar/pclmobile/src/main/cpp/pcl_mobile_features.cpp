@@ -25,7 +25,11 @@
 #include <pcl/features/normal_based_signature.h>
 #include <pcl/features/our_cvfh.h>
 #include <pcl/features/pfh.h>
+#include <pcl/features/pfh_tools.h>
+#include <pcl/features/pfhrgb.h>
 #include <pcl/features/ppf.h>
+#include <pcl/features/ppfrgb.h>
+#include <pcl/features/impl/ppfrgb.hpp>
 #include <pcl/features/principal_curvatures.h>
 #include <pcl/features/rift.h>
 #include <pcl/features/impl/rift.hpp>
@@ -125,6 +129,38 @@ pcl::PointCloud<pcl::PointXYZI>::Ptr makeIntensityCloud(const pcl::PointCloud<pc
         converted.intensity = std::sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
         output->points.push_back(converted);
     }
+    output->width = input->width * input->height == input->points.size()
+            ? input->width
+            : static_cast<std::uint32_t>(output->points.size());
+    output->height = input->width * input->height == input->points.size() ? input->height : 1;
+    output->is_dense = input->is_dense;
+    return output;
+}
+
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr makeRGBCloud(const pcl::PointCloud<pcl::PointXYZ>::Ptr& input)
+{
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr output(new pcl::PointCloud<pcl::PointXYZRGB>);
+    output->points.reserve(input->points.size());
+
+    float max_distance = 0.0f;
+    for (const auto& point : input->points) {
+        max_distance = std::max(max_distance, std::sqrt(point.x * point.x + point.y * point.y + point.z * point.z));
+    }
+
+    for (const auto& point : input->points) {
+        pcl::PointXYZRGB converted;
+        converted.x = point.x;
+        converted.y = point.y;
+        converted.z = point.z;
+        const float distance = std::sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
+        const auto gray = static_cast<std::uint8_t>(
+                max_distance > 0.0f ? std::round(255.0f * distance / max_distance) : 0.0f);
+        converted.r = gray;
+        converted.g = gray;
+        converted.b = gray;
+        output->points.push_back(converted);
+    }
+
     output->width = input->width * input->height == input->points.size()
             ? input->width
             : static_cast<std::uint32_t>(output->points.size());
@@ -267,6 +303,31 @@ std::vector<jfloat> computePFHFeatures(int normal_k_search, double feature_radiu
         }
     }
     LOGI("PFHEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d radius=%.3f",
+         input->points.size(), descriptors->points.size(), normal_k_search, feature_radius);
+    return values;
+}
+
+std::vector<jfloat> computePFHRGBFeatures(int normal_k_search, double feature_radius)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || feature_radius <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_input = makeRGBCloud(input);
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::PFHRGBSignature250>::Ptr descriptors(new pcl::PointCloud<pcl::PFHRGBSignature250>);
+
+    pcl::PFHRGBEstimation<pcl::PointXYZRGB, pcl::Normal, pcl::PFHRGBSignature250> pfhrgb;
+    pfhrgb.setInputCloud(rgb_input);
+    pfhrgb.setInputNormals(normals);
+    pfhrgb.setSearchMethod(
+            pcl::search::KdTree<pcl::PointXYZRGB>::Ptr(new pcl::search::KdTree<pcl::PointXYZRGB>));
+    pfhrgb.setRadiusSearch(feature_radius);
+    pfhrgb.compute(*descriptors);
+
+    std::vector<jfloat> values = packHistogramDescriptors<pcl::PFHRGBSignature250, 250>(*descriptors);
+    LOGI("PFHRGBEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d radius=%.3f",
          input->points.size(), descriptors->points.size(), normal_k_search, feature_radius);
     return values;
 }
@@ -789,6 +850,40 @@ std::vector<jfloat> computePPFFeatures(int normal_k_search, int max_point_count)
         values.push_back(descriptor.alpha_m);
     }
     LOGI("PPFEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d maxPoints=%d",
+         input->points.size(), descriptors->points.size(), normal_k_search, max_point_count);
+    return values;
+}
+
+std::vector<jfloat> computePPFRGBFeatures(int normal_k_search, int max_point_count)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || normal_k_search <= 0 || max_point_count <= 0
+            || input->points.size() > static_cast<std::size_t>(max_point_count)) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgb_input = makeRGBCloud(input);
+    pcl::PointCloud<pcl::Normal>::Ptr normals = computeNormals(input, normal_k_search, 0.0);
+    pcl::PointCloud<pcl::PPFRGBSignature>::Ptr descriptors(new pcl::PointCloud<pcl::PPFRGBSignature>);
+
+    pcl::PPFRGBEstimation<pcl::PointXYZRGB, pcl::Normal, pcl::PPFRGBSignature> ppfrgb;
+    ppfrgb.setInputCloud(rgb_input);
+    ppfrgb.setInputNormals(normals);
+    ppfrgb.compute(*descriptors);
+
+    std::vector<jfloat> values;
+    values.reserve(descriptors->points.size() * 8);
+    for (const auto& descriptor : descriptors->points) {
+        values.push_back(descriptor.f1);
+        values.push_back(descriptor.f2);
+        values.push_back(descriptor.f3);
+        values.push_back(descriptor.f4);
+        values.push_back(descriptor.alpha_m);
+        values.push_back(descriptor.r_ratio);
+        values.push_back(descriptor.g_ratio);
+        values.push_back(descriptor.b_ratio);
+    }
+    LOGI("PPFRGBEstimation computed descriptors: input=%zu descriptors=%zu normal_k=%d maxPoints=%d",
          input->points.size(), descriptors->points.size(), normal_k_search, max_point_count);
     return values;
 }
