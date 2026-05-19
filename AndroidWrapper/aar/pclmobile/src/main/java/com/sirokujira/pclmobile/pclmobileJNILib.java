@@ -1260,6 +1260,25 @@ public final class pclmobileJNILib {
             int pixelRadiusBorders);
 
     /**
+     * Computes PCL {@code NarfDescriptor} values on finite pixels of a range image built from the active cloud.
+     *
+     * <p>At most {@code maxDescriptorCount} finite range-image pixels are described to bound output size.</p>
+     *
+     * @return {@code x, y, z, roll, pitch, yaw, descriptor[36]} tuples
+     */
+    public static native float[] computeNARFDescriptorsFromActiveCloud(
+            float angularResolutionDegrees,
+            float maxAngleWidthDegrees,
+            float maxAngleHeightDegrees,
+            float sensorX,
+            float sensorY,
+            float sensorZ,
+            float minRange,
+            float supportSize,
+            boolean rotationInvariant,
+            int maxDescriptorCount);
+
+    /**
      * Reconstructs a convex hull from the active cloud.
      *
      * @return hull points packed as {@code x, y, z} triples

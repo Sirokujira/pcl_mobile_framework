@@ -44,6 +44,17 @@ std::vector<jfloat> computeRangeImageBorderDescriptionsFromActiveCloud(
         float min_range,
         int max_no_of_threads,
         int pixel_radius_borders);
+std::vector<jfloat> computeNARFDescriptorsFromActiveCloud(
+        float angular_resolution_degrees,
+        float max_angle_width_degrees,
+        float max_angle_height_degrees,
+        float sensor_x,
+        float sensor_y,
+        float sensor_z,
+        float min_range,
+        float support_size,
+        bool rotation_invariant,
+        int max_descriptor_count);
 
 } // namespace pclmobile
 
