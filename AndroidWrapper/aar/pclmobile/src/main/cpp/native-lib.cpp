@@ -1481,6 +1481,60 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
                     minRange));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeSphericalRangeImageFromActiveCloud(
+        JNIEnv* env,
+        jclass clazz,
+        jfloat angularResolutionDegrees,
+        jfloat maxAngleWidthDegrees,
+        jfloat maxAngleHeightDegrees,
+        jfloat sensorX,
+        jfloat sensorY,
+        jfloat sensorZ,
+        jfloat minRange)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeSphericalRangeImageFromActiveCloud(
+                    angularResolutionDegrees,
+                    maxAngleWidthDegrees,
+                    maxAngleHeightDegrees,
+                    sensorX,
+                    sensorY,
+                    sensorZ,
+                    minRange));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computePlanarRangeImageFromActiveCloud(
+        JNIEnv* env,
+        jclass clazz,
+        jint imageWidth,
+        jint imageHeight,
+        jfloat centerX,
+        jfloat centerY,
+        jfloat focalLengthX,
+        jfloat focalLengthY,
+        jfloat sensorX,
+        jfloat sensorY,
+        jfloat sensorZ,
+        jfloat minRange)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computePlanarRangeImageFromActiveCloud(
+                    imageWidth,
+                    imageHeight,
+                    centerX,
+                    centerY,
+                    focalLengthX,
+                    focalLengthY,
+                    sensorX,
+                    sensorY,
+                    sensorZ,
+                    minRange));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeConvexHull(
         JNIEnv* env, jclass clazz)
 {
