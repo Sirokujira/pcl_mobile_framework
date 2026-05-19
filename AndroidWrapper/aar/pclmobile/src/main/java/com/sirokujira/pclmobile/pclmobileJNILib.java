@@ -1182,6 +1182,37 @@ public final class pclmobileJNILib {
             float minRange);
 
     /**
+     * Builds a PCL {@code RangeImageSpherical} from the active cloud and returns finite range pixels.
+     *
+     * @return {@code x, y, z, range} tuples for finite range-image points
+     */
+    public static native float[] computeSphericalRangeImageFromActiveCloud(
+            float angularResolutionDegrees,
+            float maxAngleWidthDegrees,
+            float maxAngleHeightDegrees,
+            float sensorX,
+            float sensorY,
+            float sensorZ,
+            float minRange);
+
+    /**
+     * Builds a PCL {@code RangeImagePlanar} with fixed image dimensions from the active cloud.
+     *
+     * @return {@code x, y, z, range} tuples for finite range-image points
+     */
+    public static native float[] computePlanarRangeImageFromActiveCloud(
+            int imageWidth,
+            int imageHeight,
+            float centerX,
+            float centerY,
+            float focalLengthX,
+            float focalLengthY,
+            float sensorX,
+            float sensorY,
+            float sensorZ,
+            float minRange);
+
+    /**
      * Reconstructs a convex hull from the active cloud.
      *
      * @return hull points packed as {@code x, y, z} triples
