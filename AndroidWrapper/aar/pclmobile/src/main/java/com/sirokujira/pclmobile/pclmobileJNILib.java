@@ -304,6 +304,16 @@ public final class pclmobileJNILib {
     public static native float[] computePFHFeatures(int normalKSearch, double featureRadius);
 
     /**
+     * Computes Point Feature Histograms with color bins for the active cloud.
+     *
+     * <p>The wrapper derives a grayscale RGB field from XYZ distance before invoking
+     * PCL {@code PFHRGBEstimation}.</p>
+     *
+     * @return 250 histogram values per descriptor
+     */
+    public static native float[] computePFHRGBFeatures(int normalKSearch, double featureRadius);
+
+    /**
      * Computes Fast Point Feature Histograms for the active cloud.
      *
      * @param normalKSearch nearest neighbors used to estimate normals before descriptor computation
@@ -486,6 +496,17 @@ public final class pclmobileJNILib {
      * @return {@code f1, f2, f3, f4, alpha_m} tuples
      */
     public static native float[] computePPFFeatures(int normalKSearch, int maxPointCount);
+
+    /**
+     * Computes Point Pair Feature descriptors with color ratios for the active cloud.
+     *
+     * <p>The wrapper derives a grayscale RGB field from XYZ distance before invoking
+     * PCL {@code PPFRGBEstimation}. Returns an empty array when the active cloud has more than
+     * {@code maxPointCount} points because PPF-style descriptors are pairwise.</p>
+     *
+     * @return {@code f1, f2, f3, f4, alpha_m, r_ratio, g_ratio, b_ratio} tuples
+     */
+    public static native float[] computePPFRGBFeatures(int normalKSearch, int maxPointCount);
 
     /**
      * Computes Normal Based Signature descriptors for the active cloud.

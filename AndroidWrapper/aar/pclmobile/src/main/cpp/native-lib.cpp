@@ -446,6 +446,14 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
             env, pclmobile::computePFHFeatures(normalKSearch, featureRadius));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computePFHRGBFeatures(
+        JNIEnv* env, jclass clazz, jint normalKSearch, jdouble featureRadius)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env, pclmobile::computePFHRGBFeatures(normalKSearch, featureRadius));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeVFHFeatures(
         JNIEnv* env, jclass clazz, jint normalKSearch)
 {
@@ -643,6 +651,18 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
     return pclmobile::makeFloatArray(
             env,
             pclmobile::computePPFFeatures(normalKSearch, maxPointCount));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computePPFRGBFeatures(
+        JNIEnv* env,
+        jclass clazz,
+        jint normalKSearch,
+        jint maxPointCount)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computePPFRGBFeatures(normalKSearch, maxPointCount));
 }
 
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeCPPFPairFeature(

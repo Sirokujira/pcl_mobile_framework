@@ -16,6 +16,7 @@ std::vector<jfloat> refineNormals(
         int max_iterations,
         double convergence_threshold);
 std::vector<jfloat> computePFHFeatures(int normal_k_search, double feature_radius);
+std::vector<jfloat> computePFHRGBFeatures(int normal_k_search, double feature_radius);
 std::vector<jfloat> computeFPFHFeatures(int normal_k_search, double feature_radius);
 std::vector<jfloat> computeFPFHFeaturesOMP(int normal_k_search, double feature_radius, int number_of_threads);
 std::vector<jfloat> computeVFHFeatures(int normal_k_search);
@@ -68,6 +69,7 @@ std::vector<jfloat> computeUniqueShapeContextFeatures(
         double point_density_radius,
         double local_radius);
 std::vector<jfloat> computePPFFeatures(int normal_k_search, int max_point_count);
+std::vector<jfloat> computePPFRGBFeatures(int normal_k_search, int max_point_count);
 std::vector<jfloat> computeCPPFPairFeatureValues(int first_index, int second_index, int normal_k_search);
 std::vector<jfloat> computeNormalBasedSignatureFeatures(
         int normal_k_search,
