@@ -97,6 +97,34 @@ pcl::PointCloud<pcl::PointNormal>::Ptr computePointNormals(int k_search)
     return point_normals;
 }
 
+template <typename PointT>
+std::vector<jfloat> packXYZMesh(
+        const pcl::PointCloud<PointT>& vertices,
+        const std::vector<pcl::Vertices>& polygons)
+{
+    std::size_t value_count = 2 + vertices.points.size() * 3;
+    for (const auto& polygon : polygons) {
+        value_count += polygon.vertices.size() + 1;
+    }
+
+    std::vector<jfloat> values;
+    values.reserve(value_count);
+    values.push_back(static_cast<jfloat>(vertices.points.size()));
+    values.push_back(static_cast<jfloat>(polygons.size()));
+    for (const auto& vertex : vertices.points) {
+        values.push_back(vertex.x);
+        values.push_back(vertex.y);
+        values.push_back(vertex.z);
+    }
+    for (const auto& polygon : polygons) {
+        values.push_back(static_cast<jfloat>(polygon.vertices.size()));
+        for (std::uint32_t vertex : polygon.vertices) {
+            values.push_back(static_cast<jfloat>(vertex));
+        }
+    }
+    return values;
+}
+
 } // namespace
 
 std::vector<jfloat> computeCentroidAndBounds()
@@ -309,6 +337,45 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr computeConcaveHull(double alpha)
     LOGI("ConcaveHull reconstructed points: input=%zu hull=%zu alpha=%.3f dimension=%d",
          input->points.size(), hull->points.size(), alpha, concave_hull.getDimension());
     return hull;
+}
+
+std::vector<jfloat> computeConvexHullMesh()
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZ> hull;
+    std::vector<pcl::Vertices> polygons;
+    pcl::ConvexHull<pcl::PointXYZ> convex_hull;
+    convex_hull.setInputCloud(input);
+    convex_hull.reconstruct(hull, polygons);
+
+    std::vector<jfloat> values = packXYZMesh(hull, polygons);
+    LOGI("ConvexHull reconstructed mesh: input=%zu vertices=%zu polygons=%zu dimension=%d",
+         input->points.size(), hull.points.size(), polygons.size(), convex_hull.getDimension());
+    return values;
+}
+
+std::vector<jfloat> computeConcaveHullMesh(double alpha)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || alpha <= 0.0) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZ> hull;
+    std::vector<pcl::Vertices> polygons;
+    pcl::ConcaveHull<pcl::PointXYZ> concave_hull;
+    concave_hull.setInputCloud(input);
+    concave_hull.setAlpha(alpha);
+    concave_hull.reconstruct(hull, polygons);
+
+    std::vector<jfloat> values = packXYZMesh(hull, polygons);
+    LOGI("ConcaveHull reconstructed mesh: input=%zu vertices=%zu polygons=%zu alpha=%.3f dimension=%d",
+         input->points.size(), hull.points.size(), polygons.size(), alpha, concave_hull.getDimension());
+    return values;
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr projectInliersToPlane(double distance_threshold, int max_iterations)
