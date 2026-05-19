@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include <pcl/common/centroid.h>
+#include <pcl/common/angles.h>
 #include <pcl/common/common.h>
 #include <pcl/common/distances.h>
 #include <pcl/common/intersections.h>
@@ -148,6 +149,21 @@ std::vector<jfloat> packXYZMesh(
 }
 
 } // namespace
+
+jfloat radiansToDegrees(float radians)
+{
+    return static_cast<jfloat>(pcl::rad2deg(radians));
+}
+
+jfloat degreesToRadians(float degrees)
+{
+    return static_cast<jfloat>(pcl::deg2rad(degrees));
+}
+
+jfloat normalizeAngleRadians(float radians)
+{
+    return static_cast<jfloat>(pcl::normAngle(radians));
+}
 
 std::vector<jfloat> computeCentroidAndBounds()
 {

@@ -448,6 +448,30 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
     return pclmobile::makeFloatArray(env, pclmobile::computeSquaredDistancesToPoint(x, y, z));
 }
 
+JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_radiansToDegrees(
+        JNIEnv* env, jclass clazz, jfloat radians)
+{
+    (void) env;
+    (void) clazz;
+    return pclmobile::radiansToDegrees(radians);
+}
+
+JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_degreesToRadians(
+        JNIEnv* env, jclass clazz, jfloat degrees)
+{
+    (void) env;
+    (void) clazz;
+    return pclmobile::degreesToRadians(degrees);
+}
+
+JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_normalizeAngleRadians(
+        JNIEnv* env, jclass clazz, jfloat radians)
+{
+    (void) env;
+    (void) clazz;
+    return pclmobile::normalizeAngleRadians(radians);
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_calculateActivePolygonArea(
         JNIEnv* env, jclass clazz)
 {

@@ -307,6 +307,21 @@ public final class pclmobileJNILib {
     public static native float[] computeSquaredDistancesToPoint(float x, float y, float z);
 
     /**
+     * Converts radians to degrees using PCL {@code rad2deg}.
+     */
+    public static native float radiansToDegrees(float radians);
+
+    /**
+     * Converts degrees to radians using PCL {@code deg2rad}.
+     */
+    public static native float degreesToRadians(float degrees);
+
+    /**
+     * Normalizes an angle in radians to {@code (-PI, PI]} using PCL {@code normAngle}.
+     */
+    public static native float normalizeAngleRadians(float radians);
+
+    /**
      * Computes PCL {@code calculatePolygonArea} using active-cloud points as ordered polygon vertices.
      *
      * @return {@code area, vertex_count}
