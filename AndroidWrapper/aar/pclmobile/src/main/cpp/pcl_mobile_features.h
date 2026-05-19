@@ -10,6 +10,10 @@ namespace pclmobile {
 std::vector<jfloat> estimateNormals(int k_search);
 std::vector<jfloat> estimateNormalsRadius(double radius_search);
 std::vector<jfloat> estimateNormalsOMP(int k_search, int number_of_threads);
+std::vector<jfloat> estimateLinearLeastSquaresNormals(
+        double normal_smoothing_size,
+        bool depth_dependent_smoothing,
+        double max_depth_change_factor);
 std::vector<jfloat> refineNormals(
         int normal_k_search,
         int refinement_k_search,
