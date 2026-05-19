@@ -1,10 +1,12 @@
 #include "pcl_mobile_range_image.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include <Eigen/Geometry>
 #include <pcl/features/narf_descriptor.h>
 #include <pcl/features/range_image_border_extractor.h>
+#include <pcl/keypoints/narf_keypoint.h>
 #include <pcl/range_image/range_image.h>
 #include <pcl/range_image/range_image_planar.h>
 #include <pcl/range_image/range_image_spherical.h>
@@ -68,6 +70,29 @@ std::vector<jfloat> packNarfDescriptors(const pcl::PointCloud<pcl::Narf36>& desc
         for (float value : descriptor.descriptor) {
             values.push_back(value);
         }
+    }
+    return values;
+}
+
+std::vector<jfloat> packNarfKeypointIndices(
+        const pcl::RangeImage& range_image,
+        const pcl::PointCloud<int>& indices)
+{
+    std::vector<jfloat> values;
+    values.reserve(indices.points.size() * 5);
+    for (int index : indices.points) {
+        if (index < 0 || static_cast<std::size_t>(index) >= range_image.points.size()) {
+            continue;
+        }
+        const auto& point = range_image.points[static_cast<std::size_t>(index)];
+        if (!std::isfinite(point.range)) {
+            continue;
+        }
+        values.push_back(static_cast<jfloat>(index));
+        values.push_back(point.x);
+        values.push_back(point.y);
+        values.push_back(point.z);
+        values.push_back(point.range);
     }
     return values;
 }
@@ -298,6 +323,59 @@ std::vector<jfloat> computeNARFDescriptorsFromActiveCloud(
     std::vector<jfloat> values = packNarfDescriptors(descriptors);
     LOGI("NarfDescriptor computed descriptors: input=%zu range=%zu indices=%zu descriptors=%zu support=%.3f",
          input->points.size(), range_image.points.size(), indices.size(), descriptors.points.size(), support_size);
+    return values;
+}
+
+std::vector<jfloat> computeNARFKeypointsFromActiveCloud(
+        float angular_resolution_degrees,
+        float max_angle_width_degrees,
+        float max_angle_height_degrees,
+        float sensor_x,
+        float sensor_y,
+        float sensor_z,
+        float min_range,
+        float support_size,
+        int max_keypoint_count,
+        float min_interest_value,
+        bool non_maximum_suppression)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()
+            || angular_resolution_degrees <= 0.0f
+            || max_angle_width_degrees <= 0.0f
+            || max_angle_height_degrees <= 0.0f
+            || support_size <= 0.0f) {
+        return {};
+    }
+
+    Eigen::Affine3f sensor_pose = Eigen::Affine3f::Identity();
+    sensor_pose.translation() = Eigen::Vector3f(sensor_x, sensor_y, sensor_z);
+
+    pcl::RangeImage range_image;
+    range_image.createFromPointCloud(
+            *input,
+            degreesToRadians(angular_resolution_degrees),
+            degreesToRadians(max_angle_width_degrees),
+            degreesToRadians(max_angle_height_degrees),
+            sensor_pose,
+            pcl::RangeImage::CAMERA_FRAME,
+            0.0f,
+            min_range);
+
+    pcl::RangeImageBorderExtractor border_extractor(&range_image);
+    pcl::NarfKeypoint keypoint_detector(&border_extractor, support_size);
+    keypoint_detector.getParameters().max_no_of_interest_points = max_keypoint_count > 0 ? max_keypoint_count : -1;
+    if (min_interest_value > 0.0f) {
+        keypoint_detector.getParameters().min_interest_value = min_interest_value;
+    }
+    keypoint_detector.getParameters().do_non_maximum_suppression = non_maximum_suppression;
+
+    pcl::PointCloud<int> keypoint_indices;
+    keypoint_detector.compute(keypoint_indices);
+
+    std::vector<jfloat> values = packNarfKeypointIndices(range_image, keypoint_indices);
+    LOGI("NarfKeypoint computed keypoints: input=%zu range=%zu keypoints=%zu support=%.3f",
+         input->points.size(), range_image.points.size(), values.size() / 5, support_size);
     return values;
 }
 

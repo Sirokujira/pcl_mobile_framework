@@ -55,6 +55,18 @@ std::vector<jfloat> computeNARFDescriptorsFromActiveCloud(
         float support_size,
         bool rotation_invariant,
         int max_descriptor_count);
+std::vector<jfloat> computeNARFKeypointsFromActiveCloud(
+        float angular_resolution_degrees,
+        float max_angle_width_degrees,
+        float max_angle_height_degrees,
+        float sensor_x,
+        float sensor_y,
+        float sensor_z,
+        float min_range,
+        float support_size,
+        int max_keypoint_count,
+        float min_interest_value,
+        bool non_maximum_suppression);
 
 } // namespace pclmobile
 

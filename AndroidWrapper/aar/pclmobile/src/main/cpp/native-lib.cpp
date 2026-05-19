@@ -1629,6 +1629,38 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
                     maxDescriptorCount));
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeNARFKeypointsFromActiveCloud(
+        JNIEnv* env,
+        jclass clazz,
+        jfloat angularResolutionDegrees,
+        jfloat maxAngleWidthDegrees,
+        jfloat maxAngleHeightDegrees,
+        jfloat sensorX,
+        jfloat sensorY,
+        jfloat sensorZ,
+        jfloat minRange,
+        jfloat supportSize,
+        jint maxKeypointCount,
+        jfloat minInterestValue,
+        jboolean nonMaximumSuppression)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::computeNARFKeypointsFromActiveCloud(
+                    angularResolutionDegrees,
+                    maxAngleWidthDegrees,
+                    maxAngleHeightDegrees,
+                    sensorX,
+                    sensorY,
+                    sensorZ,
+                    minRange,
+                    supportSize,
+                    maxKeypointCount,
+                    minInterestValue,
+                    nonMaximumSuppression == JNI_TRUE));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeConvexHull(
         JNIEnv* env, jclass clazz)
 {
