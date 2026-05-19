@@ -314,6 +314,35 @@ public final class pclmobileJNILib {
     public static native float[] calculateActivePolygonArea();
 
     /**
+     * Computes PCL {@code lineWithLineIntersection}.
+     *
+     * @param lineA {@code point_x, point_y, point_z, direction_x, direction_y, direction_z}
+     * @param lineB {@code point_x, point_y, point_z, direction_x, direction_y, direction_z}
+     * @return intersection {@code x, y, z}, or an empty array when no valid intersection is found
+     */
+    public static native float[] intersectLines(float[] lineA, float[] lineB, double squaredEpsilon);
+
+    /**
+     * Computes PCL {@code planeWithPlaneIntersection}.
+     *
+     * @param planeA plane coefficients {@code a, b, c, d}
+     * @param planeB plane coefficients {@code a, b, c, d}
+     * @return {@code point_x, point_y, point_z, direction_x, direction_y, direction_z}, or empty on failure
+     */
+    public static native float[] intersectPlanes(float[] planeA, float[] planeB, double angularTolerance);
+
+    /**
+     * Computes PCL {@code threePlanesIntersection}.
+     *
+     * @return intersection {@code x, y, z}, or an empty array when no valid intersection is found
+     */
+    public static native float[] intersectThreePlanes(
+            float[] planeA,
+            float[] planeB,
+            float[] planeC,
+            double determinantTolerance);
+
+    /**
      * Finds the active-cloud point farthest from the computed centroid.
      *
      * @return {@code centroid_xyz, farthest_point_xyz, distance, point_count}

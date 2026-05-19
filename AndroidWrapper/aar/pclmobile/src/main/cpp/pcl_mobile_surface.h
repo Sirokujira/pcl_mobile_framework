@@ -19,6 +19,19 @@ std::vector<jfloat> computeMomentOfInertiaAndOBB();
 std::vector<jfloat> computeSquaredDistancesToPoint(float x, float y, float z);
 std::vector<jfloat> computeMaxDistanceFromCentroid();
 std::vector<jfloat> calculateActivePolygonArea();
+std::vector<jfloat> intersectLines(
+        const std::vector<jfloat>& line_a_values,
+        const std::vector<jfloat>& line_b_values,
+        double squared_epsilon);
+std::vector<jfloat> intersectPlanes(
+        const std::vector<jfloat>& plane_a_values,
+        const std::vector<jfloat>& plane_b_values,
+        double angular_tolerance);
+std::vector<jfloat> intersectThreePlanes(
+        const std::vector<jfloat>& plane_a_values,
+        const std::vector<jfloat>& plane_b_values,
+        const std::vector<jfloat>& plane_c_values,
+        double determinant_tolerance);
 pcl::PointCloud<pcl::PointXYZ>::Ptr demeanActiveCloud();
 pcl::PointCloud<pcl::PointXYZ>::Ptr computeConvexHull();
 pcl::PointCloud<pcl::PointXYZ>::Ptr computeConcaveHull(double alpha);

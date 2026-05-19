@@ -455,6 +455,56 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_calc
     return pclmobile::makeFloatArray(env, pclmobile::calculateActivePolygonArea());
 }
 
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_intersectLines(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray lineA,
+        jfloatArray lineB,
+        jdouble squaredEpsilon)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::intersectLines(
+                    readFloatArray(env, lineA),
+                    readFloatArray(env, lineB),
+                    squaredEpsilon));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_intersectPlanes(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray planeA,
+        jfloatArray planeB,
+        jdouble angularTolerance)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::intersectPlanes(
+                    readFloatArray(env, planeA),
+                    readFloatArray(env, planeB),
+                    angularTolerance));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_intersectThreePlanes(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray planeA,
+        jfloatArray planeB,
+        jfloatArray planeC,
+        jdouble determinantTolerance)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::intersectThreePlanes(
+                    readFloatArray(env, planeA),
+                    readFloatArray(env, planeB),
+                    readFloatArray(env, planeC),
+                    determinantTolerance));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeMaxDistanceFromCentroid(
         JNIEnv* env, jclass clazz)
 {

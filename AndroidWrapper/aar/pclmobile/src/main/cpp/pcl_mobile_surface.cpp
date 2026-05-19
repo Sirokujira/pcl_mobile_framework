@@ -5,6 +5,7 @@
 #include <pcl/common/centroid.h>
 #include <pcl/common/common.h>
 #include <pcl/common/distances.h>
+#include <pcl/common/intersections.h>
 #include <pcl/common/pca.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/moment_of_inertia_estimation.h>
@@ -48,6 +49,27 @@ void appendVector3(std::vector<jfloat>& values, const Eigen::Vector3f& vector)
     values.push_back(vector.x());
     values.push_back(vector.y());
     values.push_back(vector.z());
+}
+
+bool makePlane4(const std::vector<jfloat>& values, Eigen::Vector4f& plane)
+{
+    if (values.size() < 4) {
+        return false;
+    }
+    plane << values[0], values[1], values[2], values[3];
+    return true;
+}
+
+bool makeLine6(const std::vector<jfloat>& values, Eigen::VectorXf& line)
+{
+    if (values.size() < 6) {
+        return false;
+    }
+    line.resize(6);
+    for (int i = 0; i < 6; ++i) {
+        line[i] = values[static_cast<std::size_t>(i)];
+    }
+    return true;
 }
 
 pcl::PointCloud<pcl::Normal>::Ptr computeSurfaceNormals(
@@ -332,6 +354,86 @@ std::vector<jfloat> calculateActivePolygonArea()
     values.push_back(area);
     values.push_back(static_cast<jfloat>(input->points.size()));
     LOGI("calculatePolygonArea: vertices=%zu area=%.6f", input->points.size(), area);
+    return values;
+}
+
+std::vector<jfloat> intersectLines(
+        const std::vector<jfloat>& line_a_values,
+        const std::vector<jfloat>& line_b_values,
+        double squared_epsilon)
+{
+    Eigen::VectorXf line_a;
+    Eigen::VectorXf line_b;
+    if (!makeLine6(line_a_values, line_a) || !makeLine6(line_b_values, line_b)) {
+        return {};
+    }
+
+    Eigen::Vector4f point;
+    if (!pcl::lineWithLineIntersection(line_a, line_b, point, squared_epsilon)) {
+        return {};
+    }
+
+    std::vector<jfloat> values;
+    values.reserve(3);
+    values.push_back(point.x());
+    values.push_back(point.y());
+    values.push_back(point.z());
+    LOGI("lineWithLineIntersection computed point=(%.3f, %.3f, %.3f)",
+         point.x(), point.y(), point.z());
+    return values;
+}
+
+std::vector<jfloat> intersectPlanes(
+        const std::vector<jfloat>& plane_a_values,
+        const std::vector<jfloat>& plane_b_values,
+        double angular_tolerance)
+{
+    Eigen::Vector4f plane_a;
+    Eigen::Vector4f plane_b;
+    if (!makePlane4(plane_a_values, plane_a) || !makePlane4(plane_b_values, plane_b)) {
+        return {};
+    }
+
+    Eigen::VectorXf line;
+    if (!pcl::planeWithPlaneIntersection(plane_a, plane_b, line, angular_tolerance) || line.size() < 6) {
+        return {};
+    }
+
+    std::vector<jfloat> values;
+    values.reserve(6);
+    for (int i = 0; i < 6; ++i) {
+        values.push_back(line[i]);
+    }
+    LOGI("planeWithPlaneIntersection computed line point=(%.3f, %.3f, %.3f) direction=(%.3f, %.3f, %.3f)",
+         values[0], values[1], values[2], values[3], values[4], values[5]);
+    return values;
+}
+
+std::vector<jfloat> intersectThreePlanes(
+        const std::vector<jfloat>& plane_a_values,
+        const std::vector<jfloat>& plane_b_values,
+        const std::vector<jfloat>& plane_c_values,
+        double determinant_tolerance)
+{
+    Eigen::Vector4f plane_a;
+    Eigen::Vector4f plane_b;
+    Eigen::Vector4f plane_c;
+    if (!makePlane4(plane_a_values, plane_a)
+            || !makePlane4(plane_b_values, plane_b)
+            || !makePlane4(plane_c_values, plane_c)) {
+        return {};
+    }
+
+    Eigen::Vector3f point;
+    if (!pcl::threePlanesIntersection(plane_a, plane_b, plane_c, point, determinant_tolerance)) {
+        return {};
+    }
+
+    std::vector<jfloat> values;
+    values.reserve(3);
+    appendVector3(values, point);
+    LOGI("threePlanesIntersection computed point=(%.3f, %.3f, %.3f)",
+         point.x(), point.y(), point.z());
     return values;
 }
 
