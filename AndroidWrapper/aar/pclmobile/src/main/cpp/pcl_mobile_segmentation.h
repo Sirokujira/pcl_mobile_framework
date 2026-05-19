@@ -36,16 +36,27 @@ std::vector<jfloat> segmentSACModelWithMethod(
         double distance_threshold,
         int max_iterations);
 std::vector<jfloat> extractEuclideanClusters(double tolerance, int min_cluster_size, int max_cluster_size);
+std::vector<int> extractEuclideanClusterIndices(double tolerance, int min_cluster_size, int max_cluster_size);
 std::vector<jfloat> extractRegionGrowingClusters(int normal_k_search,
                                                  int number_of_neighbours,
                                                  int min_cluster_size,
                                                  int max_cluster_size,
                                                  double smoothness_threshold_degrees,
                                                  double curvature_threshold);
+std::vector<int> extractRegionGrowingClusterIndices(int normal_k_search,
+                                                    int number_of_neighbours,
+                                                    int min_cluster_size,
+                                                    int max_cluster_size,
+                                                    double smoothness_threshold_degrees,
+                                                    double curvature_threshold);
 std::vector<jfloat> extractConditionalEuclideanClusters(double tolerance,
                                                         int min_cluster_size,
                                                         int max_cluster_size,
                                                         double max_z_delta);
+std::vector<int> extractConditionalEuclideanClusterIndices(double tolerance,
+                                                           int min_cluster_size,
+                                                           int max_cluster_size,
+                                                           double max_z_delta);
 pcl::PointCloud<pcl::PointXYZ>::Ptr extractPolygonalPrismData(
         const std::vector<jfloat>& packed_planar_hull_xyz,
         double height_min,

@@ -806,11 +806,32 @@ public final class pclmobileJNILib {
     public static native float[] extractEuclideanClusters(double tolerance, int minClusterSize, int maxClusterSize);
 
     /**
+     * Extracts Euclidean clusters and returns PCL {@code PointIndices}-style membership.
+     *
+     * @return {@code cluster_count, cluster_size, point_index, ...} packed as {@code int[]}
+     */
+    public static native int[] extractEuclideanClusterIndices(
+            double tolerance, int minClusterSize, int maxClusterSize);
+
+    /**
      * Extracts RegionGrowing clusters from the active cloud.
      *
      * @return one cluster size per element
      */
     public static native float[] extractRegionGrowingClusters(
+            int normalKSearch,
+            int numberOfNeighbours,
+            int minClusterSize,
+            int maxClusterSize,
+            double smoothnessThresholdDegrees,
+            double curvatureThreshold);
+
+    /**
+     * Extracts RegionGrowing clusters and returns PCL {@code PointIndices}-style membership.
+     *
+     * @return {@code cluster_count, cluster_size, point_index, ...} packed as {@code int[]}
+     */
+    public static native int[] extractRegionGrowingClusterIndices(
             int normalKSearch,
             int numberOfNeighbours,
             int minClusterSize,
@@ -827,6 +848,20 @@ public final class pclmobileJNILib {
      * @return one cluster size per element
      */
     public static native float[] extractConditionalEuclideanClusters(
+            double tolerance,
+            int minClusterSize,
+            int maxClusterSize,
+            double maxZDelta);
+
+    /**
+     * Extracts ConditionalEuclideanClustering membership as PCL {@code PointIndices}.
+     *
+     * <p>The Java-facing condition keeps neighboring points when their z-value difference is at most
+     * {@code maxZDelta}.</p>
+     *
+     * @return {@code cluster_count, cluster_size, point_index, ...} packed as {@code int[]}
+     */
+    public static native int[] extractConditionalEuclideanClusterIndices(
             double tolerance,
             int minClusterSize,
             int maxClusterSize,
