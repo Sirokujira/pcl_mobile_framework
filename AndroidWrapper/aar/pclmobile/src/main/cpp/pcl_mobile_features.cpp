@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cmath>
+#include <list>
 
 #include <pcl/features/3dsc.h>
 #include <pcl/features/board.h>
@@ -43,6 +44,8 @@
 #include <pcl/features/shot_lrf_omp.h>
 #include <pcl/features/shot_omp.h>
 #include <pcl/features/spin_image.h>
+#include <pcl/features/statistical_multiscale_interest_region_extraction.h>
+#include <pcl/features/impl/statistical_multiscale_interest_region_extraction.hpp>
 #include <pcl/features/usc.h>
 #include <pcl/features/vfh.h>
 #include <pcl/filters/normal_refinement.h>
@@ -1411,6 +1414,65 @@ std::vector<jfloat> computeDifferenceOfNormals(double small_radius, double large
     std::vector<jfloat> values = packNormals(*don_normals);
     LOGI("DifferenceOfNormalsEstimation computed normals: input=%zu output=%zu small=%.3f large=%.3f",
          input->points.size(), don_normals->points.size(), small_radius, large_radius);
+    return values;
+}
+
+std::vector<int> extractStatisticalMultiscaleInterestRegionIndices(
+        double first_scale,
+        double second_scale,
+        double third_scale,
+        int max_point_count)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->points.size() < 16
+            || first_scale <= 0.0
+            || second_scale <= first_scale
+            || third_scale <= second_scale) {
+        return {};
+    }
+
+    const std::size_t point_limit = max_point_count > 0
+            ? std::min<std::size_t>(static_cast<std::size_t>(max_point_count), input->points.size())
+            : std::min<std::size_t>(input->points.size(), 256);
+    if (point_limit < 16) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr limited(new pcl::PointCloud<pcl::PointXYZ>);
+    limited->points.reserve(point_limit);
+    for (std::size_t i = 0; i < point_limit; ++i) {
+        limited->points.push_back(input->points[i]);
+    }
+    limited->width = static_cast<std::uint32_t>(limited->points.size());
+    limited->height = 1;
+    limited->is_dense = input->is_dense;
+
+    std::vector<float> scales = {
+            static_cast<float>(first_scale),
+            static_cast<float>(second_scale),
+            static_cast<float>(third_scale),
+    };
+    pcl::StatisticalMultiscaleInterestRegionExtraction<pcl::PointXYZ> extraction;
+    extraction.setInputCloud(limited);
+    extraction.setScalesVector(scales);
+
+    std::list<pcl::StatisticalMultiscaleInterestRegionExtraction<pcl::PointXYZ>::IndicesPtr> rois;
+    extraction.computeRegionsOfInterest(rois);
+
+    std::vector<int> values;
+    values.push_back(static_cast<int>(rois.size()));
+    for (const auto& roi : rois) {
+        if (!roi) {
+            values.push_back(0);
+            continue;
+        }
+        values.push_back(static_cast<int>(roi->size()));
+        for (int index : *roi) {
+            values.push_back(index);
+        }
+    }
+    LOGI("StatisticalMultiscaleInterestRegionExtraction computed: input=%zu limited=%zu rois=%zu scales=(%.3f, %.3f, %.3f)",
+         input->points.size(), limited->points.size(), rois.size(), first_scale, second_scale, third_scale);
     return values;
 }
 

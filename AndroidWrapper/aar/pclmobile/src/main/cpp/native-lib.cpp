@@ -905,6 +905,24 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_comp
             env, pclmobile::computeDifferenceOfNormals(smallRadius, largeRadius));
 }
 
+JNIEXPORT jintArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_extractStatisticalMultiscaleInterestRegionIndices(
+        JNIEnv* env,
+        jclass clazz,
+        jdouble firstScale,
+        jdouble secondScale,
+        jdouble thirdScale,
+        jint maxPointCount)
+{
+    (void) clazz;
+    return makeIntArray(
+            env,
+            pclmobile::extractStatisticalMultiscaleInterestRegionIndices(
+                    firstScale,
+                    secondScale,
+                    thirdScale,
+                    maxPointCount));
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_segmentPlane(
         JNIEnv* env, jclass clazz, jdouble distanceThreshold, jint maxIterations)
 {
@@ -2249,6 +2267,8 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_feature1(
                   pclmobile::computeBoundaryPoints(16, 0.18, 90.0).size(), 4);
     logTupleCount("feature1", "DifferenceOfNormalsEstimation",
                   pclmobile::computeDifferenceOfNormals(0.08, 0.20).size(), 4);
+    LOGI("feature1 compatibility sample: StatisticalMultiscaleInterestRegionExtraction values=%zu",
+         pclmobile::extractStatisticalMultiscaleInterestRegionIndices(0.05, 0.10, 0.20, 64).size());
 }
 
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_filterAxis(
