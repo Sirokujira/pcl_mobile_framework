@@ -1,6 +1,7 @@
 #include "pcl_mobile_surface.h"
 
 #include <cmath>
+#include <limits>
 
 #include <pcl/common/centroid.h>
 #include <pcl/common/angles.h>
@@ -70,6 +71,15 @@ bool makeLine6(const std::vector<jfloat>& values, Eigen::VectorXf& line)
     for (int i = 0; i < 6; ++i) {
         line[i] = values[static_cast<std::size_t>(i)];
     }
+    return true;
+}
+
+bool makeVector3(const std::vector<jfloat>& values, Eigen::Vector3f& vector)
+{
+    if (values.size() < 3) {
+        return false;
+    }
+    vector << values[0], values[1], values[2];
     return true;
 }
 
@@ -163,6 +173,19 @@ jfloat degreesToRadians(float degrees)
 jfloat normalizeAngleRadians(float radians)
 {
     return static_cast<jfloat>(pcl::normAngle(radians));
+}
+
+jfloat angleBetweenVectors(
+        const std::vector<jfloat>& vector_a_values,
+        const std::vector<jfloat>& vector_b_values,
+        bool in_degrees)
+{
+    Eigen::Vector3f vector_a;
+    Eigen::Vector3f vector_b;
+    if (!makeVector3(vector_a_values, vector_a) || !makeVector3(vector_b_values, vector_b)) {
+        return std::numeric_limits<jfloat>::quiet_NaN();
+    }
+    return static_cast<jfloat>(pcl::getAngle3D(vector_a, vector_b, in_degrees));
 }
 
 std::vector<jfloat> computeCentroidAndBounds()

@@ -13,6 +13,10 @@ namespace pclmobile {
 jfloat radiansToDegrees(float radians);
 jfloat degreesToRadians(float degrees);
 jfloat normalizeAngleRadians(float radians);
+jfloat angleBetweenVectors(
+        const std::vector<jfloat>& vector_a_values,
+        const std::vector<jfloat>& vector_b_values,
+        bool in_degrees);
 std::vector<jfloat> computeCentroidAndBounds();
 std::vector<jfloat> computeCovarianceMatrix();
 std::vector<jfloat> computeMeanAndCovarianceMatrix();

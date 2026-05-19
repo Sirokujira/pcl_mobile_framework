@@ -472,6 +472,20 @@ JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_normalize
     return pclmobile::normalizeAngleRadians(radians);
 }
 
+JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_angleBetweenVectors(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray vectorA,
+        jfloatArray vectorB,
+        jboolean inDegrees)
+{
+    (void) clazz;
+    return pclmobile::angleBetweenVectors(
+            readFloatArray(env, vectorA),
+            readFloatArray(env, vectorB),
+            inDegrees == JNI_TRUE);
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_calculateActivePolygonArea(
         JNIEnv* env, jclass clazz)
 {
