@@ -204,6 +204,13 @@ JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_loadPLY(
     pclmobile::loadPLYFile(pclmobile::jstringToString(env, filename));
 }
 
+JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_loadOBJ(
+        JNIEnv* env, jobject obj, jstring filename)
+{
+    (void) obj;
+    pclmobile::loadOBJFile(pclmobile::jstringToString(env, filename));
+}
+
 JNIEXPORT void JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_setCloudPoints(
         JNIEnv* env, jclass clazz, jfloatArray packedXYZ)
 {
