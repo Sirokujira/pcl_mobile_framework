@@ -355,6 +355,28 @@ public final class pclmobileJNILib {
             float directionZ);
 
     /**
+     * Computes PCL {@code geometry::distance} between two 3D points.
+     */
+    public static native float pointDistance(
+            float pointAX,
+            float pointAY,
+            float pointAZ,
+            float pointBX,
+            float pointBY,
+            float pointBZ);
+
+    /**
+     * Computes PCL {@code geometry::squaredDistance} between two 3D points.
+     */
+    public static native float squaredPointDistance(
+            float pointAX,
+            float pointAY,
+            float pointAZ,
+            float pointBX,
+            float pointBY,
+            float pointBZ);
+
+    /**
      * Computes PCL {@code selectNorm} for two float vectors.
      *
      * <p>{@code normType} accepts the {@code NORM_*} constants. PCL's PF and K norms are not exposed

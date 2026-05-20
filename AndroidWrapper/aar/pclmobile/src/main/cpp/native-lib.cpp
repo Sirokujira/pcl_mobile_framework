@@ -513,6 +513,48 @@ JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_squaredPo
             directionZ);
 }
 
+JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_pointDistance(
+        JNIEnv* env,
+        jclass clazz,
+        jfloat pointAX,
+        jfloat pointAY,
+        jfloat pointAZ,
+        jfloat pointBX,
+        jfloat pointBY,
+        jfloat pointBZ)
+{
+    (void) env;
+    (void) clazz;
+    return pclmobile::pointDistance(
+            pointAX,
+            pointAY,
+            pointAZ,
+            pointBX,
+            pointBY,
+            pointBZ);
+}
+
+JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_squaredPointDistance(
+        JNIEnv* env,
+        jclass clazz,
+        jfloat pointAX,
+        jfloat pointAY,
+        jfloat pointAZ,
+        jfloat pointBX,
+        jfloat pointBY,
+        jfloat pointBZ)
+{
+    (void) env;
+    (void) clazz;
+    return pclmobile::squaredPointDistance(
+            pointAX,
+            pointAY,
+            pointAZ,
+            pointBX,
+            pointBY,
+            pointBZ);
+}
+
 JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_selectNormDistance(
         JNIEnv* env,
         jclass clazz,
