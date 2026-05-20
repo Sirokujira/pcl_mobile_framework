@@ -41,6 +41,38 @@ jfloat squaredPointDistance(
         float point_b_x,
         float point_b_y,
         float point_b_z);
+jboolean isFinitePoint(float point_x, float point_y, float point_z);
+jboolean isFiniteXYPoint(float point_x, float point_y);
+jboolean isFiniteNormal(float normal_x, float normal_y, float normal_z);
+std::vector<jfloat> projectPointOnPlane(
+        float point_x,
+        float point_y,
+        float point_z,
+        float origin_x,
+        float origin_y,
+        float origin_z,
+        float normal_x,
+        float normal_y,
+        float normal_z);
+std::vector<jfloat> projectedUnitVectorOnPlane(
+        float point_x,
+        float point_y,
+        float point_z,
+        float origin_x,
+        float origin_y,
+        float origin_z,
+        float normal_x,
+        float normal_y,
+        float normal_z);
+std::vector<jfloat> computeMeanStd(const std::vector<jfloat>& values);
+jfloat computeMedian(const std::vector<jfloat>& values);
+std::vector<int> getPointsInBox(
+        float min_x,
+        float min_y,
+        float min_z,
+        float max_x,
+        float max_y,
+        float max_z);
 jfloat selectNormDistance(
         const std::vector<jfloat>& values_a,
         const std::vector<jfloat>& values_b,

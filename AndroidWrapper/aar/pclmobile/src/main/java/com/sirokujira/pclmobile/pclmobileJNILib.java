@@ -377,6 +377,78 @@ public final class pclmobileJNILib {
             float pointBZ);
 
     /**
+     * Tests a 3D point with PCL {@code isFinite}.
+     */
+    public static native boolean isFinitePoint(float pointX, float pointY, float pointZ);
+
+    /**
+     * Tests a 2D point with PCL {@code isXYFinite}.
+     */
+    public static native boolean isFiniteXYPoint(float pointX, float pointY);
+
+    /**
+     * Tests a normal vector with PCL {@code isNormalFinite}.
+     */
+    public static native boolean isFiniteNormal(float normalX, float normalY, float normalZ);
+
+    /**
+     * Projects a point onto a plane with PCL {@code geometry::project}.
+     *
+     * <p>Returns {@code projected_x, projected_y, projected_z}.</p>
+     */
+    public static native float[] projectPointOnPlane(
+            float pointX,
+            float pointY,
+            float pointZ,
+            float originX,
+            float originY,
+            float originZ,
+            float normalX,
+            float normalY,
+            float normalZ);
+
+    /**
+     * Computes PCL {@code geometry::projectedAsUnitVector}.
+     *
+     * <p>Returns {@code unit_x, unit_y, unit_z}.</p>
+     */
+    public static native float[] projectedUnitVectorOnPlane(
+            float pointX,
+            float pointY,
+            float pointZ,
+            float originX,
+            float originY,
+            float originZ,
+            float normalX,
+            float normalY,
+            float normalZ);
+
+    /**
+     * Computes PCL {@code getMeanStd} for a float array.
+     *
+     * <p>Returns {@code mean, stddev, count}; empty input returns an empty array.</p>
+     */
+    public static native float[] computeMeanStd(float[] values);
+
+    /**
+     * Computes PCL {@code computeMedian} for a float array.
+     *
+     * <p>Empty input returns {@code NaN}.</p>
+     */
+    public static native float computeMedian(float[] values);
+
+    /**
+     * Returns active-cloud point indices inside the given bounds using PCL {@code getPointsInBox}.
+     */
+    public static native int[] getPointsInBox(
+            float minX,
+            float minY,
+            float minZ,
+            float maxX,
+            float maxY,
+            float maxZ);
+
+    /**
      * Computes PCL {@code selectNorm} for two float vectors.
      *
      * <p>{@code normType} accepts the {@code NORM_*} constants. PCL's PF and K norms are not exposed

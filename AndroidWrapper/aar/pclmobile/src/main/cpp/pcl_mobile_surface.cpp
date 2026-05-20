@@ -11,6 +11,7 @@
 #include <pcl/common/intersections.h>
 #include <pcl/common/norms.h>
 #include <pcl/common/pca.h>
+#include <pcl/common/point_tests.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/moment_of_inertia_estimation.h>
 #include <pcl/filters/project_inliers.h>
@@ -234,6 +235,115 @@ jfloat squaredPointDistance(
     const pcl::PointXYZ point_a(point_a_x, point_a_y, point_a_z);
     const pcl::PointXYZ point_b(point_b_x, point_b_y, point_b_z);
     return static_cast<jfloat>(pcl::geometry::squaredDistance(point_a, point_b));
+}
+
+jboolean isFinitePoint(float point_x, float point_y, float point_z)
+{
+    const pcl::PointXYZ point(point_x, point_y, point_z);
+    return pcl::isFinite(point) ? JNI_TRUE : JNI_FALSE;
+}
+
+jboolean isFiniteXYPoint(float point_x, float point_y)
+{
+    const pcl::PointXY point(point_x, point_y);
+    return pcl::isXYFinite(point) ? JNI_TRUE : JNI_FALSE;
+}
+
+jboolean isFiniteNormal(float normal_x, float normal_y, float normal_z)
+{
+    pcl::Normal normal;
+    normal.normal_x = normal_x;
+    normal.normal_y = normal_y;
+    normal.normal_z = normal_z;
+    return pcl::isNormalFinite(normal) ? JNI_TRUE : JNI_FALSE;
+}
+
+std::vector<jfloat> projectPointOnPlane(
+        float point_x,
+        float point_y,
+        float point_z,
+        float origin_x,
+        float origin_y,
+        float origin_z,
+        float normal_x,
+        float normal_y,
+        float normal_z)
+{
+    Eigen::Vector3f point(point_x, point_y, point_z);
+    Eigen::Vector3f origin(origin_x, origin_y, origin_z);
+    Eigen::Vector3f normal(normal_x, normal_y, normal_z);
+    Eigen::Vector3f projected;
+    pcl::geometry::project(point, origin, normal, projected);
+    return {projected.x(), projected.y(), projected.z()};
+}
+
+std::vector<jfloat> projectedUnitVectorOnPlane(
+        float point_x,
+        float point_y,
+        float point_z,
+        float origin_x,
+        float origin_y,
+        float origin_z,
+        float normal_x,
+        float normal_y,
+        float normal_z)
+{
+    Eigen::Vector3f point(point_x, point_y, point_z);
+    Eigen::Vector3f origin(origin_x, origin_y, origin_z);
+    Eigen::Vector3f normal(normal_x, normal_y, normal_z);
+    Eigen::Vector3f unit = pcl::geometry::projectedAsUnitVector(point, origin, normal);
+    return {unit.x(), unit.y(), unit.z()};
+}
+
+std::vector<jfloat> computeMeanStd(const std::vector<jfloat>& values)
+{
+    if (values.empty()) {
+        return {};
+    }
+
+    std::vector<float> copied(values.begin(), values.end());
+    double mean = 0.0;
+    double stddev = 0.0;
+    pcl::getMeanStd(copied, mean, stddev);
+    return {
+            static_cast<jfloat>(mean),
+            static_cast<jfloat>(stddev),
+            static_cast<jfloat>(copied.size()),
+    };
+}
+
+jfloat computeMedian(const std::vector<jfloat>& values)
+{
+    if (values.empty()) {
+        return std::numeric_limits<jfloat>::quiet_NaN();
+    }
+
+    std::vector<float> copied(values.begin(), values.end());
+    return static_cast<jfloat>(pcl::computeMedian(copied.begin(), copied.end()));
+}
+
+std::vector<int> getPointsInBox(
+        float min_x,
+        float min_y,
+        float min_z,
+        float max_x,
+        float max_y,
+        float max_z)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    Eigen::Vector4f min_point(
+            std::min(min_x, max_x),
+            std::min(min_y, max_y),
+            std::min(min_z, max_z),
+            1.0f);
+    Eigen::Vector4f max_point(
+            std::max(min_x, max_x),
+            std::max(min_y, max_y),
+            std::max(min_z, max_z),
+            1.0f);
+    std::vector<int> indices;
+    pcl::getPointsInBox(*input, min_point, max_point, indices);
+    return indices;
 }
 
 jfloat selectNormDistance(
