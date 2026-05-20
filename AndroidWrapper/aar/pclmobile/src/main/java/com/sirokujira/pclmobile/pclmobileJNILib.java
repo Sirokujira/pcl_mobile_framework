@@ -449,6 +449,25 @@ public final class pclmobileJNILib {
             float maxZ);
 
     /**
+     * Transforms a single 3D point with PCL {@code transformPoint}.
+     *
+     * <p>{@code rowMajor4x4} uses the same row-major matrix format as {@link #transformActiveCloud(float[])}.
+     * Arrays shorter than 16 values are treated as identity.</p>
+     */
+    public static native float[] transformPoint(
+            float pointX,
+            float pointY,
+            float pointZ,
+            float[] rowMajor4x4);
+
+    /**
+     * Computes PCL {@code getPrincipalTransformation} for the active cloud.
+     *
+     * <p>Returns {@code ratio} followed by a row-major 4x4 matrix. Empty clouds return an empty array.</p>
+     */
+    public static native float[] getPrincipalTransformation();
+
+    /**
      * Computes PCL {@code selectNorm} for two float vectors.
      *
      * <p>{@code normType} accepts the {@code NORM_*} constants. PCL's PF and K norms are not exposed
@@ -973,6 +992,17 @@ public final class pclmobileJNILib {
      */
     public static native int[] segmentSACModelInlierIndices(
             int modelType,
+            double distanceThreshold,
+            int maxIterations);
+
+    /**
+     * Returns active-cloud point indices that inlie a fitted PCL SAC model with a selected method.
+     *
+     * <p>{@code modelType} uses {@code SACMODEL_*}; {@code methodType} uses {@code SAC_*}.</p>
+     */
+    public static native int[] segmentSACModelInlierIndicesWithMethod(
+            int modelType,
+            int methodType,
             double distanceThreshold,
             int maxIterations);
 
@@ -1897,6 +1927,29 @@ public final class pclmobileJNILib {
      * Arrays shorter than 16 values are treated as an identity transform.</p>
      */
     public static native float[] transformActiveCloud(float[] rowMajor4x4);
+
+    /**
+     * Applies PCL {@code transformPointCloud} with translation and quaternion rotation.
+     *
+     * <p>The transformed points are stored as the filtered cloud and returned as {@code x, y, z} triples.
+     * Quaternion arguments use {@code x, y, z, w} order.</p>
+     */
+    public static native float[] transformActiveCloudQuaternion(
+            float tx,
+            float ty,
+            float tz,
+            float qx,
+            float qy,
+            float qz,
+            float qw);
+
+    /**
+     * Applies a row-major 4x4 transform to selected active-cloud indices with PCL {@code transformPointCloud}.
+     *
+     * <p>The transformed selected points are stored as the filtered cloud and returned as {@code x, y, z} triples.
+     * Invalid indices are ignored.</p>
+     */
+    public static native float[] transformActiveCloudIndices(int[] indices, float[] rowMajor4x4);
 
     /**
      * Translates the active cloud with PCL {@code transformPointCloud}.

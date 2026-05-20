@@ -12,6 +12,7 @@
 #include <pcl/common/norms.h>
 #include <pcl/common/pca.h>
 #include <pcl/common/point_tests.h>
+#include <pcl/common/transforms.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/moment_of_inertia_estimation.h>
 #include <pcl/filters/project_inliers.h>
@@ -47,6 +48,31 @@ void appendMatrix3(std::vector<jfloat>& values, const Eigen::Matrix3f& matrix)
             values.push_back(matrix(row, col));
         }
     }
+}
+
+void appendMatrix4(std::vector<jfloat>& values, const Eigen::Matrix4f& matrix)
+{
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            values.push_back(matrix(row, col));
+        }
+    }
+}
+
+Eigen::Affine3f affineFromRowMajorMatrix(const std::vector<jfloat>& row_major_matrix)
+{
+    Eigen::Matrix4f matrix = Eigen::Matrix4f::Identity();
+    if (row_major_matrix.size() >= 16) {
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
+                matrix(row, col) = row_major_matrix[static_cast<std::size_t>(row * 4 + col)];
+            }
+        }
+    }
+
+    Eigen::Affine3f transform;
+    transform.matrix() = matrix;
+    return transform;
 }
 
 void appendVector3(std::vector<jfloat>& values, const Eigen::Vector3f& vector)
@@ -344,6 +370,34 @@ std::vector<int> getPointsInBox(
     std::vector<int> indices;
     pcl::getPointsInBox(*input, min_point, max_point, indices);
     return indices;
+}
+
+std::vector<jfloat> transformPoint(
+        float point_x,
+        float point_y,
+        float point_z,
+        const std::vector<jfloat>& row_major_matrix)
+{
+    pcl::PointXYZ point(point_x, point_y, point_z);
+    pcl::PointXYZ transformed = pcl::transformPoint(point, affineFromRowMajorMatrix(row_major_matrix));
+    return {transformed.x, transformed.y, transformed.z};
+}
+
+std::vector<jfloat> getPrincipalTransformation()
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()) {
+        return {};
+    }
+
+    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+    const double ratio = pcl::getPrincipalTransformation(*input, transform);
+
+    std::vector<jfloat> values;
+    values.reserve(17);
+    values.push_back(static_cast<jfloat>(ratio));
+    appendMatrix4(values, transform.matrix());
+    return values;
 }
 
 jfloat selectNormDistance(
