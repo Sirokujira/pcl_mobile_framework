@@ -18,7 +18,7 @@ let useLocalXCFramework = false
 let xcframeworkURL =
     "https://github.com/Sirokujira/pcl_mobile_framework/releases/download/v0.1.2/PCLMobile.xcframework.zip" // x-release-please-version
 let xcframeworkChecksum =
-    "0e083d194a1ef7cc9b4f0076ca94b52d7f94ae122d177ec6424d9e9ed47d5dd1"
+    "04c41a9a0caa8788f26352e72aa4bc7b7bb68b4e40d6e9910b322751321f99c0"
 
 let binaryTarget: Target = useLocalXCFramework
     ? .binaryTarget(
