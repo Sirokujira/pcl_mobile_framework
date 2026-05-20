@@ -555,6 +555,129 @@ JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_squaredPo
             pointBZ);
 }
 
+JNIEXPORT jboolean JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_isFinitePoint(
+        JNIEnv* env,
+        jclass clazz,
+        jfloat pointX,
+        jfloat pointY,
+        jfloat pointZ)
+{
+    (void) env;
+    (void) clazz;
+    return pclmobile::isFinitePoint(pointX, pointY, pointZ);
+}
+
+JNIEXPORT jboolean JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_isFiniteXYPoint(
+        JNIEnv* env,
+        jclass clazz,
+        jfloat pointX,
+        jfloat pointY)
+{
+    (void) env;
+    (void) clazz;
+    return pclmobile::isFiniteXYPoint(pointX, pointY);
+}
+
+JNIEXPORT jboolean JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_isFiniteNormal(
+        JNIEnv* env,
+        jclass clazz,
+        jfloat normalX,
+        jfloat normalY,
+        jfloat normalZ)
+{
+    (void) env;
+    (void) clazz;
+    return pclmobile::isFiniteNormal(normalX, normalY, normalZ);
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_projectPointOnPlane(
+        JNIEnv* env,
+        jclass clazz,
+        jfloat pointX,
+        jfloat pointY,
+        jfloat pointZ,
+        jfloat originX,
+        jfloat originY,
+        jfloat originZ,
+        jfloat normalX,
+        jfloat normalY,
+        jfloat normalZ)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::projectPointOnPlane(
+                    pointX,
+                    pointY,
+                    pointZ,
+                    originX,
+                    originY,
+                    originZ,
+                    normalX,
+                    normalY,
+                    normalZ));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_projectedUnitVectorOnPlane(
+        JNIEnv* env,
+        jclass clazz,
+        jfloat pointX,
+        jfloat pointY,
+        jfloat pointZ,
+        jfloat originX,
+        jfloat originY,
+        jfloat originZ,
+        jfloat normalX,
+        jfloat normalY,
+        jfloat normalZ)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::projectedUnitVectorOnPlane(
+                    pointX,
+                    pointY,
+                    pointZ,
+                    originX,
+                    originY,
+                    originZ,
+                    normalX,
+                    normalY,
+                    normalZ));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeMeanStd(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray values)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::computeMeanStd(readFloatArray(env, values)));
+}
+
+JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_computeMedian(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray values)
+{
+    (void) clazz;
+    return pclmobile::computeMedian(readFloatArray(env, values));
+}
+
+JNIEXPORT jintArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_getPointsInBox(
+        JNIEnv* env,
+        jclass clazz,
+        jfloat minX,
+        jfloat minY,
+        jfloat minZ,
+        jfloat maxX,
+        jfloat maxY,
+        jfloat maxZ)
+{
+    (void) clazz;
+    return makeIntArray(env, pclmobile::getPointsInBox(minX, minY, minZ, maxX, maxY, maxZ));
+}
+
 JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_selectNormDistance(
         JNIEnv* env,
         jclass clazz,
