@@ -513,6 +513,22 @@ JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_squaredPo
             directionZ);
 }
 
+JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_selectNormDistance(
+        JNIEnv* env,
+        jclass clazz,
+        jfloatArray valuesA,
+        jfloatArray valuesB,
+        jint dimension,
+        jint normType)
+{
+    (void) clazz;
+    return pclmobile::selectNormDistance(
+            readFloatArray(env, valuesA),
+            readFloatArray(env, valuesB),
+            dimension,
+            normType);
+}
+
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_calculateActivePolygonArea(
         JNIEnv* env, jclass clazz)
 {

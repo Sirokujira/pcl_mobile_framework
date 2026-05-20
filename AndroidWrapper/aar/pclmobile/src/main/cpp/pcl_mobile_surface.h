@@ -27,6 +27,11 @@ jfloat squaredPointToLineDistance(
         float direction_x,
         float direction_y,
         float direction_z);
+jfloat selectNormDistance(
+        const std::vector<jfloat>& values_a,
+        const std::vector<jfloat>& values_b,
+        int dimension,
+        int norm_type);
 std::vector<jfloat> computeCentroidAndBounds();
 std::vector<jfloat> computeCovarianceMatrix();
 std::vector<jfloat> computeMeanAndCovarianceMatrix();

@@ -102,6 +102,17 @@ public final class pclmobileJNILib {
     public static final int MORPH_CLOSE = 1;
     public static final int MORPH_DILATE = 2;
     public static final int MORPH_ERODE = 3;
+    public static final int NORM_L1 = 0;
+    public static final int NORM_L2_SQR = 1;
+    public static final int NORM_L2 = 2;
+    public static final int NORM_LINF = 3;
+    public static final int NORM_JM = 4;
+    public static final int NORM_B = 5;
+    public static final int NORM_SUBLINEAR = 6;
+    public static final int NORM_CS = 7;
+    public static final int NORM_DIV = 8;
+    public static final int NORM_KL = 11;
+    public static final int NORM_HIK = 12;
 
     static {
         System.loadLibrary("native-lib");
@@ -342,6 +353,18 @@ public final class pclmobileJNILib {
             float directionX,
             float directionY,
             float directionZ);
+
+    /**
+     * Computes PCL {@code selectNorm} for two float vectors.
+     *
+     * <p>{@code normType} accepts the {@code NORM_*} constants. PCL's PF and K norms are not exposed
+     * through this wrapper because they require extra parameters.</p>
+     */
+    public static native float selectNormDistance(
+            float[] valuesA,
+            float[] valuesB,
+            int dimension,
+            int normType);
 
     /**
      * Computes PCL {@code calculatePolygonArea} using active-cloud points as ordered polygon vertices.
