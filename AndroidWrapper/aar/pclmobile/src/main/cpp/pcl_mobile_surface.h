@@ -27,6 +27,20 @@ jfloat squaredPointToLineDistance(
         float direction_x,
         float direction_y,
         float direction_z);
+jfloat pointDistance(
+        float point_a_x,
+        float point_a_y,
+        float point_a_z,
+        float point_b_x,
+        float point_b_y,
+        float point_b_z);
+jfloat squaredPointDistance(
+        float point_a_x,
+        float point_a_y,
+        float point_a_z,
+        float point_b_x,
+        float point_b_y,
+        float point_b_z);
 jfloat selectNormDistance(
         const std::vector<jfloat>& values_a,
         const std::vector<jfloat>& values_b,

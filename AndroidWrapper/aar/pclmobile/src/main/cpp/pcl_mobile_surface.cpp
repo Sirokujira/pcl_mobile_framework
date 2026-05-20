@@ -7,6 +7,7 @@
 #include <pcl/common/angles.h>
 #include <pcl/common/common.h>
 #include <pcl/common/distances.h>
+#include <pcl/common/geometry.h>
 #include <pcl/common/intersections.h>
 #include <pcl/common/norms.h>
 #include <pcl/common/pca.h>
@@ -207,6 +208,32 @@ jfloat squaredPointToLineDistance(
         return std::numeric_limits<jfloat>::quiet_NaN();
     }
     return static_cast<jfloat>(pcl::sqrPointToLineDistance(point, line_point, line_direction));
+}
+
+jfloat pointDistance(
+        float point_a_x,
+        float point_a_y,
+        float point_a_z,
+        float point_b_x,
+        float point_b_y,
+        float point_b_z)
+{
+    const pcl::PointXYZ point_a(point_a_x, point_a_y, point_a_z);
+    const pcl::PointXYZ point_b(point_b_x, point_b_y, point_b_z);
+    return static_cast<jfloat>(pcl::geometry::distance(point_a, point_b));
+}
+
+jfloat squaredPointDistance(
+        float point_a_x,
+        float point_a_y,
+        float point_a_z,
+        float point_b_x,
+        float point_b_y,
+        float point_b_z)
+{
+    const pcl::PointXYZ point_a(point_a_x, point_a_y, point_a_z);
+    const pcl::PointXYZ point_b(point_b_x, point_b_y, point_b_z);
+    return static_cast<jfloat>(pcl::geometry::squaredDistance(point_a, point_b));
 }
 
 jfloat selectNormDistance(
