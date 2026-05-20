@@ -73,6 +73,12 @@ std::vector<int> getPointsInBox(
         float max_x,
         float max_y,
         float max_z);
+std::vector<jfloat> transformPoint(
+        float point_x,
+        float point_y,
+        float point_z,
+        const std::vector<jfloat>& row_major_matrix);
+std::vector<jfloat> getPrincipalTransformation();
 jfloat selectNormDistance(
         const std::vector<jfloat>& values_a,
         const std::vector<jfloat>& values_b,

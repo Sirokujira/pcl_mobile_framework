@@ -507,6 +507,63 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr transformActiveCloud(const std::vector<jfloa
     return filteredCloud();
 }
 
+pcl::PointCloud<pcl::PointXYZ>::Ptr transformActiveCloudQuaternion(
+        float tx,
+        float ty,
+        float tz,
+        float qx,
+        float qy,
+        float qz,
+        float qw)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    if (source->empty()) {
+        clearFilteredCloud();
+        return filteredCloud();
+    }
+
+    Eigen::Vector3f offset(tx, ty, tz);
+    Eigen::Quaternionf rotation(qw, qx, qy, qz);
+    if (rotation.norm() <= std::numeric_limits<float>::epsilon()) {
+        rotation = Eigen::Quaternionf::Identity();
+    } else {
+        rotation.normalize();
+    }
+
+    pcl::transformPointCloud(*source, *filteredCloud(), offset, rotation, true);
+    LOGI("transformPointCloud quaternion: input=%zu output=%zu", source->points.size(), filteredCloud()->points.size());
+    return filteredCloud();
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr transformActiveCloudIndices(
+        const std::vector<int>& indices,
+        const std::vector<jfloat>& row_major_matrix)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    if (source->empty()) {
+        clearFilteredCloud();
+        return filteredCloud();
+    }
+
+    pcl::Indices selected;
+    selected.reserve(indices.size());
+    for (int index : indices) {
+        if (index >= 0 && static_cast<std::size_t>(index) < source->points.size()) {
+            selected.push_back(index);
+        }
+    }
+    if (selected.empty()) {
+        clearFilteredCloud();
+        return filteredCloud();
+    }
+
+    Eigen::Matrix4f transform = matrixFromRowMajorTuple(row_major_matrix);
+    pcl::transformPointCloud(*source, selected, *filteredCloud(), transform, true);
+    LOGI("transformPointCloud indices: input=%zu selected=%zu output=%zu",
+         source->points.size(), selected.size(), filteredCloud()->points.size());
+    return filteredCloud();
+}
+
 pcl::PointCloud<pcl::PointXYZ>::Ptr translateActiveCloud(float tx, float ty, float tz)
 {
     Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();

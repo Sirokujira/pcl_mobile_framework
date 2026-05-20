@@ -113,6 +113,26 @@ std::vector<int> segmentModelInlierIndices(int model_type, double distance_thres
     return inliers->indices;
 }
 
+std::vector<int> segmentModelInlierIndicesWithMethod(
+        int model_type,
+        int method_type,
+        double distance_threshold,
+        int max_iterations)
+{
+    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+    if (!pclmobile::segmentModelWithMethod(
+            model_type,
+            method_type,
+            distance_threshold,
+            max_iterations,
+            coefficients,
+            inliers)) {
+        return {};
+    }
+    return inliers->indices;
+}
+
 pcl::PointCloud<pcl::PointXYZ>::Ptr extractLargestEuclideanCluster(
         double tolerance,
         int min_cluster_size,
@@ -676,6 +696,32 @@ JNIEXPORT jintArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_getPoi
 {
     (void) clazz;
     return makeIntArray(env, pclmobile::getPointsInBox(minX, minY, minZ, maxX, maxY, maxZ));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_transformPoint(
+        JNIEnv* env,
+        jclass clazz,
+        jfloat pointX,
+        jfloat pointY,
+        jfloat pointZ,
+        jfloatArray rowMajor4x4)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(
+            env,
+            pclmobile::transformPoint(
+                    pointX,
+                    pointY,
+                    pointZ,
+                    readFloatArray(env, rowMajor4x4)));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_getPrincipalTransformation(
+        JNIEnv* env,
+        jclass clazz)
+{
+    (void) clazz;
+    return pclmobile::makeFloatArray(env, pclmobile::getPrincipalTransformation());
 }
 
 JNIEXPORT jfloat JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_selectNormDistance(
@@ -1345,6 +1391,24 @@ JNIEXPORT jintArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_segmen
 {
     (void) clazz;
     return makeIntArray(env, segmentModelInlierIndices(modelType, distanceThreshold, maxIterations));
+}
+
+JNIEXPORT jintArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_segmentSACModelInlierIndicesWithMethod(
+        JNIEnv* env,
+        jclass clazz,
+        jint modelType,
+        jint methodType,
+        jdouble distanceThreshold,
+        jint maxIterations)
+{
+    (void) clazz;
+    return makeIntArray(
+            env,
+            segmentModelInlierIndicesWithMethod(
+                    modelType,
+                    methodType,
+                    distanceThreshold,
+                    maxIterations));
 }
 
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_nearestKSearch(
@@ -2482,6 +2546,37 @@ JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_tran
 {
     (void) clazz;
     return pclmobile::makePointArray(env, pclmobile::transformActiveCloud(readFloatArray(env, rowMajor4x4)));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_transformActiveCloudQuaternion(
+        JNIEnv* env,
+        jclass clazz,
+        jfloat tx,
+        jfloat ty,
+        jfloat tz,
+        jfloat qx,
+        jfloat qy,
+        jfloat qz,
+        jfloat qw)
+{
+    (void) clazz;
+    return pclmobile::makePointArray(
+            env,
+            pclmobile::transformActiveCloudQuaternion(tx, ty, tz, qx, qy, qz, qw));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_transformActiveCloudIndices(
+        JNIEnv* env,
+        jclass clazz,
+        jintArray indices,
+        jfloatArray rowMajor4x4)
+{
+    (void) clazz;
+    return pclmobile::makePointArray(
+            env,
+            pclmobile::transformActiveCloudIndices(
+                    readIntArray(env, indices),
+                    readFloatArray(env, rowMajor4x4)));
 }
 
 JNIEXPORT jfloatArray JNICALL Java_com_sirokujira_pclmobile_pclmobileJNILib_translateActiveCloud(

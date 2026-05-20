@@ -54,6 +54,17 @@ std::vector<jfloat> validateTransformEuclidean(
         double max_range,
         double threshold);
 pcl::PointCloud<pcl::PointXYZ>::Ptr transformActiveCloud(const std::vector<jfloat>& row_major_matrix);
+pcl::PointCloud<pcl::PointXYZ>::Ptr transformActiveCloudQuaternion(
+        float tx,
+        float ty,
+        float tz,
+        float qx,
+        float qy,
+        float qz,
+        float qw);
+pcl::PointCloud<pcl::PointXYZ>::Ptr transformActiveCloudIndices(
+        const std::vector<int>& indices,
+        const std::vector<jfloat>& row_major_matrix);
 pcl::PointCloud<pcl::PointXYZ>::Ptr translateActiveCloud(float tx, float ty, float tz);
 std::vector<jfloat> alignToTargetICP(
         const std::vector<jfloat>& packed_target_xyz,
