@@ -8,6 +8,7 @@
 #include <pcl/common/common.h>
 #include <pcl/common/distances.h>
 #include <pcl/common/intersections.h>
+#include <pcl/common/norms.h>
 #include <pcl/common/pca.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/moment_of_inertia_estimation.h>
@@ -206,6 +207,29 @@ jfloat squaredPointToLineDistance(
         return std::numeric_limits<jfloat>::quiet_NaN();
     }
     return static_cast<jfloat>(pcl::sqrPointToLineDistance(point, line_point, line_direction));
+}
+
+jfloat selectNormDistance(
+        const std::vector<jfloat>& values_a,
+        const std::vector<jfloat>& values_b,
+        int dimension,
+        int norm_type)
+{
+    if (dimension <= 0
+            || static_cast<std::size_t>(dimension) > values_a.size()
+            || static_cast<std::size_t>(dimension) > values_b.size()
+            || norm_type < pcl::L1
+            || norm_type > pcl::HIK
+            || norm_type == pcl::PF
+            || norm_type == pcl::K) {
+        return std::numeric_limits<jfloat>::quiet_NaN();
+    }
+
+    return static_cast<jfloat>(pcl::selectNorm(
+            values_a.data(),
+            values_b.data(),
+            dimension,
+            static_cast<pcl::NormType>(norm_type)));
 }
 
 std::vector<jfloat> computeCentroidAndBounds()
