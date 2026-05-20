@@ -8,6 +8,11 @@ namespace pclmobile {
 
 void filterAxis(const std::string& axis, double min_value, double max_value);
 void filterAxisOutside(const std::string& axis, double min_value, double max_value);
+std::vector<int> filterAxisIndices(
+        const std::string& axis,
+        double min_value,
+        double max_value,
+        bool negative);
 void filterConditionalAxisRange(
         const std::string& axis, double min_value, double max_value, bool keep_organized);
 void filterPassThroughAdvanced(
@@ -36,12 +41,38 @@ void filterFastBilateral(double sigma_s, double sigma_r);
 void filterFastBilateralOMP(double sigma_s, double sigma_r, int number_of_threads);
 void filterConvolution3DGaussian(double sigma, double radius, double sigma_coefficient, int number_of_threads);
 void filterPlaneClipper(double a, double b, double c, double d, bool negative);
+std::vector<int> filterPlaneClipperIndices(double a, double b, double c, double d, bool negative);
 void removeNaNFromActiveCloud();
+std::vector<int> removeNaNFromActiveCloudIndices();
 void filterStatisticalOutlierRemoval(int mean_k, double stddev_mul_thresh);
+std::vector<int> filterStatisticalOutlierRemovalIndices(
+        int mean_k,
+        double stddev_mul_thresh,
+        bool negative);
 void filterRadiusOutlierRemoval(double radius, int min_neighbors);
+std::vector<int> filterRadiusOutlierRemovalIndices(
+        double radius,
+        int min_neighbors,
+        bool negative);
 void filterShadowPoints(int normal_k_search, double threshold);
 void filterCropBox(double min_x, double min_y, double min_z, double max_x, double max_y, double max_z);
+std::vector<int> filterCropBoxIndices(
+        double min_x,
+        double min_y,
+        double min_z,
+        double max_x,
+        double max_y,
+        double max_z,
+        bool negative);
 void filterBoxClipper(
+        double min_x,
+        double min_y,
+        double min_z,
+        double max_x,
+        double max_y,
+        double max_z,
+        bool negative);
+std::vector<int> filterBoxClipperIndices(
         double min_x,
         double min_y,
         double min_z,
@@ -62,12 +93,33 @@ void filterCropBoxTransformed(
         double rotation_x,
         double rotation_y,
         double rotation_z);
+std::vector<int> filterCropBoxTransformedIndices(
+        double min_x,
+        double min_y,
+        double min_z,
+        double max_x,
+        double max_y,
+        double max_z,
+        double translation_x,
+        double translation_y,
+        double translation_z,
+        double rotation_x,
+        double rotation_y,
+        double rotation_z,
+        bool negative);
 void filterFrustumCulling(
         double horizontal_fov,
         double vertical_fov,
         double near_plane_distance,
         double far_plane_distance,
         const std::vector<float>& row_major_camera_pose);
+std::vector<int> filterFrustumCullingIndices(
+        double horizontal_fov,
+        double vertical_fov,
+        double near_plane_distance,
+        double far_plane_distance,
+        const std::vector<float>& row_major_camera_pose,
+        bool negative);
 void filterModelOutlierRemoval(
         int model_type,
         const std::vector<float>& model_coefficients,
@@ -79,6 +131,7 @@ void filterProjectInliers(
         const std::vector<float>& model_coefficients,
         bool copy_all_data);
 void filterCropHull2D(const std::vector<float>& packed_hull_xyz, bool negative);
+std::vector<int> filterCropHull2DIndices(const std::vector<float>& packed_hull_xyz, bool negative);
 void filterExtractIndices(const std::vector<int>& indices, bool negative);
 void extractPlaneInliers(double distance_threshold, int max_iterations);
 void extractModelInliers(int model_type, double distance_threshold, int max_iterations);

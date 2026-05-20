@@ -35,8 +35,15 @@ std::vector<jfloat> segmentSACModelWithMethod(
         int method_type,
         double distance_threshold,
         int max_iterations);
+std::vector<int> segmentSACModelOutlierIndices(int model_type, double distance_threshold, int max_iterations);
+std::vector<int> segmentSACModelOutlierIndicesWithMethod(
+        int model_type,
+        int method_type,
+        double distance_threshold,
+        int max_iterations);
 std::vector<jfloat> extractEuclideanClusters(double tolerance, int min_cluster_size, int max_cluster_size);
 std::vector<int> extractEuclideanClusterIndices(double tolerance, int min_cluster_size, int max_cluster_size);
+std::vector<int> extractLargestEuclideanClusterIndices(double tolerance, int min_cluster_size, int max_cluster_size);
 std::vector<jfloat> extractRegionGrowingClusters(int normal_k_search,
                                                  int number_of_neighbours,
                                                  int min_cluster_size,
@@ -65,7 +72,24 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr extractPolygonalPrismData(
         float view_point_y,
         float view_point_z,
         bool negative);
+std::vector<int> extractPolygonalPrismDataIndices(
+        const std::vector<jfloat>& packed_planar_hull_xyz,
+        double height_min,
+        double height_max,
+        float view_point_x,
+        float view_point_y,
+        float view_point_z,
+        bool negative);
 pcl::PointCloud<pcl::PointXYZ>::Ptr extractProgressiveMorphologicalGround(
+        int max_window_size,
+        double slope,
+        double initial_distance,
+        double max_distance,
+        double cell_size,
+        double base,
+        bool exponential,
+        bool negative);
+std::vector<int> extractProgressiveMorphologicalGroundIndices(
         int max_window_size,
         double slope,
         double initial_distance,
@@ -84,6 +108,16 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr extractApproximateProgressiveMorphologicalGr
         bool exponential,
         int number_of_threads,
         bool negative);
+std::vector<int> extractApproximateProgressiveMorphologicalGroundIndices(
+        int max_window_size,
+        double slope,
+        double initial_distance,
+        double max_distance,
+        double cell_size,
+        double base,
+        bool exponential,
+        int number_of_threads,
+        bool negative);
 pcl::PointCloud<pcl::PointXYZ>::Ptr extractMinCutForeground(
         const std::vector<jfloat>& packed_foreground_xyz,
         double sigma,
@@ -91,6 +125,18 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr extractMinCutForeground(
         double source_weight,
         int number_of_neighbours);
 std::vector<jfloat> extractMinCutForegroundStats(
+        const std::vector<jfloat>& packed_foreground_xyz,
+        double sigma,
+        double radius,
+        double source_weight,
+        int number_of_neighbours);
+std::vector<int> extractMinCutForegroundIndices(
+        const std::vector<jfloat>& packed_foreground_xyz,
+        double sigma,
+        double radius,
+        double source_weight,
+        int number_of_neighbours);
+std::vector<int> extractMinCutForegroundClusterIndices(
         const std::vector<jfloat>& packed_foreground_xyz,
         double sigma,
         double radius,

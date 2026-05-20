@@ -108,6 +108,32 @@ bool isProjectInliersSupported(int model_type)
     }
 }
 
+std::vector<int> maybeInvertIndices(
+        const pcl::Indices& indices,
+        std::size_t point_count,
+        bool negative)
+{
+    if (!negative) {
+        return indices;
+    }
+
+    std::vector<bool> selected(point_count, false);
+    for (int index : indices) {
+        if (index >= 0 && static_cast<std::size_t>(index) < point_count) {
+            selected[static_cast<std::size_t>(index)] = true;
+        }
+    }
+
+    std::vector<int> inverted;
+    inverted.reserve(point_count);
+    for (std::size_t i = 0; i < point_count; ++i) {
+        if (!selected[i]) {
+            inverted.push_back(static_cast<int>(i));
+        }
+    }
+    return inverted;
+}
+
 pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFromPackedXYZ(const std::vector<float>& packed_xyz)
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr result(new pcl::PointCloud<pcl::PointXYZ>);
@@ -160,6 +186,30 @@ void filterAxisOutside(const std::string& axis, double min_value, double max_val
     pass.setFilterLimits(min_value, max_value);
     pass.setNegative(true);
     pass.filter(*filteredCloud());
+}
+
+std::vector<int> filterAxisIndices(
+        const std::string& axis,
+        double min_value,
+        double max_value,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()) {
+        return {};
+    }
+
+    pcl::PassThrough<pcl::PointXYZ> pass;
+    pass.setInputCloud(input);
+    pass.setFilterFieldName(axis);
+    pass.setFilterLimits(min_value, max_value);
+    pass.setNegative(negative);
+
+    pcl::Indices indices;
+    pass.filter(indices);
+    LOGI("PassThrough indices: input=%zu returned=%zu axis=%s range=(%.3f, %.3f) negative=%d",
+         input->points.size(), indices.size(), axis.c_str(), min_value, max_value, negative ? 1 : 0);
+    return indices;
 }
 
 void filterConditionalAxisRange(
@@ -582,6 +632,28 @@ void filterPlaneClipper(double a, double b, double c, double d, bool negative)
          input->points.size(), clipped.size(), filteredCloud()->points.size(), negative ? 1 : 0);
 }
 
+std::vector<int> filterPlaneClipperIndices(double a, double b, double c, double d, bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()) {
+        return {};
+    }
+
+    pcl::PlaneClipper3D<pcl::PointXYZ> clipper(
+            Eigen::Vector4f(
+                    static_cast<float>(a),
+                    static_cast<float>(b),
+                    static_cast<float>(c),
+                    static_cast<float>(d)));
+    pcl::Indices clipped;
+    clipper.clipPointCloud3D(*input, clipped);
+
+    std::vector<int> result = maybeInvertIndices(clipped, input->points.size(), negative);
+    LOGI("PlaneClipper3D indices: input=%zu clipped=%zu returned=%zu negative=%d",
+         input->points.size(), clipped.size(), result.size(), negative ? 1 : 0);
+    return result;
+}
+
 void removeNaNFromActiveCloud()
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr input(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
@@ -596,6 +668,21 @@ void removeNaNFromActiveCloud()
          input->points.size(), filteredCloud()->points.size());
 }
 
+std::vector<int> removeNaNFromActiveCloudIndices()
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    if (input->empty()) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZ> finite_points;
+    std::vector<int> indices;
+    pcl::removeNaNFromPointCloud(*input, finite_points, indices);
+    LOGI("removeNaNFromPointCloud indices: input=%zu finite=%zu",
+         input->points.size(), indices.size());
+    return indices;
+}
+
 void filterStatisticalOutlierRemoval(int mean_k, double stddev_mul_thresh)
 {
     pcl::StatisticalOutlierRemoval<pcl::PointXYZ> removal;
@@ -607,6 +694,29 @@ void filterStatisticalOutlierRemoval(int mean_k, double stddev_mul_thresh)
          cloud()->points.size(), filteredCloud()->points.size(), mean_k, stddev_mul_thresh);
 }
 
+std::vector<int> filterStatisticalOutlierRemovalIndices(
+        int mean_k,
+        double stddev_mul_thresh,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || mean_k <= 0) {
+        return {};
+    }
+
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> removal;
+    removal.setInputCloud(input);
+    removal.setMeanK(mean_k);
+    removal.setStddevMulThresh(stddev_mul_thresh);
+    removal.setNegative(negative);
+
+    pcl::Indices indices;
+    removal.filter(indices);
+    LOGI("StatisticalOutlierRemoval indices: input=%zu returned=%zu meanK=%d stddev=%.3f negative=%d",
+         input->points.size(), indices.size(), mean_k, stddev_mul_thresh, negative ? 1 : 0);
+    return indices;
+}
+
 void filterRadiusOutlierRemoval(double radius, int min_neighbors)
 {
     pcl::RadiusOutlierRemoval<pcl::PointXYZ> removal;
@@ -616,6 +726,29 @@ void filterRadiusOutlierRemoval(double radius, int min_neighbors)
     removal.filter(*filteredCloud());
     LOGI("RadiusOutlierRemoval filtered points: input=%zu output=%zu radius=%.3f minNeighbors=%d",
          cloud()->points.size(), filteredCloud()->points.size(), radius, min_neighbors);
+}
+
+std::vector<int> filterRadiusOutlierRemovalIndices(
+        double radius,
+        int min_neighbors,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || radius <= 0.0 || min_neighbors < 0) {
+        return {};
+    }
+
+    pcl::RadiusOutlierRemoval<pcl::PointXYZ> removal;
+    removal.setInputCloud(input);
+    removal.setRadiusSearch(radius);
+    removal.setMinNeighborsInRadius(min_neighbors);
+    removal.setNegative(negative);
+
+    pcl::Indices indices;
+    removal.filter(indices);
+    LOGI("RadiusOutlierRemoval indices: input=%zu returned=%zu radius=%.3f minNeighbors=%d negative=%d",
+         input->points.size(), indices.size(), radius, min_neighbors, negative ? 1 : 0);
+    return indices;
 }
 
 void filterShadowPoints(int normal_k_search, double threshold)
@@ -652,6 +785,33 @@ void filterCropBox(double min_x, double min_y, double min_z, double max_x, doubl
     crop_box.filter(*filteredCloud());
     LOGI("CropBox filtered points: input=%zu output=%zu min=(%.3f, %.3f, %.3f) max=(%.3f, %.3f, %.3f)",
          cloud()->points.size(), filteredCloud()->points.size(), min_x, min_y, min_z, max_x, max_y, max_z);
+}
+
+std::vector<int> filterCropBoxIndices(
+        double min_x,
+        double min_y,
+        double min_z,
+        double max_x,
+        double max_y,
+        double max_z,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || min_x > max_x || min_y > max_y || min_z > max_z) {
+        return {};
+    }
+
+    pcl::CropBox<pcl::PointXYZ> crop_box;
+    crop_box.setInputCloud(input);
+    crop_box.setMin(Eigen::Vector4f(min_x, min_y, min_z, 1.0f));
+    crop_box.setMax(Eigen::Vector4f(max_x, max_y, max_z, 1.0f));
+    pcl::Indices selected;
+    crop_box.filter(selected);
+
+    std::vector<int> result = maybeInvertIndices(selected, input->points.size(), negative);
+    LOGI("CropBox indices: input=%zu selected=%zu returned=%zu negative=%d",
+         input->points.size(), selected.size(), result.size(), negative ? 1 : 0);
+    return result;
 }
 
 void filterBoxClipper(
@@ -701,6 +861,38 @@ void filterBoxClipper(
          input->points.size(), clipped.size(), filteredCloud()->points.size(), negative ? 1 : 0);
 }
 
+std::vector<int> filterBoxClipperIndices(
+        double min_x,
+        double min_y,
+        double min_z,
+        double max_x,
+        double max_y,
+        double max_z,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || min_x > max_x || min_y > max_y || min_z > max_z) {
+        return {};
+    }
+
+    const Eigen::Vector3f center(
+            static_cast<float>((min_x + max_x) * 0.5),
+            static_cast<float>((min_y + max_y) * 0.5),
+            static_cast<float>((min_z + max_z) * 0.5));
+    const Eigen::Vector3f size(
+            static_cast<float>(max_x - min_x),
+            static_cast<float>(max_y - min_y),
+            static_cast<float>(max_z - min_z));
+    pcl::BoxClipper3D<pcl::PointXYZ> clipper(Eigen::Vector3f::Zero(), center, size);
+
+    pcl::Indices clipped;
+    clipper.clipPointCloud3D(*input, clipped);
+    std::vector<int> result = maybeInvertIndices(clipped, input->points.size(), negative);
+    LOGI("BoxClipper3D indices: input=%zu clipped=%zu returned=%zu negative=%d",
+         input->points.size(), clipped.size(), result.size(), negative ? 1 : 0);
+    return result;
+}
+
 void filterFrustumCulling(
         double horizontal_fov,
         double vertical_fov,
@@ -731,6 +923,41 @@ void filterFrustumCulling(
     LOGI("FrustumCulling filtered points: input=%zu output=%zu hfov=%.3f vfov=%.3f near=%.3f far=%.3f",
          input->points.size(), filteredCloud()->points.size(), horizontal_fov, vertical_fov,
          near_plane_distance, far_plane_distance);
+}
+
+std::vector<int> filterFrustumCullingIndices(
+        double horizontal_fov,
+        double vertical_fov,
+        double near_plane_distance,
+        double far_plane_distance,
+        const std::vector<float>& row_major_camera_pose,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()
+            || horizontal_fov <= 0.0
+            || horizontal_fov >= 180.0
+            || vertical_fov <= 0.0
+            || vertical_fov >= 180.0
+            || near_plane_distance < 0.0
+            || far_plane_distance <= near_plane_distance) {
+        return {};
+    }
+
+    pcl::FrustumCulling<pcl::PointXYZ> frustum;
+    frustum.setInputCloud(input);
+    frustum.setHorizontalFOV(static_cast<float>(horizontal_fov));
+    frustum.setVerticalFOV(static_cast<float>(vertical_fov));
+    frustum.setNearPlaneDistance(static_cast<float>(near_plane_distance));
+    frustum.setFarPlaneDistance(static_cast<float>(far_plane_distance));
+    frustum.setCameraPose(makeRowMajorMatrix4f(row_major_camera_pose));
+    pcl::Indices selected;
+    frustum.filter(selected);
+
+    std::vector<int> result = maybeInvertIndices(selected, input->points.size(), negative);
+    LOGI("FrustumCulling indices: input=%zu selected=%zu returned=%zu negative=%d",
+         input->points.size(), selected.size(), result.size(), negative ? 1 : 0);
+    return result;
 }
 
 void filterModelOutlierRemoval(
@@ -838,6 +1065,41 @@ void filterCropBoxTransformed(
          cloud()->points.size(), filteredCloud()->points.size(), min_x, min_y, min_z, max_x, max_y, max_z);
 }
 
+std::vector<int> filterCropBoxTransformedIndices(
+        double min_x,
+        double min_y,
+        double min_z,
+        double max_x,
+        double max_y,
+        double max_z,
+        double translation_x,
+        double translation_y,
+        double translation_z,
+        double rotation_x,
+        double rotation_y,
+        double rotation_z,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || min_x > max_x || min_y > max_y || min_z > max_z) {
+        return {};
+    }
+
+    pcl::CropBox<pcl::PointXYZ> crop_box;
+    crop_box.setInputCloud(input);
+    crop_box.setMin(Eigen::Vector4f(min_x, min_y, min_z, 1.0f));
+    crop_box.setMax(Eigen::Vector4f(max_x, max_y, max_z, 1.0f));
+    crop_box.setTranslation(Eigen::Vector3f(translation_x, translation_y, translation_z));
+    crop_box.setRotation(Eigen::Vector3f(rotation_x, rotation_y, rotation_z));
+    pcl::Indices selected;
+    crop_box.filter(selected);
+
+    std::vector<int> result = maybeInvertIndices(selected, input->points.size(), negative);
+    LOGI("CropBox transformed indices: input=%zu selected=%zu returned=%zu negative=%d",
+         input->points.size(), selected.size(), result.size(), negative ? 1 : 0);
+    return result;
+}
+
 void filterCropHull2D(const std::vector<float>& packed_hull_xyz, bool negative)
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
@@ -862,6 +1124,34 @@ void filterCropHull2D(const std::vector<float>& packed_hull_xyz, bool negative)
     crop_hull.filter(*filteredCloud());
     LOGI("CropHull2D filtered points: input=%zu hull=%zu output=%zu negative=%d",
          input->points.size(), hull->points.size(), filteredCloud()->points.size(), negative ? 1 : 0);
+}
+
+std::vector<int> filterCropHull2DIndices(const std::vector<float>& packed_hull_xyz, bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr hull = cloudFromPackedXYZ(packed_hull_xyz);
+    if (input->empty() || hull->points.size() < 3) {
+        return {};
+    }
+
+    pcl::Vertices polygon;
+    polygon.vertices.reserve(hull->points.size());
+    for (std::size_t i = 0; i < hull->points.size(); ++i) {
+        polygon.vertices.push_back(static_cast<std::uint32_t>(i));
+    }
+
+    pcl::CropHull<pcl::PointXYZ> crop_hull;
+    crop_hull.setInputCloud(input);
+    crop_hull.setHullCloud(hull);
+    crop_hull.setHullIndices(std::vector<pcl::Vertices>{polygon});
+    crop_hull.setDim(2);
+    crop_hull.setCropOutside(!negative);
+    pcl::Indices selected;
+    crop_hull.filter(selected);
+
+    LOGI("CropHull2D indices: input=%zu hull=%zu returned=%zu negative=%d",
+         input->points.size(), hull->points.size(), selected.size(), negative ? 1 : 0);
+    return selected;
 }
 
 void filterExtractIndices(const std::vector<int>& indices, bool negative)

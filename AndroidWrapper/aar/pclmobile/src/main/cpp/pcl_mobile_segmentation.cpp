@@ -107,6 +107,47 @@ std::vector<int> packClusterIndices(const std::vector<pcl::PointIndices>& cluste
     return values;
 }
 
+const pcl::PointIndices* largestCluster(const std::vector<pcl::PointIndices>& clusters)
+{
+    if (clusters.empty()) {
+        return nullptr;
+    }
+
+    const pcl::PointIndices* largest_cluster = &clusters.front();
+    for (const auto& cluster : clusters) {
+        if (cluster.indices.size() > largest_cluster->indices.size()) {
+            largest_cluster = &cluster;
+        }
+    }
+    return largest_cluster;
+}
+
+std::vector<int> maybeInvertIndices(
+        const pcl::Indices& indices,
+        std::size_t point_count,
+        bool negative)
+{
+    if (!negative) {
+        return indices;
+    }
+
+    std::vector<bool> selected(point_count, false);
+    for (int index : indices) {
+        if (index >= 0 && static_cast<std::size_t>(index) < point_count) {
+            selected[static_cast<std::size_t>(index)] = true;
+        }
+    }
+
+    std::vector<int> inverted;
+    inverted.reserve(point_count);
+    for (std::size_t i = 0; i < point_count; ++i) {
+        if (!selected[i]) {
+            inverted.push_back(static_cast<int>(i));
+        }
+    }
+    return inverted;
+}
+
 } // namespace
 
 bool segmentPlane(double distance_threshold,
@@ -230,6 +271,40 @@ std::vector<jfloat> segmentSACModelWithMethod(
     return values;
 }
 
+std::vector<int> segmentSACModelOutlierIndices(int model_type, double distance_threshold, int max_iterations)
+{
+    return segmentSACModelOutlierIndicesWithMethod(
+            model_type,
+            pcl::SAC_RANSAC,
+            distance_threshold,
+            max_iterations);
+}
+
+std::vector<int> segmentSACModelOutlierIndicesWithMethod(
+        int model_type,
+        int method_type,
+        double distance_threshold,
+        int max_iterations)
+{
+    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+    if (!segmentModelWithMethod(
+                model_type,
+                method_type,
+                distance_threshold,
+                max_iterations,
+                coefficients,
+                inliers)) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    std::vector<int> outliers = maybeInvertIndices(inliers->indices, input->points.size(), true);
+    LOGI("SACSegmentation outlier indices: input=%zu inliers=%zu outliers=%zu model=%d method=%d",
+         input->points.size(), inliers->indices.size(), outliers.size(), model_type, method_type);
+    return outliers;
+}
+
 std::vector<jfloat> extractEuclideanClusters(double tolerance, int min_cluster_size, int max_cluster_size)
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
@@ -281,6 +356,45 @@ std::vector<int> extractEuclideanClusterIndices(double tolerance, int min_cluste
     LOGI("EuclideanClusterExtraction indices: input=%zu clusters=%zu tolerance=%.3f min=%d max=%d",
          input->points.size(), cluster_indices.size(), tolerance, min_cluster_size, max_cluster_size);
     return packClusterIndices(cluster_indices);
+}
+
+std::vector<int> extractLargestEuclideanClusterIndices(
+        double tolerance,
+        int min_cluster_size,
+        int max_cluster_size)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || tolerance <= 0.0) {
+        return {};
+    }
+
+    const int min_size = min_cluster_size > 0 ? min_cluster_size : 1;
+    const int max_size = max_cluster_size >= min_size
+            ? max_cluster_size
+            : static_cast<int>(input->points.size());
+
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+    tree->setInputCloud(input);
+
+    std::vector<pcl::PointIndices> cluster_indices;
+    pcl::EuclideanClusterExtraction<pcl::PointXYZ> extraction;
+    extraction.setClusterTolerance(tolerance);
+    extraction.setMinClusterSize(min_size);
+    extraction.setMaxClusterSize(max_size);
+    extraction.setSearchMethod(tree);
+    extraction.setInputCloud(input);
+    extraction.extract(cluster_indices);
+
+    const pcl::PointIndices* largest_cluster = largestCluster(cluster_indices);
+    if (largest_cluster == nullptr) {
+        LOGI("EuclideanClusterExtraction largest indices: input=%zu clusters=0 tolerance=%.3f",
+             input->points.size(), tolerance);
+        return {};
+    }
+
+    LOGI("EuclideanClusterExtraction largest indices: input=%zu clusters=%zu indices=%zu tolerance=%.3f",
+         input->points.size(), cluster_indices.size(), largest_cluster->indices.size(), tolerance);
+    return largest_cluster->indices;
 }
 
 std::vector<jfloat> extractRegionGrowingClusters(
@@ -452,6 +566,36 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr extractPolygonalPrismData(
     return filteredCloud();
 }
 
+std::vector<int> extractPolygonalPrismDataIndices(
+        const std::vector<jfloat>& packed_planar_hull_xyz,
+        double height_min,
+        double height_max,
+        float view_point_x,
+        float view_point_y,
+        float view_point_z,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr planar_hull = cloudFromPackedXYZ(packed_planar_hull_xyz);
+    if (input->empty() || planar_hull->points.size() < 3 || height_min > height_max) {
+        return {};
+    }
+
+    pcl::ExtractPolygonalPrismData<pcl::PointXYZ> prism;
+    prism.setInputCloud(input);
+    prism.setInputPlanarHull(planar_hull);
+    prism.setHeightLimits(height_min, height_max);
+    prism.setViewPoint(view_point_x, view_point_y, view_point_z);
+
+    pcl::PointIndices prism_indices;
+    prism.segment(prism_indices);
+    std::vector<int> result = maybeInvertIndices(prism_indices.indices, input->points.size(), negative);
+    LOGI("ExtractPolygonalPrismData indices: input=%zu hull=%zu indices=%zu returned=%zu negative=%d",
+         input->points.size(), planar_hull->points.size(), prism_indices.indices.size(),
+         result.size(), negative ? 1 : 0);
+    return result;
+}
+
 pcl::PointCloud<pcl::PointXYZ>::Ptr extractProgressiveMorphologicalGround(
         int max_window_size,
         double slope,
@@ -484,6 +628,39 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr extractProgressiveMorphologicalGround(
     LOGI("ProgressiveMorphologicalFilter: input=%zu ground=%zu output=%zu maxWindow=%d negative=%d",
          input->points.size(), ground.size(), filteredCloud()->points.size(), max_window_size, negative ? 1 : 0);
     return filteredCloud();
+}
+
+std::vector<int> extractProgressiveMorphologicalGroundIndices(
+        int max_window_size,
+        double slope,
+        double initial_distance,
+        double max_distance,
+        double cell_size,
+        double base,
+        bool exponential,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || max_window_size <= 0 || cell_size <= 0.0 || base <= 0.0) {
+        return {};
+    }
+
+    pcl::ProgressiveMorphologicalFilter<pcl::PointXYZ> filter;
+    filter.setInputCloud(input);
+    filter.setMaxWindowSize(max_window_size);
+    filter.setSlope(static_cast<float>(slope));
+    filter.setInitialDistance(static_cast<float>(initial_distance));
+    filter.setMaxDistance(static_cast<float>(max_distance));
+    filter.setCellSize(static_cast<float>(cell_size));
+    filter.setBase(static_cast<float>(base));
+    filter.setExponential(exponential);
+
+    pcl::Indices ground;
+    filter.extract(ground);
+    std::vector<int> result = maybeInvertIndices(ground, input->points.size(), negative);
+    LOGI("ProgressiveMorphologicalFilter indices: input=%zu ground=%zu returned=%zu negative=%d",
+         input->points.size(), ground.size(), result.size(), negative ? 1 : 0);
+    return result;
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr extractApproximateProgressiveMorphologicalGround(
@@ -521,6 +698,41 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr extractApproximateProgressiveMorphologicalGr
          input->points.size(), ground.size(), filteredCloud()->points.size(), max_window_size,
          number_of_threads, negative ? 1 : 0);
     return filteredCloud();
+}
+
+std::vector<int> extractApproximateProgressiveMorphologicalGroundIndices(
+        int max_window_size,
+        double slope,
+        double initial_distance,
+        double max_distance,
+        double cell_size,
+        double base,
+        bool exponential,
+        int number_of_threads,
+        bool negative)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || max_window_size <= 0 || cell_size <= 0.0 || base <= 0.0) {
+        return {};
+    }
+
+    pcl::ApproximateProgressiveMorphologicalFilter<pcl::PointXYZ> filter;
+    filter.setInputCloud(input);
+    filter.setMaxWindowSize(max_window_size);
+    filter.setSlope(static_cast<float>(slope));
+    filter.setInitialDistance(static_cast<float>(initial_distance));
+    filter.setMaxDistance(static_cast<float>(max_distance));
+    filter.setCellSize(static_cast<float>(cell_size));
+    filter.setBase(static_cast<float>(base));
+    filter.setExponential(exponential);
+    filter.setNumberOfThreads(static_cast<unsigned int>(std::max(number_of_threads, 0)));
+
+    pcl::Indices ground;
+    filter.extract(ground);
+    std::vector<int> result = maybeInvertIndices(ground, input->points.size(), negative);
+    LOGI("ApproximateProgressiveMorphologicalFilter indices: input=%zu ground=%zu returned=%zu threads=%d negative=%d",
+         input->points.size(), ground.size(), result.size(), number_of_threads, negative ? 1 : 0);
+    return result;
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr extractMinCutForeground(
@@ -593,6 +805,80 @@ std::vector<jfloat> extractMinCutForegroundStats(
             static_cast<jfloat>(input_count),
             static_cast<jfloat>(foreground_count),
     };
+}
+
+std::vector<int> extractMinCutForegroundIndices(
+        const std::vector<jfloat>& packed_foreground_xyz,
+        double sigma,
+        double radius,
+        double source_weight,
+        int number_of_neighbours)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr foreground = cloudFromPackedXYZ(packed_foreground_xyz);
+    if (input->empty()
+            || foreground->empty()
+            || sigma <= 0.0
+            || radius <= 0.0
+            || source_weight <= 0.0
+            || number_of_neighbours <= 0) {
+        return {};
+    }
+
+    pcl::MinCutSegmentation<pcl::PointXYZ> min_cut;
+    min_cut.setInputCloud(input);
+    min_cut.setForegroundPoints(foreground);
+    min_cut.setSigma(sigma);
+    min_cut.setRadius(radius);
+    min_cut.setSourceWeight(source_weight);
+    min_cut.setNumberOfNeighbours(static_cast<unsigned int>(number_of_neighbours));
+
+    std::vector<pcl::PointIndices> clusters;
+    min_cut.extract(clusters);
+    const pcl::PointIndices* largest_cluster = largestCluster(clusters);
+    if (largest_cluster == nullptr) {
+        LOGI("MinCutSegmentation largest indices: input=%zu foreground=%zu clusters=0 flow=%.6f",
+             input->points.size(), foreground->points.size(), min_cut.getMaxFlow());
+        return {};
+    }
+
+    LOGI("MinCutSegmentation largest indices: input=%zu foreground=%zu clusters=%zu indices=%zu flow=%.6f",
+         input->points.size(), foreground->points.size(), clusters.size(),
+         largest_cluster->indices.size(), min_cut.getMaxFlow());
+    return largest_cluster->indices;
+}
+
+std::vector<int> extractMinCutForegroundClusterIndices(
+        const std::vector<jfloat>& packed_foreground_xyz,
+        double sigma,
+        double radius,
+        double source_weight,
+        int number_of_neighbours)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr foreground = cloudFromPackedXYZ(packed_foreground_xyz);
+    if (input->empty()
+            || foreground->empty()
+            || sigma <= 0.0
+            || radius <= 0.0
+            || source_weight <= 0.0
+            || number_of_neighbours <= 0) {
+        return {};
+    }
+
+    pcl::MinCutSegmentation<pcl::PointXYZ> min_cut;
+    min_cut.setInputCloud(input);
+    min_cut.setForegroundPoints(foreground);
+    min_cut.setSigma(sigma);
+    min_cut.setRadius(radius);
+    min_cut.setSourceWeight(source_weight);
+    min_cut.setNumberOfNeighbours(static_cast<unsigned int>(number_of_neighbours));
+
+    std::vector<pcl::PointIndices> clusters;
+    min_cut.extract(clusters);
+    LOGI("MinCutSegmentation cluster indices: input=%zu foreground=%zu clusters=%zu flow=%.6f",
+         input->points.size(), foreground->points.size(), clusters.size(), min_cut.getMaxFlow());
+    return packClusterIndices(clusters);
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr segmentDifferencesAgainstTarget(

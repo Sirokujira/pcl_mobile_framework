@@ -170,18 +170,27 @@ std::vector<jfloat> packPointUVKeypoints(const pcl::PointCloud<pcl::PointUV>& ke
     return values;
 }
 
-} // namespace
-
-pcl::PointCloud<pcl::PointXYZ>::Ptr computeISSKeypoints(
+pcl::PointCloud<pcl::PointXYZ>::Ptr runISSKeypoints(
+        const pcl::PointCloud<pcl::PointXYZ>::Ptr& input,
         double salient_radius,
         double non_max_radius,
+        double normal_radius,
+        double border_radius,
         double threshold21,
         double threshold32,
-        int min_neighbors)
+        double angle_threshold,
+        int min_neighbors,
+        int number_of_threads)
 {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
     pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints(new pcl::PointCloud<pcl::PointXYZ>);
-    if (input->empty() || salient_radius <= 0.0 || non_max_radius <= 0.0) {
+    if (input->empty()
+            || salient_radius <= 0.0
+            || non_max_radius <= 0.0
+            || threshold21 <= 0.0
+            || threshold32 <= 0.0
+            || min_neighbors <= 0
+            || border_radius < 0.0
+            || (border_radius > 0.0 && normal_radius <= 0.0)) {
         return keypoints;
     }
 
@@ -193,10 +202,79 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr computeISSKeypoints(
     iss.setThreshold21(threshold21);
     iss.setThreshold32(threshold32);
     iss.setMinNeighbors(min_neighbors);
+    if (normal_radius > 0.0) {
+        iss.setNormalRadius(normal_radius);
+    }
+    if (border_radius > 0.0) {
+        iss.setBorderRadius(border_radius);
+    }
+    if (angle_threshold > 0.0) {
+        iss.setAngleThreshold(static_cast<float>(angle_threshold));
+    }
+    iss.setNumberOfThreads(static_cast<unsigned int>(std::max(number_of_threads, 0)));
     iss.compute(*keypoints);
+    return keypoints;
+}
+
+} // namespace
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr computeISSKeypoints(
+        double salient_radius,
+        double non_max_radius,
+        double threshold21,
+        double threshold32,
+        int min_neighbors)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints = runISSKeypoints(
+            input,
+            salient_radius,
+            non_max_radius,
+            0.0,
+            0.0,
+            threshold21,
+            threshold32,
+            0.0,
+            min_neighbors,
+            0);
 
     LOGI("ISSKeypoint3D computed keypoints: input=%zu keypoints=%zu salient=%.3f nonMax=%.3f",
          input->points.size(), keypoints->points.size(), salient_radius, non_max_radius);
+    return keypoints;
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr computeISSKeypointsAdvanced(
+        double salient_radius,
+        double non_max_radius,
+        double normal_radius,
+        double border_radius,
+        double threshold21,
+        double threshold32,
+        double angle_threshold,
+        int min_neighbors,
+        int number_of_threads)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    pcl::PointCloud<pcl::PointXYZ>::Ptr keypoints = runISSKeypoints(
+            input,
+            salient_radius,
+            non_max_radius,
+            normal_radius,
+            border_radius,
+            threshold21,
+            threshold32,
+            angle_threshold,
+            min_neighbors,
+            number_of_threads);
+
+    LOGI("ISSKeypoint3D advanced computed keypoints: input=%zu keypoints=%zu salient=%.3f nonMax=%.3f normal=%.3f border=%.3f threads=%d",
+         input->points.size(),
+         keypoints->points.size(),
+         salient_radius,
+         non_max_radius,
+         normal_radius,
+         border_radius,
+         number_of_threads);
     return keypoints;
 }
 

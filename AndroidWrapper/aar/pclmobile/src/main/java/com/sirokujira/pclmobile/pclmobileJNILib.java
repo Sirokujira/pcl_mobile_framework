@@ -60,6 +60,7 @@ package com.sirokujira.pclmobile;
  *     <li>PCA axes: {@code mean_xyz, eigenvalues_xyz, row-major 3x3 eigenvectors, point_count}</li>
  *     <li>Distances: {@code squared_distance, squared_distance, ...}</li>
      *     <li>Rigid transform matrix: row-major 4x4 matrix</li>
+     *     <li>Correspondences: {@code source_index, target_index, distance, ...}</li>
      *     <li>ICP: {@code has_converged, fitness_score, row-major 4x4 matrix}</li>
      *     <li>NDT: {@code has_converged, fitness_score, row-major 4x4 matrix}</li>
  * </ul>
@@ -224,6 +225,36 @@ public final class pclmobileJNILib {
     public static native boolean writeFilteredPCDFile(String filename);
 
     /**
+     * Writes the active cloud to a binary PCD file.
+     */
+    public static native boolean writeActivePCDFileBinary(String filename);
+
+    /**
+     * Writes the source cloud to a binary PCD file.
+     */
+    public static native boolean writeSourcePCDFileBinary(String filename);
+
+    /**
+     * Writes the filtered cloud to a binary PCD file.
+     */
+    public static native boolean writeFilteredPCDFileBinary(String filename);
+
+    /**
+     * Writes the active cloud to a binary-compressed PCD file.
+     */
+    public static native boolean writeActivePCDFileBinaryCompressed(String filename);
+
+    /**
+     * Writes the source cloud to a binary-compressed PCD file.
+     */
+    public static native boolean writeSourcePCDFileBinaryCompressed(String filename);
+
+    /**
+     * Writes the filtered cloud to a binary-compressed PCD file.
+     */
+    public static native boolean writeFilteredPCDFileBinaryCompressed(String filename);
+
+    /**
      * Writes the active cloud to an ASCII PLY file.
      */
     public static native boolean writeActivePLYFile(String filename);
@@ -237,6 +268,21 @@ public final class pclmobileJNILib {
      * Writes the filtered cloud to an ASCII PLY file.
      */
     public static native boolean writeFilteredPLYFile(String filename);
+
+    /**
+     * Writes the active cloud to a binary PLY file.
+     */
+    public static native boolean writeActivePLYFileBinary(String filename);
+
+    /**
+     * Writes the source cloud to a binary PLY file.
+     */
+    public static native boolean writeSourcePLYFileBinary(String filename);
+
+    /**
+     * Writes the filtered cloud to a binary PLY file.
+     */
+    public static native boolean writeFilteredPLYFileBinary(String filename);
 
     /**
      * Writes the active cloud to an IFS file.
@@ -557,6 +603,22 @@ public final class pclmobileJNILib {
      * @return {@code normal_x, normal_y, normal_z, curvature} tuples
      */
     public static native float[] estimateNormalsOMP(int kSearch, int numberOfThreads);
+
+    /**
+     * Estimates normals for an organized active cloud with PCL {@code IntegralImageNormalEstimation}.
+     *
+     * <p>Returns an empty array for unorganized clouds.</p>
+     *
+     * @return {@code normal_x, normal_y, normal_z, curvature} tuples
+     */
+    public static native float[] estimateIntegralImageNormals(
+            int method,
+            int rectWidth,
+            int rectHeight,
+            double maxDepthChangeFactor,
+            double normalSmoothingSize,
+            boolean depthDependentSmoothing,
+            boolean borderPolicyIgnore);
 
     /**
      * Estimates normals for an organized active cloud with PCL {@code LinearLeastSquaresNormalEstimation}.
@@ -931,6 +993,26 @@ public final class pclmobileJNILib {
     public static native float[] computeDifferenceOfNormals(double smallRadius, double largeRadius);
 
     /**
+     * Computes PCL {@code OrganizedEdgeBase} labels for an organized active cloud.
+     *
+     * <p>Returns one integer label per point, or an empty array for unorganized clouds.</p>
+     */
+    public static native int[] computeOrganizedEdgeLabels(
+            double depthDisconThreshold,
+            int maxSearchNeighbors,
+            int edgeTypes);
+
+    /**
+     * Computes PCL {@code OrganizedEdgeBase} edge index groups for an organized active cloud.
+     *
+     * @return {@code group_count, edge_label, count, point_index, ...} packed as {@code int[]}
+     */
+    public static native int[] extractOrganizedEdgeIndices(
+            double depthDisconThreshold,
+            int maxSearchNeighbors,
+            int edgeTypes);
+
+    /**
      * Extracts PCL {@code StatisticalMultiscaleInterestRegionExtraction} ROI memberships.
      *
      * <p>This algorithm builds an all-pairs geodesic graph, so {@code maxPointCount} limits how many
@@ -1007,6 +1089,27 @@ public final class pclmobileJNILib {
             int maxIterations);
 
     /**
+     * Returns active-cloud point indices outside a fitted PCL SAC model.
+     *
+     * <p>{@code modelType} uses the {@code SACMODEL_*} constants exposed by this class.</p>
+     */
+    public static native int[] segmentSACModelOutlierIndices(
+            int modelType,
+            double distanceThreshold,
+            int maxIterations);
+
+    /**
+     * Returns active-cloud point indices outside a fitted PCL SAC model with a selected method.
+     *
+     * <p>{@code modelType} uses {@code SACMODEL_*}; {@code methodType} uses {@code SAC_*}.</p>
+     */
+    public static native int[] segmentSACModelOutlierIndicesWithMethod(
+            int modelType,
+            int methodType,
+            double distanceThreshold,
+            int maxIterations);
+
+    /**
      * Runs nearest-neighbor search against the active cloud.
      *
      * @return {@code x, y, z, squared_distance} tuples for found neighbors
@@ -1050,6 +1153,36 @@ public final class pclmobileJNILib {
      * @return {@code point_index, squared_distance} tuples for found neighbors
      */
     public static native float[] radiusSearchIndicesLimited(
+            float x, float y, float z, double radius, int maxNeighbors);
+
+    /**
+     * Runs PCL BruteForce nearest-neighbor search against the active cloud.
+     *
+     * @return {@code x, y, z, squared_distance} tuples for found neighbors
+     */
+    public static native float[] bruteForceNearestKSearch(float x, float y, float z, int k);
+
+    /**
+     * Runs PCL BruteForce nearest-neighbor search and returns active-cloud indices.
+     *
+     * @return {@code point_index, squared_distance} tuples for found neighbors
+     */
+    public static native float[] bruteForceNearestKSearchIndices(float x, float y, float z, int k);
+
+    /**
+     * Runs PCL BruteForce radius search with a result bound.
+     *
+     * @return {@code x, y, z, squared_distance} tuples for found neighbors
+     */
+    public static native float[] bruteForceRadiusSearchLimited(
+            float x, float y, float z, double radius, int maxNeighbors);
+
+    /**
+     * Runs bounded PCL BruteForce radius search and returns active-cloud indices.
+     *
+     * @return {@code point_index, squared_distance} tuples for found neighbors
+     */
+    public static native float[] bruteForceRadiusSearchIndicesLimited(
             float x, float y, float z, double radius, int maxNeighbors);
 
     /**
@@ -1146,6 +1279,12 @@ public final class pclmobileJNILib {
             double tolerance, int minClusterSize, int maxClusterSize);
 
     /**
+     * Extracts Euclidean clusters and returns the largest cluster's active-cloud indices.
+     */
+    public static native int[] extractLargestEuclideanClusterIndices(
+            double tolerance, int minClusterSize, int maxClusterSize);
+
+    /**
      * Extracts RegionGrowing clusters from the active cloud.
      *
      * @return one cluster size per element
@@ -1217,11 +1356,38 @@ public final class pclmobileJNILib {
             boolean negative);
 
     /**
+     * Runs PCL ExtractPolygonalPrismData and returns selected active-cloud indices.
+     *
+     * <p>Set {@code negative} to return indices outside the prism instead of inside it.</p>
+     */
+    public static native int[] extractPolygonalPrismDataIndices(
+            float[] packedPlanarHullXYZ,
+            double heightMin,
+            double heightMax,
+            float viewPointX,
+            float viewPointY,
+            float viewPointZ,
+            boolean negative);
+
+    /**
      * Runs PCL ProgressiveMorphologicalFilter and stores ground or non-ground points.
      *
      * <p>Set {@code negative} to keep non-ground points instead of ground points.</p>
      */
     public static native void extractProgressiveMorphologicalGround(
+            int maxWindowSize,
+            double slope,
+            double initialDistance,
+            double maxDistance,
+            double cellSize,
+            double base,
+            boolean exponential,
+            boolean negative);
+
+    /**
+     * Runs PCL ProgressiveMorphologicalFilter and returns ground or non-ground active-cloud indices.
+     */
+    public static native int[] extractProgressiveMorphologicalGroundIndices(
             int maxWindowSize,
             double slope,
             double initialDistance,
@@ -1254,6 +1420,20 @@ public final class pclmobileJNILib {
      * <p>Set {@code negative} to keep non-ground points instead of ground points.</p>
      */
     public static native void extractApproximateProgressiveMorphologicalGround(
+            int maxWindowSize,
+            double slope,
+            double initialDistance,
+            double maxDistance,
+            double cellSize,
+            double base,
+            boolean exponential,
+            int numberOfThreads,
+            boolean negative);
+
+    /**
+     * Runs PCL ApproximateProgressiveMorphologicalFilter and returns ground or non-ground active-cloud indices.
+     */
+    public static native int[] extractApproximateProgressiveMorphologicalGroundIndices(
             int maxWindowSize,
             double slope,
             double initialDistance,
@@ -1336,6 +1516,28 @@ public final class pclmobileJNILib {
             int numberOfNeighbours);
 
     /**
+     * Runs MinCutSegmentation and returns the largest foreground cluster's active-cloud indices.
+     */
+    public static native int[] extractMinCutForegroundIndices(
+            float[] packedForegroundXYZ,
+            double sigma,
+            double radius,
+            double sourceWeight,
+            int numberOfNeighbours);
+
+    /**
+     * Runs MinCutSegmentation and returns PCL {@code PointIndices}-style membership for all clusters.
+     *
+     * @return {@code cluster_count, cluster_size, point_index, ...} packed as {@code int[]}
+     */
+    public static native int[] extractMinCutForegroundClusterIndices(
+            float[] packedForegroundXYZ,
+            double sigma,
+            double radius,
+            double sourceWeight,
+            int numberOfNeighbours);
+
+    /**
      * Segments points from the active cloud that differ from {@code packedTargetXYZ}.
      *
      * @return difference points packed as {@code x, y, z} triples
@@ -1355,6 +1557,26 @@ public final class pclmobileJNILib {
             double threshold21,
             double threshold32,
             int minNeighbors);
+
+    /**
+     * Computes ISS 3D keypoints with the additional official PCL tuning knobs.
+     *
+     * <p>{@code borderRadius} enables boundary-aware suppression when positive, and
+     * requires a positive {@code normalRadius}. Use {@code numberOfThreads} {@code 0}
+     * to let PCL choose the thread count.</p>
+     *
+     * @return keypoint positions packed as {@code x, y, z} triples
+     */
+    public static native float[] computeISSKeypointsAdvanced(
+            double salientRadius,
+            double nonMaxRadius,
+            double normalRadius,
+            double borderRadius,
+            double threshold21,
+            double threshold32,
+            double angleThreshold,
+            int minNeighbors,
+            int numberOfThreads);
 
     /**
      * Computes SIFT keypoints for the active cloud.
@@ -1642,6 +1864,13 @@ public final class pclmobileJNILib {
     public static native float[] computeConcaveHullMesh(double alpha);
 
     /**
+     * Removes vertices not referenced by any polygon with PCL {@code SimplificationRemoveUnusedVertices}.
+     *
+     * <p>{@code packedMesh} uses the same layout as {@link #reconstructGridProjectionMesh}.</p>
+     */
+    public static native float[] simplifyMeshRemoveUnusedVertices(float[] packedMesh);
+
+    /**
      * Projects plane inliers from the active cloud onto the fitted plane.
      *
      * @return projected points packed as {@code x, y, z} triples
@@ -1813,6 +2042,21 @@ public final class pclmobileJNILib {
     public static native float[] estimateRigidTransform2D(float[] packedTargetXYZ);
 
     /**
+     * Estimates a point-to-plane rigid transform with PCL TransformationEstimationPointToPlaneLLS.
+     *
+     * <p>The active cloud is used as the source. {@code packedTargetXYZ} is used as the target, with
+     * target normals estimated internally from {@code normalKSearch}. When {@code packedCorrespondences}
+     * contains repeated {@code source_index, target_index, distance} triples, those pairs drive the estimate.
+     * Otherwise, source and target must have matching point counts and are paired by index.</p>
+     *
+     * @return row-major 4x4 matrix
+     */
+    public static native float[] estimateRigidTransformPointToPlaneLLS(
+            float[] packedTargetXYZ,
+            float[] packedCorrespondences,
+            int normalKSearch);
+
+    /**
      * Finds nearest-neighbor correspondences from the active cloud to {@code packedTargetXYZ}.
      *
      * <p>Pass {@code 0.0} for {@code maxDistance} to keep PCL's unbounded default.
@@ -1827,6 +2071,19 @@ public final class pclmobileJNILib {
      * The returned array is packed as repeated {@code source_index, target_index, distance} triples.</p>
      */
     public static native float[] findReciprocalCorrespondences(float[] packedTargetXYZ, double maxDistance);
+
+    /**
+     * Finds correspondences with PCL CorrespondenceEstimationNormalShooting.
+     *
+     * <p>Source normals are estimated from the active cloud using {@code normalKSearch}. The returned array
+     * is packed as repeated {@code source_index, target_index, distance} triples. Pass {@code 0} for
+     * {@code correspondenceKSearch} or {@code 0.0} for {@code maxDistance} to keep PCL defaults.</p>
+     */
+    public static native float[] findCorrespondencesNormalShooting(
+            float[] packedTargetXYZ,
+            int normalKSearch,
+            int correspondenceKSearch,
+            double maxDistance);
 
     /**
      * Rejects correspondences whose source-target distance is above {@code maxDistance}.
@@ -2037,6 +2294,11 @@ public final class pclmobileJNILib {
      * Removes points inside an axis range with PassThrough negative mode.
      */
     public static native void filterAxisOutside(String filename, double min, double max);
+
+    /**
+     * Returns active-cloud indices selected by PCL PassThrough.
+     */
+    public static native int[] filterAxisIndices(String axis, double min, double max, boolean negative);
 
     /**
      * Applies PassThrough and returns the filtered points.
@@ -2385,6 +2647,16 @@ public final class pclmobileJNILib {
             boolean negative);
 
     /**
+     * Returns active-cloud indices selected by PCL PlaneClipper3D.
+     */
+    public static native int[] filterPlaneClipperIndices(
+            double a,
+            double b,
+            double c,
+            double d,
+            boolean negative);
+
+    /**
      * Applies PlaneClipper3D and returns the filtered points.
      */
     public static float[] planeClipper(double a, double b, double c, double d, boolean negative) {
@@ -2396,6 +2668,11 @@ public final class pclmobileJNILib {
      * Removes NaN points from the active cloud into the filtered cloud.
      */
     public static native void removeNaNFromActiveCloud();
+
+    /**
+     * Returns active-cloud indices kept by PCL {@code removeNaNFromPointCloud}.
+     */
+    public static native int[] removeNaNFromActiveCloudIndices();
 
     /**
      * Removes NaN points from the active cloud and returns the filtered points.
@@ -2411,6 +2688,14 @@ public final class pclmobileJNILib {
     public static native void filterStatisticalOutlierRemoval(int meanK, double stddevMulThresh);
 
     /**
+     * Returns active-cloud indices selected by PCL StatisticalOutlierRemoval.
+     */
+    public static native int[] filterStatisticalOutlierRemovalIndices(
+            int meanK,
+            double stddevMulThresh,
+            boolean negative);
+
+    /**
      * Removes statistical outliers and returns the filtered points.
      */
     public static float[] statisticalOutlierRemoval(int meanK, double stddevMulThresh) {
@@ -2422,6 +2707,14 @@ public final class pclmobileJNILib {
      * Removes points that do not have enough neighbors inside {@code radius}.
      */
     public static native void filterRadiusOutlierRemoval(double radius, int minNeighbors);
+
+    /**
+     * Returns active-cloud indices selected by PCL RadiusOutlierRemoval.
+     */
+    public static native int[] filterRadiusOutlierRemovalIndices(
+            double radius,
+            int minNeighbors,
+            boolean negative);
 
     /**
      * Removes radius outliers and returns the filtered points.
@@ -2452,6 +2745,16 @@ public final class pclmobileJNILib {
             double maxX, double maxY, double maxZ);
 
     /**
+     * Returns active-cloud indices selected by PCL CropBox.
+     *
+     * <p>Set {@code negative} to return indices outside the box instead of inside it.</p>
+     */
+    public static native int[] filterCropBoxIndices(
+            double minX, double minY, double minZ,
+            double maxX, double maxY, double maxZ,
+            boolean negative);
+
+    /**
      * Applies CropBox and returns the filtered points.
      */
     public static float[] cropBox(
@@ -2465,6 +2768,16 @@ public final class pclmobileJNILib {
      * Keeps or removes source-cloud points inside an axis-aligned PCL BoxClipper3D box.
      */
     public static native void filterBoxClipper(
+            double minX, double minY, double minZ,
+            double maxX, double maxY, double maxZ,
+            boolean negative);
+
+    /**
+     * Returns active-cloud indices selected by PCL BoxClipper3D.
+     *
+     * <p>Set {@code negative} to return indices outside the box instead of inside it.</p>
+     */
+    public static native int[] filterBoxClipperIndices(
             double minX, double minY, double minZ,
             double maxX, double maxY, double maxZ,
             boolean negative);
@@ -2488,6 +2801,16 @@ public final class pclmobileJNILib {
             double maxX, double maxY, double maxZ,
             double translationX, double translationY, double translationZ,
             double rotationX, double rotationY, double rotationZ);
+
+    /**
+     * Returns active-cloud indices selected by a translated/rotated PCL CropBox.
+     */
+    public static native int[] filterCropBoxTransformedIndices(
+            double minX, double minY, double minZ,
+            double maxX, double maxY, double maxZ,
+            double translationX, double translationY, double translationZ,
+            double rotationX, double rotationY, double rotationZ,
+            boolean negative);
 
     /**
      * Applies transformed CropBox and returns the filtered points.
@@ -2515,6 +2838,19 @@ public final class pclmobileJNILib {
             double nearPlaneDistance,
             double farPlaneDistance,
             float[] rowMajorCameraPose);
+
+    /**
+     * Returns active-cloud indices selected by PCL FrustumCulling.
+     *
+     * <p>Set {@code negative} to return indices outside the frustum instead of inside it.</p>
+     */
+    public static native int[] filterFrustumCullingIndices(
+            double horizontalFov,
+            double verticalFov,
+            double nearPlaneDistance,
+            double farPlaneDistance,
+            float[] rowMajorCameraPose,
+            boolean negative);
 
     /**
      * Applies FrustumCulling and returns the filtered points.
@@ -2595,6 +2931,11 @@ public final class pclmobileJNILib {
      * {@code negative} to keep points outside the hull instead of inside it.</p>
      */
     public static native void filterCropHull2D(float[] packedHullXYZ, boolean negative);
+
+    /**
+     * Returns active-cloud indices selected by PCL CropHull in 2D polygon mode.
+     */
+    public static native int[] filterCropHull2DIndices(float[] packedHullXYZ, boolean negative);
 
     /**
      * Applies CropHull 2D polygon filtering and returns the filtered points.

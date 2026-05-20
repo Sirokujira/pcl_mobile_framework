@@ -6,6 +6,7 @@
 #include <pcl/common/centroid.h>
 #include <pcl/common/angles.h>
 #include <pcl/common/common.h>
+#include <pcl/conversions.h>
 #include <pcl/common/distances.h>
 #include <pcl/common/geometry.h>
 #include <pcl/common/intersections.h>
@@ -29,6 +30,7 @@
 #include <pcl/surface/impl/marching_cubes_rbf.hpp>
 #include <pcl/surface/mls.h>
 #include <pcl/surface/organized_fast_mesh.h>
+#include <pcl/surface/simplification_remove_unused_vertices.h>
 #include <pcl/surface/surfel_smoothing.h>
 #include <pcl/surface/impl/surfel_smoothing.hpp>
 
@@ -185,6 +187,78 @@ std::vector<jfloat> packXYZMesh(
         }
     }
     return values;
+}
+
+bool readNonNegativeCount(jfloat value, std::size_t& count)
+{
+    if (!std::isfinite(value) || value < 0.0f) {
+        return false;
+    }
+    count = static_cast<std::size_t>(value);
+    return static_cast<jfloat>(count) == value;
+}
+
+bool unpackXYZMesh(const std::vector<jfloat>& values, pcl::PolygonMesh& mesh)
+{
+    if (values.size() < 2) {
+        return false;
+    }
+
+    std::size_t vertex_count = 0;
+    std::size_t polygon_count = 0;
+    if (!readNonNegativeCount(values[0], vertex_count)
+            || !readNonNegativeCount(values[1], polygon_count)
+            || values.size() < 2 + vertex_count * 3) {
+        return false;
+    }
+
+    pcl::PointCloud<pcl::PointXYZ> vertices;
+    vertices.points.reserve(vertex_count);
+    std::size_t offset = 2;
+    for (std::size_t i = 0; i < vertex_count; ++i) {
+        vertices.points.emplace_back(values[offset], values[offset + 1], values[offset + 2]);
+        offset += 3;
+    }
+    vertices.width = static_cast<std::uint32_t>(vertices.points.size());
+    vertices.height = 1;
+    vertices.is_dense = false;
+    pcl::toPCLPointCloud2(vertices, mesh.cloud);
+
+    mesh.polygons.clear();
+    mesh.polygons.reserve(polygon_count);
+    for (std::size_t i = 0; i < polygon_count; ++i) {
+        if (offset >= values.size()) {
+            return false;
+        }
+
+        std::size_t polygon_size = 0;
+        if (!readNonNegativeCount(values[offset], polygon_size)
+                || offset + 1 + polygon_size > values.size()) {
+            return false;
+        }
+        ++offset;
+
+        pcl::Vertices polygon;
+        polygon.vertices.reserve(polygon_size);
+        for (std::size_t j = 0; j < polygon_size; ++j) {
+            std::size_t vertex_index = 0;
+            if (!readNonNegativeCount(values[offset + j], vertex_index)
+                    || vertex_index >= vertex_count) {
+                return false;
+            }
+            polygon.vertices.push_back(static_cast<std::uint32_t>(vertex_index));
+        }
+        offset += polygon_size;
+        mesh.polygons.push_back(polygon);
+    }
+    return offset == values.size();
+}
+
+std::vector<jfloat> packPolygonMesh(const pcl::PolygonMesh& mesh)
+{
+    pcl::PointCloud<pcl::PointXYZ> vertices;
+    pcl::fromPCLPointCloud2(mesh.cloud, vertices);
+    return packXYZMesh(vertices, mesh.polygons);
 }
 
 } // namespace
@@ -845,6 +919,23 @@ std::vector<jfloat> computeConcaveHullMesh(double alpha)
     std::vector<jfloat> values = packXYZMesh(hull, polygons);
     LOGI("ConcaveHull reconstructed mesh: input=%zu vertices=%zu polygons=%zu alpha=%.3f dimension=%d",
          input->points.size(), hull.points.size(), polygons.size(), alpha, concave_hull.getDimension());
+    return values;
+}
+
+std::vector<jfloat> simplifyMeshRemoveUnusedVertices(const std::vector<jfloat>& packed_mesh)
+{
+    pcl::PolygonMesh input;
+    if (!unpackXYZMesh(packed_mesh, input)) {
+        return {};
+    }
+
+    pcl::PolygonMesh output;
+    pcl::surface::SimplificationRemoveUnusedVertices simplification;
+    simplification.simplify(input, output);
+
+    std::vector<jfloat> values = packPolygonMesh(output);
+    LOGI("SimplificationRemoveUnusedVertices simplified mesh: vertices=%u polygons=%zu output_values=%zu",
+         input.cloud.width * input.cloud.height, input.polygons.size(), values.size());
     return values;
 }
 

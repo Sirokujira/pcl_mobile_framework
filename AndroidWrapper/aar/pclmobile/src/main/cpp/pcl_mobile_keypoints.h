@@ -16,6 +16,16 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr computeISSKeypoints(
         double threshold21,
         double threshold32,
         int min_neighbors);
+pcl::PointCloud<pcl::PointXYZ>::Ptr computeISSKeypointsAdvanced(
+        double salient_radius,
+        double non_max_radius,
+        double normal_radius,
+        double border_radius,
+        double threshold21,
+        double threshold32,
+        double angle_threshold,
+        int min_neighbors,
+        int number_of_threads);
 
 std::vector<jfloat> computeSIFTKeypoints(
         double min_scale,

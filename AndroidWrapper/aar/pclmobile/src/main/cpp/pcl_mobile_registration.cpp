@@ -1,10 +1,13 @@
 #include "pcl_mobile_registration.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 
 #include <pcl/common/transforms.h>
+#include <pcl/features/normal_3d.h>
 #include <pcl/registration/correspondence_estimation.h>
+#include <pcl/registration/correspondence_estimation_normal_shooting.h>
 #include <pcl/registration/correspondence_rejection_distance.h>
 #include <pcl/registration/correspondence_rejection_median_distance.h>
 #include <pcl/registration/correspondence_rejection_one_to_one.h>
@@ -20,9 +23,11 @@
 #include <pcl/registration/transformation_estimation_2D.h>
 #include <pcl/registration/transformation_estimation_dual_quaternion.h>
 #include <pcl/registration/transformation_estimation_lm.h>
+#include <pcl/registration/transformation_estimation_point_to_plane_lls.h>
 #include <pcl/registration/transformation_estimation_svd.h>
 #include <pcl/registration/transformation_estimation_svd_scale.h>
 #include <pcl/registration/transformation_validation_euclidean.h>
+#include <pcl/search/kdtree.h>
 
 #include "pcl_mobile_context.h"
 #include "pcl_mobile_log.h"
@@ -37,6 +42,54 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr cloudFromPackedXYZ(const std::vector<jfloat>
     result->points.reserve(packed_xyz.size() / 3);
     for (std::size_t i = 0; i + 2 < packed_xyz.size(); i += 3) {
         result->points.emplace_back(packed_xyz[i], packed_xyz[i + 1], packed_xyz[i + 2]);
+    }
+    result->width = static_cast<std::uint32_t>(result->points.size());
+    result->height = 1;
+    result->is_dense = false;
+    return result;
+}
+
+pcl::PointCloud<pcl::Normal>::Ptr estimateNormals(
+        const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& cloud,
+        int k_search)
+{
+    pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+    if (!cloud || cloud->points.size() < 3) {
+        return normals;
+    }
+
+    const int requested_k = k_search > 2 ? k_search : 10;
+    const int bounded_k = std::min<int>(requested_k, static_cast<int>(cloud->points.size()));
+
+    pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normal_estimation;
+    normal_estimation.setInputCloud(cloud);
+    normal_estimation.setSearchMethod(pcl::search::KdTree<pcl::PointXYZ>::Ptr(
+            new pcl::search::KdTree<pcl::PointXYZ>));
+    normal_estimation.setKSearch(bounded_k);
+    normal_estimation.compute(*normals);
+    return normals;
+}
+
+pcl::PointCloud<pcl::PointNormal>::Ptr pointNormalCloudFromXYZAndNormals(
+        const pcl::PointCloud<pcl::PointXYZ>::ConstPtr& cloud,
+        const pcl::PointCloud<pcl::Normal>::ConstPtr& normals)
+{
+    pcl::PointCloud<pcl::PointNormal>::Ptr result(new pcl::PointCloud<pcl::PointNormal>);
+    if (!cloud || !normals || cloud->points.size() != normals->points.size()) {
+        return result;
+    }
+
+    result->points.reserve(cloud->points.size());
+    for (std::size_t i = 0; i < cloud->points.size(); i++) {
+        pcl::PointNormal point;
+        point.x = cloud->points[i].x;
+        point.y = cloud->points[i].y;
+        point.z = cloud->points[i].z;
+        point.normal_x = normals->points[i].normal_x;
+        point.normal_y = normals->points[i].normal_y;
+        point.normal_z = normals->points[i].normal_z;
+        point.curvature = normals->points[i].curvature;
+        result->points.push_back(point);
     }
     result->width = static_cast<std::uint32_t>(result->points.size());
     result->height = 1;
@@ -228,6 +281,50 @@ std::vector<jfloat> estimateRigidTransform2D(const std::vector<jfloat>& packed_t
     return matrixToRowMajorTuple(transform);
 }
 
+std::vector<jfloat> estimateRigidTransformPointToPlaneLLS(
+        const std::vector<jfloat>& packed_target_xyz,
+        const std::vector<jfloat>& packed_correspondences,
+        int normal_k_search)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr target_xyz = cloudFromPackedXYZ(packed_target_xyz);
+    if (source->empty() || target_xyz->empty()) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr target_normals = estimateNormals(target_xyz, normal_k_search);
+    pcl::PointCloud<pcl::PointNormal>::Ptr target =
+            pointNormalCloudFromXYZAndNormals(target_xyz, target_normals);
+    if (target->points.size() != target_xyz->points.size()) {
+        LOGE("TransformationEstimationPointToPlaneLLS refused input: target normals unavailable");
+        return {};
+    }
+
+    Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
+    pcl::registration::TransformationEstimationPointToPlaneLLS<pcl::PointXYZ, pcl::PointNormal> estimation;
+    pcl::Correspondences correspondences = unpackCorrespondences(
+            packed_correspondences,
+            static_cast<int>(source->points.size()),
+            static_cast<int>(target->points.size()));
+    if (!correspondences.empty()) {
+        estimation.estimateRigidTransformation(*source, *target, correspondences, transform);
+        LOGI("TransformationEstimationPointToPlaneLLS correspondences: source=%zu target=%zu correspondences=%zu",
+             source->points.size(), target->points.size(), correspondences.size());
+        return matrixToRowMajorTuple(transform);
+    }
+
+    if (source->points.size() != target->points.size()) {
+        LOGE("TransformationEstimationPointToPlaneLLS refused input: source=%zu target=%zu correspondences=0",
+             source->points.size(), target->points.size());
+        return {};
+    }
+
+    estimation.estimateRigidTransformation(*source, *target, transform);
+    LOGI("TransformationEstimationPointToPlaneLLS indexed: source=%zu target=%zu",
+         source->points.size(), target->points.size());
+    return matrixToRowMajorTuple(transform);
+}
+
 std::vector<jfloat> findCorrespondences(
         const std::vector<jfloat>& packed_target_xyz,
         double max_distance,
@@ -255,6 +352,47 @@ std::vector<jfloat> findCorrespondences(
     LOGI("CorrespondenceEstimation%s: source=%zu target=%zu correspondences=%zu max_distance=%.6f",
          reciprocal ? " reciprocal" : "", source->points.size(), target->points.size(),
          correspondences.size(), search_distance);
+    return packCorrespondences(correspondences);
+}
+
+std::vector<jfloat> findCorrespondencesNormalShooting(
+        const std::vector<jfloat>& packed_target_xyz,
+        int normal_k_search,
+        int correspondence_k_search,
+        double max_distance)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr source(new pcl::PointCloud<pcl::PointXYZ>(*activeCloud()));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr target = cloudFromPackedXYZ(packed_target_xyz);
+    if (source->empty() || target->empty()) {
+        return {};
+    }
+
+    pcl::PointCloud<pcl::Normal>::Ptr source_normals = estimateNormals(source, normal_k_search);
+    if (source_normals->points.size() != source->points.size()) {
+        LOGE("CorrespondenceEstimationNormalShooting refused input: source normals unavailable source=%zu normals=%zu",
+             source->points.size(), source_normals->points.size());
+        return {};
+    }
+
+    pcl::registration::CorrespondenceEstimationNormalShooting<
+            pcl::PointXYZ,
+            pcl::PointXYZ,
+            pcl::Normal> estimation;
+    estimation.setInputSource(source);
+    estimation.setInputTarget(target);
+    estimation.setSourceNormals(source_normals);
+    if (correspondence_k_search > 0) {
+        estimation.setKSearch(static_cast<unsigned int>(correspondence_k_search));
+    }
+
+    pcl::Correspondences correspondences;
+    const double search_distance =
+            max_distance > 0.0 ? max_distance : std::numeric_limits<double>::max();
+    estimation.determineCorrespondences(correspondences, search_distance);
+
+    LOGI("CorrespondenceEstimationNormalShooting: source=%zu target=%zu correspondences=%zu normal_k=%d correspondence_k=%u max_distance=%.6f",
+         source->points.size(), target->points.size(), correspondences.size(),
+         normal_k_search, estimation.getKSearch(), search_distance);
     return packCorrespondences(correspondences);
 }
 
