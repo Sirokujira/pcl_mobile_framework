@@ -16,10 +16,19 @@ std::vector<jfloat> estimateRigidTransform3Point(const std::vector<jfloat>& pack
 std::vector<jfloat> estimateRigidTransformDualQuaternion(const std::vector<jfloat>& packed_target_xyz);
 std::vector<jfloat> estimateRigidTransformLM(const std::vector<jfloat>& packed_target_xyz);
 std::vector<jfloat> estimateRigidTransform2D(const std::vector<jfloat>& packed_target_xyz);
+std::vector<jfloat> estimateRigidTransformPointToPlaneLLS(
+        const std::vector<jfloat>& packed_target_xyz,
+        const std::vector<jfloat>& packed_correspondences,
+        int normal_k_search);
 std::vector<jfloat> findCorrespondences(
         const std::vector<jfloat>& packed_target_xyz,
         double max_distance,
         bool reciprocal);
+std::vector<jfloat> findCorrespondencesNormalShooting(
+        const std::vector<jfloat>& packed_target_xyz,
+        int normal_k_search,
+        int correspondence_k_search,
+        double max_distance);
 std::vector<jfloat> rejectCorrespondencesDistance(
         const std::vector<jfloat>& packed_correspondences,
         const std::vector<jfloat>& packed_target_xyz,

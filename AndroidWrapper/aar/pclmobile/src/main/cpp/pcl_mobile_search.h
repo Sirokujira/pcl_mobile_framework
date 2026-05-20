@@ -13,6 +13,11 @@ std::vector<jfloat> radiusSearch(float x, float y, float z, double radius);
 std::vector<jfloat> radiusSearchIndices(float x, float y, float z, double radius);
 std::vector<jfloat> radiusSearchLimited(float x, float y, float z, double radius, int max_neighbors);
 std::vector<jfloat> radiusSearchIndicesLimited(float x, float y, float z, double radius, int max_neighbors);
+std::vector<jfloat> bruteForceNearestKSearch(float x, float y, float z, int k);
+std::vector<jfloat> bruteForceNearestKSearchIndices(float x, float y, float z, int k);
+std::vector<jfloat> bruteForceRadiusSearchLimited(float x, float y, float z, double radius, int max_neighbors);
+std::vector<jfloat> bruteForceRadiusSearchIndicesLimited(
+        float x, float y, float z, double radius, int max_neighbors);
 std::vector<jfloat> octreeNearestKSearch(float x, float y, float z, double resolution, int k);
 std::vector<jfloat> octreeNearestKSearchIndices(float x, float y, float z, double resolution, int k);
 std::vector<jfloat> octreeRadiusSearch(float x, float y, float z, double resolution, double radius);

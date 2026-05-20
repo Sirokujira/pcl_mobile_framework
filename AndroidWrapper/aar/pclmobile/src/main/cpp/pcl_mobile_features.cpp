@@ -20,6 +20,7 @@
 #include <pcl/features/grsd.h>
 #include <pcl/features/intensity_gradient.h>
 #include <pcl/features/intensity_spin.h>
+#include <pcl/features/integral_image_normal.h>
 #include <pcl/features/linear_least_squares_normal.h>
 #include <pcl/features/impl/linear_least_squares_normal.hpp>
 #include <pcl/features/moment_invariants.h>
@@ -27,6 +28,8 @@
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/normal_based_signature.h>
 #include <pcl/features/our_cvfh.h>
+#include <pcl/features/organized_edge_detection.h>
+#include <pcl/features/impl/organized_edge_detection.hpp>
 #include <pcl/features/pfh.h>
 #include <pcl/features/pfh_tools.h>
 #include <pcl/features/pfhrgb.h>
@@ -244,6 +247,47 @@ std::vector<jfloat> estimateNormalsOMP(int k_search, int number_of_threads)
     std::vector<jfloat> values = packNormals(*normals);
     LOGI("NormalEstimationOMP computed normals: input=%zu normals=%zu k=%d threads=%d",
          input->points.size(), normals->points.size(), k_search, number_of_threads);
+    return values;
+}
+
+std::vector<jfloat> estimateIntegralImageNormals(
+        int method,
+        int rect_width,
+        int rect_height,
+        double max_depth_change_factor,
+        double normal_smoothing_size,
+        bool depth_dependent_smoothing,
+        bool border_policy_ignore)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty()
+            || input->height <= 1
+            || rect_width <= 0
+            || rect_height <= 0
+            || normal_smoothing_size <= 0.0) {
+        return {};
+    }
+
+    pcl::IntegralImageNormalEstimation<pcl::PointXYZ, pcl::Normal> estimation;
+    estimation.setInputCloud(input);
+    estimation.setNormalEstimationMethod(
+            static_cast<pcl::IntegralImageNormalEstimation<pcl::PointXYZ, pcl::Normal>::NormalEstimationMethod>(
+                    method));
+    estimation.setRectSize(rect_width, rect_height);
+    estimation.setNormalSmoothingSize(static_cast<float>(normal_smoothing_size));
+    estimation.setDepthDependentSmoothing(depth_dependent_smoothing);
+    if (max_depth_change_factor > 0.0) {
+        estimation.setMaxDepthChangeFactor(static_cast<float>(max_depth_change_factor));
+    }
+    estimation.setBorderPolicy(border_policy_ignore
+            ? pcl::IntegralImageNormalEstimation<pcl::PointXYZ, pcl::Normal>::BORDER_POLICY_IGNORE
+            : pcl::IntegralImageNormalEstimation<pcl::PointXYZ, pcl::Normal>::BORDER_POLICY_MIRROR);
+
+    pcl::PointCloud<pcl::Normal> normals;
+    estimation.compute(normals);
+    std::vector<jfloat> values = packNormals(normals);
+    LOGI("IntegralImageNormalEstimation computed normals: input=%zu normals=%zu method=%d rect=(%d,%d)",
+         input->points.size(), normals.points.size(), method, rect_width, rect_height);
     return values;
 }
 
@@ -1414,6 +1458,70 @@ std::vector<jfloat> computeDifferenceOfNormals(double small_radius, double large
     std::vector<jfloat> values = packNormals(*don_normals);
     LOGI("DifferenceOfNormalsEstimation computed normals: input=%zu output=%zu small=%.3f large=%.3f",
          input->points.size(), don_normals->points.size(), small_radius, large_radius);
+    return values;
+}
+
+std::vector<int> computeOrganizedEdgeLabels(
+        double depth_discon_threshold,
+        int max_search_neighbors,
+        int edge_types)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || input->height <= 1 || max_search_neighbors <= 0 || edge_types <= 0) {
+        return {};
+    }
+
+    pcl::OrganizedEdgeBase<pcl::PointXYZ, pcl::Label> edge_detection;
+    edge_detection.setInputCloud(input);
+    edge_detection.setDepthDisconThreshold(static_cast<float>(depth_discon_threshold));
+    edge_detection.setMaxSearchNeighbors(max_search_neighbors);
+    edge_detection.setEdgeType(edge_types);
+
+    pcl::PointCloud<pcl::Label> labels;
+    std::vector<pcl::PointIndices> label_indices;
+    edge_detection.compute(labels, label_indices);
+
+    std::vector<int> values;
+    values.reserve(labels.points.size());
+    for (const auto& label : labels.points) {
+        values.push_back(static_cast<int>(label.label));
+    }
+    LOGI("OrganizedEdgeBase computed labels: input=%zu labels=%zu edgeTypes=%d",
+         input->points.size(), labels.points.size(), edge_types);
+    return values;
+}
+
+std::vector<int> extractOrganizedEdgeIndices(
+        double depth_discon_threshold,
+        int max_search_neighbors,
+        int edge_types)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || input->height <= 1 || max_search_neighbors <= 0 || edge_types <= 0) {
+        return {};
+    }
+
+    pcl::OrganizedEdgeBase<pcl::PointXYZ, pcl::Label> edge_detection;
+    edge_detection.setInputCloud(input);
+    edge_detection.setDepthDisconThreshold(static_cast<float>(depth_discon_threshold));
+    edge_detection.setMaxSearchNeighbors(max_search_neighbors);
+    edge_detection.setEdgeType(edge_types);
+
+    pcl::PointCloud<pcl::Label> labels;
+    std::vector<pcl::PointIndices> label_indices;
+    edge_detection.compute(labels, label_indices);
+
+    std::vector<int> values;
+    values.push_back(static_cast<int>(label_indices.size()));
+    for (std::size_t i = 0; i < label_indices.size(); ++i) {
+        values.push_back(1 << static_cast<int>(i));
+        values.push_back(static_cast<int>(label_indices[i].indices.size()));
+        for (int index : label_indices[i].indices) {
+            values.push_back(index);
+        }
+    }
+    LOGI("OrganizedEdgeBase computed indices: input=%zu groups=%zu edgeTypes=%d",
+         input->points.size(), label_indices.size(), edge_types);
     return values;
 }
 

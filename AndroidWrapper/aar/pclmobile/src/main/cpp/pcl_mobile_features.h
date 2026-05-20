@@ -10,6 +10,14 @@ namespace pclmobile {
 std::vector<jfloat> estimateNormals(int k_search);
 std::vector<jfloat> estimateNormalsRadius(double radius_search);
 std::vector<jfloat> estimateNormalsOMP(int k_search, int number_of_threads);
+std::vector<jfloat> estimateIntegralImageNormals(
+        int method,
+        int rect_width,
+        int rect_height,
+        double max_depth_change_factor,
+        double normal_smoothing_size,
+        bool depth_dependent_smoothing,
+        bool border_policy_ignore);
 std::vector<jfloat> estimateLinearLeastSquaresNormals(
         double normal_smoothing_size,
         bool depth_dependent_smoothing,
@@ -120,6 +128,14 @@ std::vector<jfloat> computeBoundaryPoints(
         double radius_search,
         double angle_threshold_degrees);
 std::vector<jfloat> computeDifferenceOfNormals(double small_radius, double large_radius);
+std::vector<int> computeOrganizedEdgeLabels(
+        double depth_discon_threshold,
+        int max_search_neighbors,
+        int edge_types);
+std::vector<int> extractOrganizedEdgeIndices(
+        double depth_discon_threshold,
+        int max_search_neighbors,
+        int edge_types);
 std::vector<int> extractStatisticalMultiscaleInterestRegionIndices(
         double first_scale,
         double second_scale,

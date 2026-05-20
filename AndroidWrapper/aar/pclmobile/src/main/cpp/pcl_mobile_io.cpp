@@ -120,6 +120,30 @@ bool writePCDFileASCII(const std::string& filename, const pcl::PointCloud<pcl::P
     return ok;
 }
 
+bool writePCDFileBinary(const std::string& filename, const pcl::PointCloud<pcl::PointXYZ>::Ptr& source)
+{
+    if (filename.empty() || source == nullptr || source->empty()) {
+        LOGE("Refused to write empty binary PCD file target=%s points=%zu",
+             filename.c_str(), source == nullptr ? 0 : source->points.size());
+        return false;
+    }
+    const bool ok = pcl::io::savePCDFileBinary(filename, *source) == 0;
+    LOGI("Saved binary PCD file: %s ok=%d points=%zu", filename.c_str(), ok ? 1 : 0, source->points.size());
+    return ok;
+}
+
+bool writePCDFileBinaryCompressed(const std::string& filename, const pcl::PointCloud<pcl::PointXYZ>::Ptr& source)
+{
+    if (filename.empty() || source == nullptr || source->empty()) {
+        LOGE("Refused to write empty compressed PCD file target=%s points=%zu",
+             filename.c_str(), source == nullptr ? 0 : source->points.size());
+        return false;
+    }
+    const bool ok = pcl::io::savePCDFileBinaryCompressed(filename, *source) == 0;
+    LOGI("Saved compressed PCD file: %s ok=%d points=%zu", filename.c_str(), ok ? 1 : 0, source->points.size());
+    return ok;
+}
+
 bool writePLYFileASCII(const std::string& filename, const pcl::PointCloud<pcl::PointXYZ>::Ptr& source)
 {
     if (filename.empty() || source == nullptr || source->empty()) {
@@ -129,6 +153,18 @@ bool writePLYFileASCII(const std::string& filename, const pcl::PointCloud<pcl::P
     }
     const bool ok = pcl::io::savePLYFileASCII(filename, *source) == 0;
     LOGI("Saved PLY file: %s ok=%d points=%zu", filename.c_str(), ok ? 1 : 0, source->points.size());
+    return ok;
+}
+
+bool writePLYFileBinary(const std::string& filename, const pcl::PointCloud<pcl::PointXYZ>::Ptr& source)
+{
+    if (filename.empty() || source == nullptr || source->empty()) {
+        LOGE("Refused to write empty binary PLY file target=%s points=%zu",
+             filename.c_str(), source == nullptr ? 0 : source->points.size());
+        return false;
+    }
+    const bool ok = pcl::io::savePLYFileBinary(filename, *source) == 0;
+    LOGI("Saved binary PLY file: %s ok=%d points=%zu", filename.c_str(), ok ? 1 : 0, source->points.size());
     return ok;
 }
 

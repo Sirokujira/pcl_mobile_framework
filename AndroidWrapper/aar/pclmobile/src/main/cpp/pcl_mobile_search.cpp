@@ -4,6 +4,8 @@
 
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/octree/octree_search.h>
+#include <pcl/search/brute_force.h>
+#include <pcl/search/impl/brute_force.hpp>
 
 #include "pcl_mobile_arrays.h"
 #include "pcl_mobile_context.h"
@@ -165,6 +167,48 @@ std::vector<jfloat> octreeRadiusSearchIndicesInternal(
     return packIndexResult(indices, squared_distances, static_cast<int>(found));
 }
 
+std::vector<jfloat> bruteForceRadiusSearchInternal(
+        float x, float y, float z, double radius, unsigned int max_neighbors)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || radius <= 0.0) {
+        return {};
+    }
+
+    pcl::search::BruteForce<pcl::PointXYZ> search(true);
+    search.setInputCloud(input);
+
+    pcl::Indices indices;
+    std::vector<float> squared_distances;
+    const int found = search.radiusSearch(
+            makeQueryPoint(x, y, z), radius, indices, squared_distances, max_neighbors);
+
+    LOGI("BruteForce radiusSearch: input=%zu found=%d radius=%.3f maxNeighbors=%u",
+         input->points.size(), found, radius, max_neighbors);
+    return packSearchResult(input, indices, squared_distances, found);
+}
+
+std::vector<jfloat> bruteForceRadiusSearchIndicesInternal(
+        float x, float y, float z, double radius, unsigned int max_neighbors)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || radius <= 0.0) {
+        return {};
+    }
+
+    pcl::search::BruteForce<pcl::PointXYZ> search(true);
+    search.setInputCloud(input);
+
+    pcl::Indices indices;
+    std::vector<float> squared_distances;
+    const int found = search.radiusSearch(
+            makeQueryPoint(x, y, z), radius, indices, squared_distances, max_neighbors);
+
+    LOGI("BruteForce radiusSearch indices: input=%zu found=%d radius=%.3f maxNeighbors=%u",
+         input->points.size(), found, radius, max_neighbors);
+    return packIndexResult(indices, squared_distances, found);
+}
+
 } // namespace
 
 std::vector<jfloat> nearestKSearch(float x, float y, float z, int k)
@@ -221,6 +265,52 @@ std::vector<jfloat> radiusSearchLimited(float x, float y, float z, double radius
 std::vector<jfloat> radiusSearchIndicesLimited(float x, float y, float z, double radius, int max_neighbors)
 {
     return radiusSearchIndicesInternal(x, y, z, radius, sanitizeMaxNeighbors(max_neighbors));
+}
+
+std::vector<jfloat> bruteForceNearestKSearch(float x, float y, float z, int k)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || k <= 0) {
+        return {};
+    }
+
+    pcl::search::BruteForce<pcl::PointXYZ> search(true);
+    search.setInputCloud(input);
+
+    pcl::Indices indices(static_cast<std::size_t>(k));
+    std::vector<float> squared_distances(static_cast<std::size_t>(k));
+    const int found = search.nearestKSearch(makeQueryPoint(x, y, z), k, indices, squared_distances);
+
+    LOGI("BruteForce nearestKSearch: input=%zu found=%d k=%d", input->points.size(), found, k);
+    return packSearchResult(input, indices, squared_distances, found);
+}
+
+std::vector<jfloat> bruteForceNearestKSearchIndices(float x, float y, float z, int k)
+{
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input = activeCloud();
+    if (input->empty() || k <= 0) {
+        return {};
+    }
+
+    pcl::search::BruteForce<pcl::PointXYZ> search(true);
+    search.setInputCloud(input);
+
+    pcl::Indices indices(static_cast<std::size_t>(k));
+    std::vector<float> squared_distances(static_cast<std::size_t>(k));
+    const int found = search.nearestKSearch(makeQueryPoint(x, y, z), k, indices, squared_distances);
+
+    LOGI("BruteForce nearestKSearch indices: input=%zu found=%d k=%d", input->points.size(), found, k);
+    return packIndexResult(indices, squared_distances, found);
+}
+
+std::vector<jfloat> bruteForceRadiusSearchLimited(float x, float y, float z, double radius, int max_neighbors)
+{
+    return bruteForceRadiusSearchInternal(x, y, z, radius, sanitizeMaxNeighbors(max_neighbors));
+}
+
+std::vector<jfloat> bruteForceRadiusSearchIndicesLimited(float x, float y, float z, double radius, int max_neighbors)
+{
+    return bruteForceRadiusSearchIndicesInternal(x, y, z, radius, sanitizeMaxNeighbors(max_neighbors));
 }
 
 std::vector<jfloat> octreeNearestKSearch(float x, float y, float z, double resolution, int k)
