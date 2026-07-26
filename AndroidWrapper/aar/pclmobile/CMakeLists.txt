@@ -1,7 +1,9 @@
 # Native side of the :pclmobile AAR module.
 #
-# Consolidates AndroidWrapper/CMakeLists.txt and the AAR module's own
-# CMakeLists.txt, both inherited from Sirokujira/pcl-superbuild@83cc231. See docs/LINEAGE.md.
+# Consolidates AndroidWrapper/CMakeLists.txt (carried by the 2019 import commit
+# 98c6c50) and the AAR module's own CMakeLists.txt (added here by e21dc8a).
+# Neither has an ancestor in Sirokujira/pcl-superbuild — the Android wrapper is
+# native to this repository. See docs/LINEAGE.md.
 #
 # This file used to declare 14 individual add_library(lib_pclN ...) targets.
 # It is now a foreach() loop over the PCL/Boost components we depend on so
