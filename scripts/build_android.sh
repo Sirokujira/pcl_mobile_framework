@@ -2,6 +2,9 @@
 #
 # scripts/build_android.sh
 #
+# Successor to build_android.sh / build_android.bat of Sirokujira/pcl-superbuild@83cc231.
+# See docs/LINEAGE.md.
+#
 # Cross-compiles PCL/Boost/Eigen/FLANN/Qhull for the listed Android ABIs and
 # stages the result under AndroidWrapper/aar/pclmobile/libs/<ABI>/ so that
 # the AAR module can pick them up.

@@ -2,6 +2,10 @@
 #
 # scripts/build_ios.sh
 #
+# Successor to build_ios_device_framework.sh /
+# build_ios_simulator_framework.sh / build_ios_universal_binary.sh of
+# Sirokujira/pcl-superbuild@83cc231. See docs/LINEAGE.md.
+#
 # Cross-compiles the PCL stack for iOS device + simulator slices, then asks
 # CMake to build PCLMobile.framework against each slice. Finally calls
 # scripts/make_xcframework.sh to merge the slices.

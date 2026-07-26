@@ -1,5 +1,8 @@
 # Top-level CMakeLists.txt for the pcl_mobile_framework superbuild.
 #
+# Direct descendant of Sirokujira/pcl-superbuild@83cc231 — CMakeLists.txt.
+# See docs/LINEAGE.md.
+#
 # This is a "superbuild" in the CMake sense: it doesn't build any code
 # itself, only orchestrates ExternalProject_Add of PCL and its dependencies
 # for one cross-compilation target at a time.

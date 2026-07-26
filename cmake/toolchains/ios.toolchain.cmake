@@ -1,5 +1,8 @@
 # cmake/toolchains/ios.toolchain.cmake
 #
+# Collapses the 15-file toolchains/ directory of Sirokujira/pcl-superbuild@83cc231
+# into a single PLATFORM-driven toolchain. See docs/LINEAGE.md.
+#
 # Single iOS / iOS-Simulator toolchain. Replaces the 18-file collection that
 # used to live in toolchains/ (each ARM/x86 slice in its own copy-pasted
 # CMake file). Inspired by leetal/ios-cmake v4 but trimmed down to the

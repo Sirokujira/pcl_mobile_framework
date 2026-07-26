@@ -1,5 +1,8 @@
 # cmake/ProjectVariables.cmake
 #
+# Derived from Sirokujira/pcl-superbuild@83cc231 — setup-project-variables.cmake.
+# See docs/LINEAGE.md.
+#
 # Renamed and slimmed-down successor to setup-project-variables.cmake.
 # Drops the legacy iOS arch options (armv7/armv7s/arm64e/i386) and the
 # per-arch try-run-result CMake files; ios.toolchain.cmake handles all of that.

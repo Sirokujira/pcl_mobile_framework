@@ -1,5 +1,8 @@
 # cmake/external/eigen.cmake
 #
+# Successor to install_eigen() in Sirokujira/pcl-superbuild@83cc231 —
+# external-project-macros.cmake. See docs/LINEAGE.md.
+#
 # Eigen is a header-only library, so we install it once for the host. Every
 # cross-compiled target sees the same headers via -I${install_prefix}/eigen.
 

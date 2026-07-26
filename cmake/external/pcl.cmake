@@ -1,5 +1,8 @@
 # cmake/external/pcl.cmake
 #
+# Successor to fetch_pcl()/crosscompile_pcl() in Sirokujira/pcl-superbuild@83cc231 —
+# external-project-macros.cmake. See docs/LINEAGE.md.
+#
 # Cross-compile PCL 1.14 against the slice-local Boost/Eigen/FLANN/Qhull.
 
 include_guard(GLOBAL)

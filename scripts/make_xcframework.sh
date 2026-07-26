@@ -2,6 +2,9 @@
 #
 # scripts/make_xcframework.sh
 #
+# Successor to makeFramework.sh / makeFramework2.sh of Sirokujira/pcl-superbuild@83cc231,
+# which built fat frameworks with lipo. See docs/LINEAGE.md.
+#
 # Combines the per-slice PCLMobile.framework builds produced by
 # scripts/build_ios.sh into a single PCLMobile.xcframework that
 # CocoaPods / SwiftPM / Carthage can consume.

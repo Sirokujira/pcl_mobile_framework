@@ -1,5 +1,8 @@
 # iOS framework wrapper.
 #
+# Successor to the iOSWrapper/ tree of Sirokujira/pcl-superbuild@83cc231
+# (PointCloudLibraryInterface/Wrapper/Conversions). See docs/LINEAGE.md.
+#
 # Generates an Xcode project that builds PCLMobile.framework, an Objective-C++
 # facade over the PCL/Boost/Eigen/FLANN/Qhull static libraries produced by the
 # top-level superbuild.

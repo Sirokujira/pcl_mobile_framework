@@ -29,10 +29,10 @@
 ## 1. 致命的な問題(これが直らないと現状ビルドが通らない)
 
 ### 1.1 `external-project-macros.cmake` が repo に存在しない
-`CMakeLists.txt:43` で `include(external-project-macros.cmake)` しているが、`fetch_pcl()` / `crosscompile_boost()` 等を定義するこのファイル自体が repo に含まれていない。`git log --all` でも見つからない。
+`CMakeLists.txt:43` で `include(external-project-macros.cmake)` しているが、`fetch_pcl()` / `crosscompile_boost()` 等を定義するこのファイル自体が repo に含まれていない。2019 年に前身 `Sirokujira/pcl-superbuild` からファイルをコピーして本 repo を起こした際、この 1 ファイルだけが取り込み漏れになっている(前身側の `83cc231` には存在する)。
 
 - 影響: `cmake` を打った瞬間に `Could not find include file "external-project-macros.cmake"` で停止する。**現状、本リポジトリは誰の環境でもビルドできない。**
-- 対応: 参考実装(`hirotakaster/pcl-superbuild`, `patmarion/pcl-superbuild`)を元に再実装する。各依存ごとに `fetch_*()` / `compile_*()` / `crosscompile_*()` マクロ群を定義する。
+- 対応: 前身 `Sirokujira/pcl-superbuild@83cc231` の `external-project-macros.cmake`(およびその源流である `hirotakaster/pcl-superbuild`, `patmarion/pcl-superbuild`)を元に、依存ごとのファイルへ分割して再実装する。マクロ名(`install_eigen` / `crosscompile_boost` / `crosscompile_flann` / `crosscompile_qhull` / `crosscompile_pcl`)は前身から引き継ぐ。系譜の詳細は [docs/LINEAGE.md](./docs/LINEAGE.md) を参照。
 
 ### 1.2 `iOSWrapper/` が実質空
 - 中身は `README.md`(別プロジェクトからのコピペ)と `module.modulemap` のみ。
