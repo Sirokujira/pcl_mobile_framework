@@ -1,5 +1,8 @@
 # cmake/external/boost.cmake
 #
+# Successor to fetch_boost()/crosscompile_boost() in Sirokujira/pcl-superbuild@83cc231 —
+# external-project-macros.cmake. See docs/LINEAGE.md.
+#
 # Cross-compile a slim Boost (PCL-required components only) for each target
 # slice.
 #

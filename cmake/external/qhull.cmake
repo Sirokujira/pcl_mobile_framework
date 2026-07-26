@@ -1,4 +1,7 @@
 # cmake/external/qhull.cmake
+#
+# Successor to fetch_qhull()/crosscompile_qhull() in Sirokujira/pcl-superbuild@83cc231 —
+# external-project-macros.cmake. See docs/LINEAGE.md.
 
 include_guard(GLOBAL)
 include(ExternalProject)

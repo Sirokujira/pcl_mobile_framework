@@ -1,4 +1,7 @@
 # cmake/external/flann.cmake
+#
+# Successor to fetch_flann()/crosscompile_flann() in Sirokujira/pcl-superbuild@83cc231 —
+# external-project-macros.cmake. See docs/LINEAGE.md.
 
 include_guard(GLOBAL)
 include(ExternalProject)

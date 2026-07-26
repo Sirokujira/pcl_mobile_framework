@@ -1,5 +1,8 @@
 # cmake/SetupSuperbuild.cmake
 #
+# Derived from Sirokujira/pcl-superbuild@83cc231 — setup-superbuild.cmake.
+# See docs/LINEAGE.md.
+#
 # Renamed from setup-superbuild.cmake. Defines the per-tree paths used by all
 # ExternalProject_Add calls under cmake/external/.
 

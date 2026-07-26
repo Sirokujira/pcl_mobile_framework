@@ -10,6 +10,29 @@ dependencies (Boost, Eigen, FLANN, Qhull) into shippable mobile libraries:
   or CocoaPods).
 * **Android** — `pclmobile` AAR (consumable via Gradle / Maven).
 
+## Lineage
+
+This repository is the successor to
+[**Sirokujira/pcl-superbuild**](https://github.com/Sirokujira/pcl-superbuild)
+(itself a fork of `hirotakaster/pcl-superbuild`, ultimately of
+`patmarion/pcl-superbuild`, 2012). In June 2019 that project's tree was copied
+into a fresh repository as commit `98c6c50`, and everything here since has been
+an incremental modernization of the same superbuild: PCL 1.9 → 1.14, NDK r16b →
+r26+, `lipo` fat frameworks → XCFramework, AppVeyor/Travis/CircleCI → GitHub
+Actions.
+
+Because the move was a file copy rather than a fork, GitHub shows no parent
+repository. The predecessor's history is instead attached to this one through a
+`refs/replace` graft, so `git log` walks back to 2012:
+
+```bash
+git fetch origin 'refs/replace/*:refs/replace/*'
+git log --oneline pcl-superbuild-origin..HEAD
+```
+
+See [docs/LINEAGE.md](./docs/LINEAGE.md) for the timeline, the file-by-file
+derivation map and licensing provenance.
+
 ## Repository layout
 
 ```
@@ -19,6 +42,9 @@ pcl_mobile_framework/
 ├── LICENSE
 ├── README.md                      # ← you are here
 ├── MODERNIZATION_PLAN.md          # Where this repo is heading
+│
+├── docs/
+│   └── LINEAGE.md                 # Descent from pcl-superbuild (2012→)
 │
 ├── cmake/
 │   ├── SetupSuperbuild.cmake      # Per-tree paths
