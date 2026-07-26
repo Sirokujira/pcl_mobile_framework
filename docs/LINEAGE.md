@@ -29,7 +29,7 @@ graph LR
 |---|---|---|---|
 | Origin | `patmarion/pcl-superbuild` | 2012-06-27 → | `7bbe666` — first commit, Pat Marion (Kitware) |
 | Fork | `hirotakaster/pcl-superbuild` | → 2016 | GitHub fork parent of the next row |
-| Predecessor | `Sirokujira/pcl-superbuild` | 2016-06-14 → 2018-11-23 | `83cc231` — final commit |
+| Predecessor | `Sirokujira/pcl-superbuild` | 2016-06-14 → 2018-11-23 | `83cc231` — last development commit |
 | Current | `Sirokujira/pcl_mobile_framework` | 2019-06-06 → | `98c6c50` — initial import |
 
 The first three rows share one continuous git history; GitHub still records
@@ -42,7 +42,8 @@ the last hop lost its ancestry, and that is what the graft below restores.
 
 The predecessor's commits are present in this repository as a `refs/replace`
 graft that attaches `98c6c50` ("add build pcl binaries generate files", the
-initial import) to `83cc231` (pcl-superbuild's final commit). Nothing is
+initial import) to `83cc231` (pcl-superbuild's last development commit; that
+repository has since received only a pointer to this one). Nothing is
 rewritten — every existing SHA stays valid — but `git log` walks straight
 through the seam back to 2012.
 
