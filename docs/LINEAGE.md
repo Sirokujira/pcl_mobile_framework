@@ -140,7 +140,7 @@ only through the graft, i.e. `git show pcl-superbuild-origin:iOSWrapper/…`.
 | `iOSWrapper/{module,iphoneos,iphonesimulator}.modulemap` | [`iOSWrapper/module.modulemap`](../iOSWrapper/module.modulemap) | One module map; the XCFramework handles per-platform selection. |
 | `iOSWrapper/framework.plist{,.in}` | [`iOSWrapper/Sources/Info.plist`](../iOSWrapper/Sources/Info.plist) | — |
 | `iOSWrapper/{Bridge,Wrapper}.swift.txt`, `ProjectName-Bridging-Header.h.txt` | Swift Package (`Package.swift`) | Copy-paste snippets → a real SwiftPM `binaryTarget`. |
-| **†** `AndroidWrapper/` | [`AndroidWrapper/aar/`](../AndroidWrapper/aar/) | The AAR module itself was added a day after the import, by `90b905e`. Two competing `CMakeLists.txt` consolidated into the AAR module; Groovy → Kotlin DSL; AGP 3.4 → 8.5. |
+| **†** `AndroidWrapper/` | [`AndroidWrapper/aar/`](../AndroidWrapper/aar/) | The Gradle project and its sample app came a day after the import (`90b905e`, 2019-06-07); the `pclmobile` library module itself only seven months later (`e21dc8a`, 2020-01-03). Two competing `CMakeLists.txt` consolidated into the AAR module; Groovy → Kotlin DSL; AGP 3.4 → 8.5. |
 
 ### CI and distribution
 
@@ -153,17 +153,30 @@ only through the graft, i.e. `git show pcl-superbuild-origin:iOSWrapper/…`.
 | Fat `.framework` via `lipo` | `PCLMobile.xcframework` | Apple deprecated fat device+simulator binaries. |
 | README mentions of Pod/Carthage/SPM | `Package.swift`, `PCLMobile.podspec`, Maven/GitHub Packages | Distribution actually implemented. |
 
-The originals that *were* imported are kept verbatim under
+The files these replaced are kept under
 [`.deprecated/`](../.deprecated/README.md), which records the same mapping from
-the replacement side. (The 44 files left behind at `83cc231` are not there —
-they only ever existed in the predecessor, and the graft is the way to read
-them.) Every file whose provenance touches the predecessor also says so in its
-own header — either naming the `83cc231` ancestor it descends from, or stating
-that it has none — so the relationship is visible without leaving the file:
+the replacement side. Two caveats: the 44 files left behind at `83cc231` are
+*not* there — they only ever existed in the predecessor, and the graft is the
+way to read them — and each `*.original` is the file as it stood when it was
+retired, which for six of them is a 2020 state rather than the 2019 import.
+
+Every **live** file with a predecessor ancestor names it in its own header, and
+the modernized files that arrived with the import without one say that too, so
+for the maintained tree the relationship is visible without leaving the file:
 
 ```bash
 grep -rl "pcl-superbuild@83cc231" --exclude-dir=.git .
 ```
+
+What that grep does not list is omitted on purpose: the verbatim originals
+under `.deprecated/` and
+[`cmake/toolchains/pcl-try-run-results.cmake`](../cmake/toolchains/pcl-try-run-results.cmake)
+stay headerless to preserve byte-identity;
+[`strip-frameworks.sh`](../strip-frameworks.sh) is vendored third-party code
+(see *Licensing*); and `.gitignore`, `README.md` and
+[`iOSWrapper/module.modulemap`](../iOSWrapper/module.modulemap) descend from
+`83cc231` but have been rewritten past the point where a provenance line would
+mean anything.
 
 ## Versions carried across
 
