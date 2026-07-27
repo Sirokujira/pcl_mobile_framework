@@ -1,0 +1,55 @@
+name: Lineage
+
+# Verifies that docs/LINEAGE.md still matches the git objects it describes.
+#
+# The lineage record was published wrong twice before this check existed, so
+# the figures in it are asserted rather than trusted. The job needs the
+# predecessor's history, which reaches this repository through the
+# pcl-superbuild-origin tag — hence fetch-depth: 0.
+
+on:
+  push:
+    paths:
+      - "docs/LINEAGE.md"
+      - ".deprecated/README.md"
+      - "README.md"
+      - "scripts/check_lineage.sh"
+      - ".github/workflows/lineage.yml"
+  pull_request:
+    paths:
+      - "docs/LINEAGE.md"
+      - ".deprecated/README.md"
+      - "README.md"
+      - "scripts/check_lineage.sh"
+      - ".github/workflows/lineage.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lineage-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch the predecessor's history
+        run: |
+          # actions/checkout brings tags with fetch-depth: 0, but the objects
+          # behind pcl-superbuild-origin live outside the branch graph, so be
+          # explicit rather than relying on that.
+          git fetch --no-tags origin 'refs/tags/pcl-superbuild-origin:refs/tags/pcl-superbuild-origin' || true
+          git rev-parse -q --verify 83cc231^{commit} >/dev/null || {
+            echo "::error::The predecessor commit 83cc231 is not reachable."
+            echo "::error::It should arrive with the pcl-superbuild-origin tag; see docs/LINEAGE.md."
+            exit 1
+          }
+
+      - name: Check docs/LINEAGE.md against the tree
+        run: ./scripts/check_lineage.sh
