@@ -4,15 +4,27 @@ Files retained for historical reference only. They are not part of the build
 and will be deleted once the modernized layout is proven on real hardware.
 See [MODERNIZATION_PLAN.md](../MODERNIZATION_PLAN.md) for context.
 
-All of these arrived with this repository's 2019 import commit `98c6c50`. Some
-have an ancestor in the predecessor project, `Sirokujira/pcl-superbuild@83cc231`
-(tagged here as `pcl-superbuild-origin`) — `setup-superbuild.cmake.original`,
-`setup-project-variables.cmake.original`, `makeFramework.sh.original`, the
-`toolchains/` files — while others (the `build_ios_*` / `build_android`
-drivers, `makeFramework2.sh.original`, `xamarinObjevtiveSharpie.sh`, the whole
-`AndroidWrapper/` tree) were never committed to pcl-superbuild at all. The
-table below is the replacement side of the derivation map in
-[docs/LINEAGE.md](../docs/LINEAGE.md), which marks the distinction with †.
+Most of these arrived with this repository's 2019 import commit `98c6c50`.
+Eight did not — the six `AndroidWrapper/aar/` originals plus
+`AndroidWrapper/.circleci/config.yml.original` and
+`AndroidWrapper/bitrise_android.yml.original`, which this repository wrote
+itself in `90b905e` (2019-06-07) and `e21dc8a` (2020-01-03).
+
+Of the imported ones, some have an ancestor in the predecessor project,
+`Sirokujira/pcl-superbuild@83cc231` (tagged here as `pcl-superbuild-origin`) —
+`setup-superbuild.cmake.original`, `setup-project-variables.cmake.original`,
+`makeFramework.sh.original`, the `toolchains/` files — while others (the
+`build_ios_*` / `build_android` drivers, `makeFramework2.sh.original`,
+`xamarinObjevtiveSharpie.sh`, the whole `AndroidWrapper/` tree) were never
+committed to pcl-superbuild at all. The table below is the replacement side of
+the derivation map in [docs/LINEAGE.md](../docs/LINEAGE.md), which marks the
+distinction with †.
+
+Each `*.original` is the file as it stood **when it was retired**, which for
+several is a later state than the 2019 import — this repository kept editing
+them until 2020. `build_android.sh.original`, `makeFramework2.sh.original` and
+the four `build_ios_*.original` all differ from their `98c6c50` blobs; use
+`git --no-replace-objects show 98c6c50:<path>` for the imported state.
 
 ## Why each file moved here
 
