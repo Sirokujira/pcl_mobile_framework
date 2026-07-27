@@ -4,11 +4,15 @@ Files retained for historical reference only. They are not part of the build
 and will be deleted once the modernized layout is proven on real hardware.
 See [MODERNIZATION_PLAN.md](../MODERNIZATION_PLAN.md) for context.
 
-Nearly all of these are the originals inherited from the predecessor project,
-`Sirokujira/pcl-superbuild@83cc231` (tagged here as `pcl-superbuild-origin`),
-either directly or via this repository's 2019 import commit `98c6c50`. The
+All of these arrived with this repository's 2019 import commit `98c6c50`. Some
+have an ancestor in the predecessor project, `Sirokujira/pcl-superbuild@83cc231`
+(tagged here as `pcl-superbuild-origin`) — `setup-superbuild.cmake.original`,
+`setup-project-variables.cmake.original`, `makeFramework.sh.original`, the
+`toolchains/` files — while others (the `build_ios_*` / `build_android`
+drivers, `makeFramework2.sh.original`, `xamarinObjevtiveSharpie.sh`, the whole
+`AndroidWrapper/` tree) were never committed to pcl-superbuild at all. The
 table below is the replacement side of the derivation map in
-[docs/LINEAGE.md](../docs/LINEAGE.md).
+[docs/LINEAGE.md](../docs/LINEAGE.md), which marks the distinction with †.
 
 ## Why each file moved here
 

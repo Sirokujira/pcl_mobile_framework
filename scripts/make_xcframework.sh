@@ -2,8 +2,11 @@
 #
 # scripts/make_xcframework.sh
 #
-# Successor to makeFramework.sh / makeFramework2.sh of Sirokujira/pcl-superbuild@83cc231,
-# which built fat frameworks with lipo. See docs/LINEAGE.md.
+# Successor to the makeFramework.sh / makeFramework2.sh pair (354 + 409 lines)
+# carried by this repository's 2019 import commit 98c6c50. Of the two, only
+# makeFramework.sh has an ancestor in Sirokujira/pcl-superbuild@83cc231, and
+# there it is a different 488-line file. Both built fat frameworks with lipo.
+# See docs/LINEAGE.md.
 #
 # Combines the per-slice PCLMobile.framework builds produced by
 # scripts/build_ios.sh into a single PCLMobile.xcframework that

@@ -15,11 +15,12 @@ dependencies (Boost, Eigen, FLANN, Qhull) into shippable mobile libraries:
 This repository is the successor to
 [**Sirokujira/pcl-superbuild**](https://github.com/Sirokujira/pcl-superbuild)
 (itself a fork of `hirotakaster/pcl-superbuild`, ultimately of
-`patmarion/pcl-superbuild`, 2012). In June 2019 that project's tree was copied
-into a fresh repository as commit `98c6c50`, and everything here since has been
-an incremental modernization of the same superbuild: PCL 1.9 → 1.14, NDK r16b →
-r26+, `lipo` fat frameworks → XCFramework, AppVeyor/Travis/CircleCI → GitHub
-Actions.
+`patmarion/pcl-superbuild`, 2012). In June 2019 a partial snapshot of that
+project's working tree was copied into a fresh repository as commit `98c6c50`
+(44 files, 28 of which pcl-superbuild also had at `83cc231`), and everything
+here since has been an incremental modernization of the same superbuild: PCL
+1.9 → 1.14, NDK r16b → r26+, `lipo` fat frameworks → XCFramework,
+AppVeyor/Travis/CircleCI → GitHub Actions.
 
 Because the move was a file copy rather than a fork, GitHub shows no parent
 repository. The predecessor's history is instead attached to this one through a
@@ -27,7 +28,7 @@ repository. The predecessor's history is instead attached to this one through a
 
 ```bash
 git fetch origin 'refs/replace/*:refs/replace/*'
-git log --oneline pcl-superbuild-origin..HEAD
+git log --oneline | tail -5
 ```
 
 See [docs/LINEAGE.md](./docs/LINEAGE.md) for the timeline, the file-by-file
